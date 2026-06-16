@@ -14,6 +14,7 @@ obj/
 # Local configuration and secrets
 src/**/appsettings.Development.json
 src/**/appsettings.Local.json
+src/ConShield.Collector/collector.local.json
 *.env
 .env
 .env.*

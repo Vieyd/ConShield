@@ -20,11 +20,16 @@ public class SecurityEventWriter : ISecurityEventWriter
     {
         var entry = new SecurityEventEntry
         {
+            OccurredAtUtc = request.OccurredAtUtc ?? DateTime.UtcNow,
             EventType = request.EventType,
             Severity = request.Severity,
             Description = request.Description,
             UserName = request.UserName,
             SourceIp = request.SourceIp,
+            ExternalEventId = request.ExternalEventId,
+            SourceSystem = request.SourceSystem,
+            ExternalEventType = request.ExternalEventType,
+            SourceHost = request.SourceHost,
             AdditionalDataJson = request.AdditionalData is null
                 ? null
                 : JsonSerializer.Serialize(request.AdditionalData)
@@ -43,6 +48,10 @@ public class SecurityEventWriter : ISecurityEventWriter
             entry.Severity,
             entry.UserName,
             entry.SourceIp,
+            entry.ExternalEventId,
+            entry.SourceSystem,
+            entry.ExternalEventType,
+            entry.SourceHost,
             entry.Description,
             entry.AdditionalDataJson
         });

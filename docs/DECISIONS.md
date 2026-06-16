@@ -45,3 +45,23 @@ Reason: public documentation must not overstate implemented capabilities.
 The current authentication mechanism remains unchanged for now. Hardening should happen as a separate task.
 
 Reason: replacing authentication touches user flows, authorization, tests, and documentation and should not be mixed with project context/test setup work.
+
+## 008. Use a Separate API Key for External Event Ingestion
+
+The first external ingestion endpoint uses `X-ConShield-Api-Key`, configured only through local settings or environment variables.
+
+Reason: this creates a clear trust boundary for the local prototype without mixing Collector access with demo user cookies or introducing a full identity system too early.
+
+This is not a production machine identity solution. Future hardening should consider key rotation, mTLS, centralized secret management, and per-source credentials.
+
+## 009. Enforce Idempotency in the Database
+
+External security events are idempotent by `sourceSystem + externalEventId`.
+
+Reason: Collector retries should be safe, and the PostgreSQL unique index remains the final protection against concurrent duplicate submissions.
+
+## 010. Rate Limit Only the Ingestion Endpoint
+
+The external ingestion endpoint has its own ASP.NET Core rate limiting policy.
+
+Reason: Collector abuse controls should not change MVC dashboard behavior or operator workflows.
