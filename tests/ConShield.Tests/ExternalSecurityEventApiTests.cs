@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ConShield.Contracts.Enums;
 using ConShield.Data;
 using Microsoft.AspNetCore.Hosting;
@@ -29,6 +30,7 @@ public class ExternalSecurityEventApiTests
         var response = await client.PostAsJsonAsync("/api/v1/security-events", payload);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Null(response.Headers.Location);
         await using var db = factory.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
         Assert.Equal(1, await db.SecurityEvents.CountAsync(x => x.SourceSystem == "collector-tests"));
     }
@@ -106,6 +108,21 @@ public class ExternalSecurityEventApiTests
     }
 
     [PostgreSqlFact]
+    public async Task NumericSeverityValues_ReturnBadRequest()
+    {
+        await using var factory = await CreateFactoryAsync();
+        using var client = factory.CreateClient();
+        AddApiKey(client);
+        var severities = new[] { "999", "-1", "4", "" };
+
+        foreach (var severity in severities)
+        {
+            var response = await client.PostAsJsonAsync("/api/v1/security-events", ValidPayload(severity: severity));
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+    }
+
+    [PostgreSqlFact]
     public async Task EmptySourceSystem_ReturnsBadRequest()
     {
         await using var factory = await CreateFactoryAsync();
@@ -173,6 +190,116 @@ public class ExternalSecurityEventApiTests
     }
 
     [PostgreSqlFact]
+    public async Task RateLimit_UsesRemoteIpForDifferentInvalidApiKeys()
+    {
+        await using var factory = await CreateFactoryAsync();
+        using var client = factory.CreateClient();
+        var responses = new List<HttpResponseMessage>();
+
+        for (var i = 0; i < 25; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/security-events")
+            {
+                Content = JsonContent.Create(ValidPayload())
+            };
+            request.Headers.Add(ApiKeyHeader, $"wrong-key-{Guid.NewGuid()}");
+
+            responses.Add(await client.SendAsync(request));
+        }
+
+        Assert.Contains(responses, x => x.StatusCode == HttpStatusCode.TooManyRequests);
+        await using var db = factory.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(0, await db.SecurityEvents.CountAsync(x => x.SourceSystem == "collector-tests"));
+    }
+
+    [PostgreSqlFact]
+    public async Task OversizedRequestWithContentLength_ReturnsPayloadTooLargeAndDoesNotCreateEvent()
+    {
+        await using var factory = await CreateFactoryAsync(maxRequestBodyBytes: 512);
+        using var client = factory.CreateClient();
+        AddApiKey(client);
+
+        var response = await client.PostAsync(
+            "/api/v1/security-events",
+            new StringContent(LargePayload(), Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+        await using var db = factory.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(0, await db.SecurityEvents.CountAsync(x => x.SourceSystem == "collector-tests"));
+    }
+
+    [PostgreSqlFact]
+    public async Task OversizedStreamedRequestWithoutContentLength_ReturnsPayloadTooLargeAndDoesNotCreateEvent()
+    {
+        await using var factory = await CreateFactoryAsync(maxRequestBodyBytes: 512);
+        using var client = factory.CreateClient();
+        AddApiKey(client);
+        using var content = new StreamContent(new NonSeekableUtf8Stream(LargePayload()));
+        content.Headers.ContentType = new("application/json");
+
+        var response = await client.PostAsync("/api/v1/security-events", content);
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+        await using var db = factory.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(0, await db.SecurityEvents.CountAsync(x => x.SourceSystem == "collector-tests"));
+    }
+
+    [PostgreSqlFact]
+    public async Task OversizedRequestWithTrailingSlash_ReturnsPayloadTooLargeAndDoesNotCreateEvent()
+    {
+        await using var factory = await CreateFactoryAsync(maxRequestBodyBytes: 512);
+        using var client = factory.CreateClient();
+        AddApiKey(client);
+
+        var response = await client.PostAsync(
+            "/api/v1/security-events/",
+            new StringContent(LargePayload(), Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+        await using var db = factory.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(0, await db.SecurityEvents.CountAsync(x => x.SourceSystem == "collector-tests"));
+    }
+
+    [PostgreSqlFact]
+    public async Task ApiErrors_ReturnSafeJson()
+    {
+        await using var factory = await CreateFactoryAsync();
+        using var client = factory.CreateClient();
+        AddApiKey(client);
+
+        var malformed = await client.PostAsync(
+            "/api/v1/security-events",
+            new StringContent("{", Encoding.UTF8, "application/json"));
+        var wrongType = await client.PostAsync(
+            "/api/v1/security-events",
+            new StringContent("[]", Encoding.UTF8, "application/json"));
+        var empty = await client.PostAsync(
+            "/api/v1/security-events",
+            new StringContent("", Encoding.UTF8, "application/json"));
+        var unsupported = await client.PostAsync(
+            "/api/v1/security-events",
+            new StringContent("{}", Encoding.UTF8, "text/plain"));
+
+        foreach (var (name, response) in new[]
+        {
+            ("malformed", malformed),
+            ("wrongType", wrongType),
+            ("empty", empty),
+            ("unsupported", unsupported)
+        })
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.False(response.IsSuccessStatusCode);
+            Assert.DoesNotContain("System.", body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("<html", body, StringComparison.OrdinalIgnoreCase);
+            var mediaType = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+            Assert.True(
+                mediaType.Contains("application/", StringComparison.Ordinal),
+                $"{name} returned {response.StatusCode} with content type '{mediaType}' and body: {body}");
+        }
+    }
+
+    [PostgreSqlFact]
     public async Task ApiKey_IsNotReturnedInResponseBody()
     {
         await using var factory = await CreateFactoryAsync();
@@ -185,7 +312,7 @@ public class ExternalSecurityEventApiTests
         Assert.DoesNotContain(ApiKey, body, StringComparison.Ordinal);
     }
 
-    private static async Task<WebApplicationFactory<Program>> CreateFactoryAsync()
+    private static async Task<WebApplicationFactory<Program>> CreateFactoryAsync(int maxRequestBodyBytes = 32768)
     {
         var connectionString = Environment.GetEnvironmentVariable("CONSHIELD_TEST_POSTGRES_CONNECTION")
             ?? throw new InvalidOperationException("CONSHIELD_TEST_POSTGRES_CONNECTION is required.");
@@ -201,7 +328,7 @@ public class ExternalSecurityEventApiTests
                         ["ConnectionStrings:DefaultConnection"] = connectionString,
                         ["ExternalEventIngestion:Enabled"] = "true",
                         ["ExternalEventIngestion:ApiKey"] = ApiKey,
-                        ["ExternalEventIngestion:MaxRequestBodyBytes"] = "32768",
+                        ["ExternalEventIngestion:MaxRequestBodyBytes"] = maxRequestBodyBytes.ToString(),
                         ["ExternalEventIngestion:AllowedFutureClockSkewMinutes"] = "5"
                     });
                 });
@@ -236,5 +363,62 @@ public class ExternalSecurityEventApiTests
             description,
             additionalData = new { test = true }
         };
+    }
+
+    private static string LargePayload()
+    {
+        return JsonSerializer.Serialize(ValidPayload(description: new string('x', 5000)));
+    }
+
+    private sealed class NonSeekableUtf8Stream : Stream
+    {
+        private readonly byte[] _bytes;
+        private int _position;
+
+        public NonSeekableUtf8Stream(string value)
+        {
+            _bytes = Encoding.UTF8.GetBytes(value);
+        }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => _position;
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (_position >= _bytes.Length)
+                return 0;
+
+            var length = Math.Min(count, _bytes.Length - _position);
+            Array.Copy(_bytes, _position, buffer, offset, length);
+            _position += length;
+            return length;
+        }
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (_position >= _bytes.Length)
+                return ValueTask.FromResult(0);
+
+            var length = Math.Min(buffer.Length, _bytes.Length - _position);
+            _bytes.AsMemory(_position, length).CopyTo(buffer);
+            _position += length;
+            return ValueTask.FromResult(length);
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

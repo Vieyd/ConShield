@@ -5,6 +5,8 @@ using ConShield.SecurityEvents;
 using ConShield.Web.Options;
 using ConShield.Web.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 
@@ -14,6 +16,18 @@ builder.Services.Configure<List<DemoUserOptions>>(builder.Configuration.GetSecti
 builder.Services.Configure<ExternalEventIngestionOptions>(builder.Configuration.GetSection("ExternalEventIngestion"));
 
 builder.Services.AddControllersWithViews()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context => new BadRequestObjectResult(new
+        {
+            error = "invalid_request",
+            errors = context.ModelState
+                .Where(x => x.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    x => x.Key,
+                    x => x.Value!.Errors.Select(error => error.ErrorMessage).ToArray())
+        });
+    })
     .AddViewLocalization();
 
 builder.Services.AddLocalization();
@@ -36,12 +50,9 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("ExternalEventIngestion", httpContext =>
     {
-        var apiKeyFingerprint = ExternalEventApiKeyValidator.PartitionFingerprint(
-            httpContext.Request.Headers["X-ConShield-Api-Key"].FirstOrDefault());
         var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
-        var partitionKey = $"{remoteIp}:{apiKeyFingerprint}";
 
-        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        return RateLimitPartition.GetFixedWindowLimiter(remoteIp, _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 20,
             Window = TimeSpan.FromMinutes(1),
@@ -91,7 +102,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path.StartsWithSegments("/api/v1/security-events"))
+    if (context.GetEndpoint()?.Metadata.GetMetadata<ExternalEventIngestionEndpointAttribute>() is not null)
     {
         try
         {
@@ -111,26 +122,88 @@ app.Use(async (context, next) =>
 
     await next();
 });
+app.UseRateLimiter();
 app.Use(async (context, next) =>
 {
-    if (HttpMethods.IsPost(context.Request.Method)
-        && context.Request.Path.Equals("/api/v1/security-events", StringComparison.OrdinalIgnoreCase))
+    if (context.GetEndpoint()?.Metadata.GetMetadata<ExternalEventIngestionEndpointAttribute>() is null)
     {
-        var options = context.RequestServices
-            .GetRequiredService<Microsoft.Extensions.Options.IOptions<ExternalEventIngestionOptions>>()
-            .Value;
+        await next();
+        return;
+    }
 
-        if (context.Request.ContentLength.HasValue && context.Request.ContentLength.Value > options.MaxRequestBodyBytes)
+    var options = context.RequestServices
+        .GetRequiredService<Microsoft.Extensions.Options.IOptions<ExternalEventIngestionOptions>>()
+        .Value;
+
+    if (!options.Enabled)
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        await context.Response.WriteAsJsonAsync(new { error = "external_event_ingestion_disabled" });
+        return;
+    }
+
+    var providedApiKey = context.Request.Headers["X-ConShield-Api-Key"].FirstOrDefault();
+    if (!ExternalEventApiKeyValidator.IsValid(providedApiKey, options.ApiKey))
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        await context.Response.WriteAsJsonAsync(new { error = "unauthorized" });
+        return;
+    }
+
+    if (!IsJsonContentType(context.Request.ContentType))
+    {
+        context.Response.StatusCode = StatusCodes.Status415UnsupportedMediaType;
+        await context.Response.WriteAsJsonAsync(new { error = "unsupported_media_type" });
+        return;
+    }
+
+    if (context.Request.ContentLength == 0)
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await context.Response.WriteAsJsonAsync(new { error = "invalid_request" });
+        return;
+    }
+
+    if (context.Request.ContentLength.HasValue && context.Request.ContentLength.Value > options.MaxRequestBodyBytes)
+    {
+        context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+        await context.Response.WriteAsJsonAsync(new { error = "payload_too_large" });
+        return;
+    }
+
+    var maxRequestBodySizeFeature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
+    if (maxRequestBodySizeFeature is { IsReadOnly: false })
+        maxRequestBodySizeFeature.MaxRequestBodySize = options.MaxRequestBodyBytes;
+
+    var originalBody = context.Request.Body;
+    context.Request.Body = new LimitedRequestBodyStream(originalBody, options.MaxRequestBodyBytes);
+
+    try
+    {
+        await next();
+        if (!context.Response.HasStarted
+            && string.IsNullOrWhiteSpace(context.Response.ContentType)
+            && context.Response.StatusCode is StatusCodes.Status400BadRequest or StatusCodes.Status415UnsupportedMediaType)
+        {
+            var error = context.Response.StatusCode == StatusCodes.Status415UnsupportedMediaType
+                ? "unsupported_media_type"
+                : "invalid_request";
+            await context.Response.WriteAsJsonAsync(new { error });
+        }
+    }
+    catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge)
+    {
+        if (!context.Response.HasStarted)
         {
             context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
             await context.Response.WriteAsJsonAsync(new { error = "payload_too_large" });
-            return;
         }
     }
-
-    await next();
+    finally
+    {
+        context.Request.Body = originalBody;
+    }
 });
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -139,6 +212,16 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+static bool IsJsonContentType(string? contentType)
+{
+    if (string.IsNullOrWhiteSpace(contentType))
+        return false;
+
+    var mediaType = contentType.Split(';', 2)[0].Trim();
+    return mediaType.Equals("application/json", StringComparison.OrdinalIgnoreCase)
+        || mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase);
+}
 
 public partial class Program
 {
