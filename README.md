@@ -74,12 +74,7 @@ The development configuration is intentionally ignored by Git. For a new machine
 
 Local demo accounts are configured in `src/ConShield.Web/appsettings.Development.json`.
 
-Default local credentials in this workspace:
-
-- `adminib / AdminIB123!`
-- `operator / Operator123!`
-
-Before publishing, keep these values only in ignored local files or replace them with your own local demo values.
+For a new machine, copy `src/ConShield.Web/appsettings.Development.example.json` to `src/ConShield.Web/appsettings.Development.json` and set local demo usernames and passwords there. The development file is ignored by Git and must not be committed.
 
 ## Demo Flow
 
