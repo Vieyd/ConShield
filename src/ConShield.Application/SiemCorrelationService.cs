@@ -26,14 +26,17 @@ public class SiemCorrelationService : ISiemCorrelationService
         var result = new CorrelationRunResult();
         var now = DateTime.UtcNow;
 
+        var recentLoginFailures = await _dbContext.SecurityEvents
+            .Where(x => x.EventType == SecurityEventType.LoginFailure && x.OccurredAtUtc >= now.AddMinutes(-2))
+            .ToListAsync(cancellationToken);
+
         var created1 = await ProcessRuleAsync(
             ruleCode: "BF-001",
             ruleName: "Повторные неуспешные попытки входа",
             severity: EventSeverity.High,
             descriptionFactory: group => $"Зафиксировано {group.Count} неуспешных попыток входа для учетной записи {group.Key} за последние 2 минуты.",
             eventIdsFactory: group => group.EventIds,
-            groups: await _dbContext.SecurityEvents
-                .Where(x => x.EventType == SecurityEventType.LoginFailure && x.OccurredAtUtc >= now.AddMinutes(-2))
+            groups: recentLoginFailures
                 .GroupBy(x => string.IsNullOrWhiteSpace(x.UserName) ? "unknown-user" : x.UserName!)
                 .Select(g => new RuleCandidate
                 {
@@ -42,11 +45,16 @@ public class SiemCorrelationService : ISiemCorrelationService
                     EventIds = g.OrderBy(x => x.Id).Select(x => x.Id).ToList()
                 })
                 .Where(x => x.Count >= 3)
-                .ToListAsync(cancellationToken),
+                .ToList(),
             createIncident: true,
             cancellationToken: cancellationToken);
 
         Merge(result, created1);
+
+        var recentUserExceptionChanges = await _dbContext.SecurityEvents
+            .Where(x => (x.EventType == SecurityEventType.UserExceptionUpdated || x.EventType == SecurityEventType.UserExceptionDeleted)
+                        && x.OccurredAtUtc >= now.AddSeconds(-30))
+            .ToListAsync(cancellationToken);
 
         var created2 = await ProcessRuleAsync(
             ruleCode: "UE-001",
@@ -54,9 +62,7 @@ public class SiemCorrelationService : ISiemCorrelationService
             severity: EventSeverity.Critical,
             descriptionFactory: group => $"Пользователь {group.Key} выполнил {group.Count} операций изменения или удаления UserExceptions за последние 30 секунд.",
             eventIdsFactory: group => group.EventIds,
-            groups: await _dbContext.SecurityEvents
-                .Where(x => (x.EventType == SecurityEventType.UserExceptionUpdated || x.EventType == SecurityEventType.UserExceptionDeleted)
-                            && x.OccurredAtUtc >= now.AddSeconds(-30))
+            groups: recentUserExceptionChanges
                 .GroupBy(x => string.IsNullOrWhiteSpace(x.UserName) ? "unknown-user" : x.UserName!)
                 .Select(g => new RuleCandidate
                 {
@@ -65,11 +71,15 @@ public class SiemCorrelationService : ISiemCorrelationService
                     EventIds = g.OrderBy(x => x.Id).Select(x => x.Id).ToList()
                 })
                 .Where(x => x.Count >= 5)
-                .ToListAsync(cancellationToken),
+                .ToList(),
             createIncident: true,
             cancellationToken: cancellationToken);
 
         Merge(result, created2);
+
+        var recentCriticalEvents = await _dbContext.SecurityEvents
+            .Where(x => x.Severity == EventSeverity.Critical && x.OccurredAtUtc >= now.AddMinutes(-5))
+            .ToListAsync(cancellationToken);
 
         var created3 = await ProcessRuleAsync(
             ruleCode: "CR-001",
@@ -77,8 +87,7 @@ public class SiemCorrelationService : ISiemCorrelationService
             severity: EventSeverity.Critical,
             descriptionFactory: group => $"С источника {group.Key} зарегистрировано {group.Count} критических события за последние 5 минут.",
             eventIdsFactory: group => group.EventIds,
-            groups: await _dbContext.SecurityEvents
-                .Where(x => x.Severity == EventSeverity.Critical && x.OccurredAtUtc >= now.AddMinutes(-5))
+            groups: recentCriticalEvents
                 .GroupBy(x => string.IsNullOrWhiteSpace(x.SourceIp) ? "unknown-ip" : x.SourceIp!)
                 .Select(g => new RuleCandidate
                 {
@@ -87,7 +96,7 @@ public class SiemCorrelationService : ISiemCorrelationService
                     EventIds = g.OrderBy(x => x.Id).Select(x => x.Id).ToList()
                 })
                 .Where(x => x.Count >= 2)
-                .ToListAsync(cancellationToken),
+                .ToList(),
             createIncident: true,
             cancellationToken: cancellationToken);
 
