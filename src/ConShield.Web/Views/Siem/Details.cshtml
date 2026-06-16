@@ -1,0 +1,140 @@
+@using ConShield.Contracts.Constants
+@using ConShield.Contracts.Enums
+@using ConShield.Web.Infrastructure
+@model ConShield.Web.ViewModels.SiemAlertDetailsViewModel
+@{
+    ViewData["Title"] = "Карточка SIEM-оповещения";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Карточка SIEM-оповещения</h1>
+    <div class="d-flex gap-2">
+        @if (Model.Incident is not null)
+        {
+            <a asp-controller="Incidents" asp-action="Details" asp-route-id="@Model.Incident.Id" class="btn btn-outline-primary">Открыть инцидент</a>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">Назад</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">ID</dt>
+                    <dd class="col-sm-7">@Model.Alert.Id</dd>
+
+                    <dt class="col-sm-5">Создано</dt>
+                    <dd class="col-sm-7">@Model.Alert.CreatedAtUtc.ToMoscowDisplay()</dd>
+
+                    <dt class="col-sm-5">RuleCode</dt>
+                    <dd class="col-sm-7">@Model.Alert.RuleCode</dd>
+
+                    <dt class="col-sm-5">Правило</dt>
+                    <dd class="col-sm-7">@Model.Alert.RuleName</dd>
+
+                    <dt class="col-sm-5">TriggerKey</dt>
+                    <dd class="col-sm-7">@Model.Alert.TriggerKey</dd>
+
+                    <dt class="col-sm-5">Критичность</dt>
+                    <dd class="col-sm-7">@Model.Alert.Severity</dd>
+
+                    <dt class="col-sm-5">Статус</dt>
+                    <dd class="col-sm-7">@Model.Alert.Status</dd>
+
+                    <dt class="col-sm-5">IncidentId</dt>
+                    <dd class="col-sm-7">@(Model.Alert.IncidentId?.ToString() ?? "—")</dd>
+
+                    <dt class="col-sm-5">Описание</dt>
+                    <dd class="col-sm-7">@Model.Alert.Description</dd>
+                </dl>
+            </div>
+        </div>
+
+        @if (User.IsInRole(AppRoles.AdminIB))
+        {
+            <div class="card mt-3">
+                <div class="card-body">
+                    <div class="fw-semibold mb-2">Изменить статус</div>
+                    <form asp-action="ChangeStatus" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Alert.Id" />
+                        <input type="hidden" name="status" value="@AlertStatuses.Acknowledged" />
+                        <button class="btn btn-outline-primary" type="submit">Подтвердить</button>
+                    </form>
+                    <form asp-action="ChangeStatus" method="post" class="d-inline ms-2">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Alert.Id" />
+                        <input type="hidden" name="status" value="@AlertStatuses.Closed" />
+                        <button class="btn btn-outline-secondary" type="submit">Закрыть</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-header">Связанный инцидент</div>
+            <div class="card-body">
+                @if (Model.Incident is null)
+                {
+                    <div class="text-muted">Инцидент не связан с данным оповещением.</div>
+                }
+                else
+                {
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">ID</dt>
+                        <dd class="col-sm-8">@Model.Incident.Id</dd>
+                        <dt class="col-sm-4">Название</dt>
+                        <dd class="col-sm-8">@Model.Incident.Name</dd>
+                        <dt class="col-sm-4">Статус</dt>
+                        <dd class="col-sm-8">@Model.Incident.Status</dd>
+                        <dt class="col-sm-4">Критичность</dt>
+                        <dd class="col-sm-8">@Model.Incident.Severity</dd>
+                    </dl>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">События-источники (@Model.SourceEventIds.Count)</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Время</th>
+                                <th>Тип</th>
+                                <th>Пользователь</th>
+                                <th>Источник</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in Model.SourceEvents)
+                        {
+                            <tr>
+                                <td>@item.Id</td>
+                                <td>@item.OccurredAtUtc.ToMoscowDisplay()</td>
+                                <td>@item.EventType</td>
+                                <td>@(item.UserName ?? "—")</td>
+                                <td>@(item.SourceIp ?? "—")</td>
+                                <td>@item.Description</td>
+                            </tr>
+                        }
+                        @if (!Model.SourceEvents.Any())
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Связанные события не найдены.</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

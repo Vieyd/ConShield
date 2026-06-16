@@ -1,0 +1,39 @@
+# Build output
+bin/
+obj/
+
+# IDE and local workspace state
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local configuration and secrets
+src/**/appsettings.Development.json
+src/**/appsettings.Local.json
+*.env
+.env
+.env.*
+!.env.example
+
+# Runtime data
+logs/
+*.log
+*.jsonl
+*.db
+*.db-shm
+*.db-wal
+*.mdf
+*.ldf
+*.sqlite
+*.sqlite3
+
+# Generated/cache files
+*.cache
+TestResults/
+coverage/
+*.tmp
+*.bak

@@ -1,0 +1,67 @@
+@using ConShield.Contracts.Constants
+@using ConShield.Web.Infrastructure
+@model ConShield.Data.Entities.IncidentRecord
+@{
+    ViewData["Title"] = "Карточка инцидента";
+    var sourceEvent = ViewBag.SourceEvent as ConShield.Data.Entities.SecurityEventEntry;
+}
+
+<h2>Карточка инцидента</h2>
+
+<dl class="row">
+    <dt class="col-sm-3">Id</dt>
+    <dd class="col-sm-9">@Model.Id</dd>
+
+    <dt class="col-sm-3">Создан</dt>
+    <dd class="col-sm-9">@Model.CreatedAtUtc.ToMoscowDisplay()</dd>
+
+    <dt class="col-sm-3">Название</dt>
+    <dd class="col-sm-9">@Model.Name</dd>
+
+    <dt class="col-sm-3">Критичность</dt>
+    <dd class="col-sm-9">@Model.Severity</dd>
+
+    <dt class="col-sm-3">Статус</dt>
+    <dd class="col-sm-9">@Model.Status</dd>
+
+    <dt class="col-sm-3">SourceEventId</dt>
+    <dd class="col-sm-9">@Model.SourceEventId</dd>
+
+    <dt class="col-sm-3">Примечание</dt>
+    <dd class="col-sm-9">@Model.Notes</dd>
+</dl>
+
+@if (sourceEvent is not null)
+{
+    <div class="card mb-3">
+        <div class="card-header">Связанное событие безопасности</div>
+        <div class="card-body">
+            <div><strong>ID:</strong> @sourceEvent.Id</div>
+            <div><strong>Время:</strong> @sourceEvent.OccurredAtUtc.ToMoscowDisplay()</div>
+            <div><strong>Тип:</strong> @sourceEvent.EventType</div>
+            <div><strong>Критичность:</strong> @sourceEvent.Severity</div>
+            <div><strong>Описание:</strong> @sourceEvent.Description</div>
+        </div>
+    </div>
+}
+
+@if (User.IsInRole(AppRoles.AdminIB))
+{
+    <div class="mb-3 d-flex gap-2 flex-wrap">
+        <form asp-action="ChangeStatus" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" name="status" value="@IncidentStatuses.InProgress" />
+            <button type="submit" class="btn btn-outline-warning">Перевести в работу</button>
+        </form>
+        <form asp-action="ChangeStatus" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" name="status" value="@IncidentStatuses.Closed" />
+            <button type="submit" class="btn btn-outline-success">Закрыть</button>
+        </form>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">Редактировать</a>
+    </div>
+}
+
+<a asp-action="Index" class="btn btn-secondary">Назад</a>

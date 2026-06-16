@@ -1,0 +1,34 @@
+@model UserExceptionDto
+@{
+    ViewData["Title"] = "Карточка записи";
+}
+
+<h2>Карточка записи</h2>
+
+<dl class="row">
+    <dt class="col-sm-3">Id</dt>
+    <dd class="col-sm-9">@Model.Id</dd>
+
+    <dt class="col-sm-3">Логин</dt>
+    <dd class="col-sm-9">@Model.UserLogin</dd>
+
+    <dt class="col-sm-3">Система</dt>
+    <dd class="col-sm-9">@Model.SourceSystem</dd>
+
+    <dt class="col-sm-3">Тип</dt>
+    <dd class="col-sm-9">@Model.ExceptionType</dd>
+
+    <dt class="col-sm-3">Описание</dt>
+    <dd class="col-sm-9">@Model.Description</dd>
+
+    <dt class="col-sm-3">Активно</dt>
+    <dd class="col-sm-9">@(Model.IsActive ? "Да" : "Нет")</dd>
+
+    <dt class="col-sm-3">Создано</dt>
+    <dd class="col-sm-9">@Model.CreatedAtUtc.ToMoscowDisplay()</dd>
+
+    <dt class="col-sm-3">Создал</dt>
+    <dd class="col-sm-9">@Model.CreatedBy</dd>
+</dl>
+
+<a asp-action="Index" class="btn btn-secondary">Назад</a>

@@ -1,0 +1,11 @@
+@model ConShield.Web.ViewModels.IncidentEditViewModel
+@{
+    ViewData["Title"] = "Создание инцидента";
+}
+
+<h2>Создание инцидента</h2>
+<partial name="_Form" model="Model" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

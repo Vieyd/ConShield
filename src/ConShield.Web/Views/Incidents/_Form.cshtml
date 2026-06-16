@@ -1,0 +1,40 @@
+@using ConShield.Contracts.Constants
+@using ConShield.Contracts.Enums
+@model ConShield.Web.ViewModels.IncidentEditViewModel
+
+<form method="post">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Severity" class="form-label"></label>
+        <select asp-for="Severity" class="form-select" asp-items="Html.GetEnumSelectList<EventSeverity>()"></select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Status" class="form-label"></label>
+        <select asp-for="Status" class="form-select">
+            <option value="@IncidentStatuses.New">New</option>
+            <option value="@IncidentStatuses.InProgress">InProgress</option>
+            <option value="@IncidentStatuses.Closed">Closed</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="SourceEventId" class="form-label"></label>
+        <input asp-for="SourceEventId" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Notes" class="form-label"></label>
+        <textarea asp-for="Notes" class="form-control" rows="4"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+    <a asp-action="Index" class="btn btn-secondary">Отмена</a>
+</form>

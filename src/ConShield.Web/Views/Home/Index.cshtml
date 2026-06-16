@@ -1,0 +1,247 @@
+@using ConShield.Contracts.Constants
+@using ConShield.Contracts.Enums
+@using ConShield.Web.Infrastructure
+@model ConShield.Web.ViewModels.HomeDashboardViewModel
+@{
+    ViewData["Title"] = "Главная";
+}
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Всего исключений</div>
+                <div class="display-6">@Model.UserExceptionsCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Активных исключений</div>
+                <div class="display-6">@Model.ActiveExceptionsCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Событий безопасности</div>
+                <div class="display-6">@Model.SecurityEventsCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Критических событий</div>
+                <div class="display-6">@Model.CriticalEventsCount</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Всего инцидентов</div>
+                <div class="display-6">@Model.IncidentsCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Новые</div>
+                <div class="display-6">@Model.NewIncidentsCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">В работе</div>
+                <div class="display-6">@Model.InProgressIncidentsCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Закрытые</div>
+                <div class="display-6">@Model.ClosedIncidentsCount</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">SIEM-оповещений</div>
+                <div class="display-6">@Model.SiemAlertsCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Новых SIEM-оповещений</div>
+                <div class="display-6">@Model.NewSiemAlertsCount</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4 alert alert-info">
+    Панель ConShield показывает сводные показатели по журналу событий безопасности, инцидентам, пользовательским исключениям и SIEM-оповещениям.
+    Ниже выводятся последние записи по основным разделам системы для оперативного контроля состояния.
+</div>
+
+<div class="row g-4 mt-1">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Последние SIEM-оповещения</span>
+                <a asp-controller="Siem" asp-action="Index" class="btn btn-sm btn-outline-light">Открыть все</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Создано</th>
+                                <th>Правило</th>
+                                <th>Критичность</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in Model.RecentAlerts)
+                        {
+                            <tr>
+                                <td>@item.Id</td>
+                                <td>@item.CreatedAtUtc.ToMoscowDisplay()</td>
+                                <td>@item.RuleCode</td>
+                                <td>
+                                    @switch (item.Severity)
+                                    {
+                                        case EventSeverity.Critical:
+                                            <span class="badge text-bg-danger">Critical</span>
+                                            break;
+                                        case EventSeverity.High:
+                                            <span class="badge text-bg-primary">High</span>
+                                            break;
+                                        case EventSeverity.Warning:
+                                            <span class="badge text-bg-warning">Warning</span>
+                                            break;
+                                        default:
+                                            <span class="badge text-bg-info">Info</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>@item.Status</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Последние инциденты</span>
+                <a asp-controller="Incidents" asp-action="Index" class="btn btn-sm btn-outline-light">Открыть все</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Создан</th>
+                                <th>Название</th>
+                                <th>Критичность</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in Model.RecentIncidents)
+                        {
+                            <tr>
+                                <td>@item.Id</td>
+                                <td>@item.CreatedAtUtc.ToMoscowDisplay()</td>
+                                <td>@item.Name</td>
+                                <td>
+                                    @switch (item.Severity)
+                                    {
+                                        case EventSeverity.Critical:
+                                            <span class="badge text-bg-danger">Critical</span>
+                                            break;
+                                        case EventSeverity.High:
+                                            <span class="badge text-bg-primary">High</span>
+                                            break;
+                                        case EventSeverity.Warning:
+                                            <span class="badge text-bg-warning">Warning</span>
+                                            break;
+                                        default:
+                                            <span class="badge text-bg-info">Info</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>@item.Status</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-1">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Последние критические события</span>
+                <a asp-controller="SecurityEvents" asp-action="Index" class="btn btn-sm btn-outline-light">Журнал событий</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Время</th>
+                                <th>Тип</th>
+                                <th>Пользователь</th>
+                                <th>Источник</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in Model.RecentCriticalEvents)
+                        {
+                            <tr>
+                                <td>@item.Id</td>
+                                <td>@item.OccurredAtUtc.ToMoscowDisplay()</td>
+                                <td>@item.EventType</td>
+                                <td>@(item.UserName ?? "—")</td>
+                                <td>@(item.SourceIp ?? "—")</td>
+                                <td>@item.Description</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

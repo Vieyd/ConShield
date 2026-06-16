@@ -1,0 +1,61 @@
+@using ConShield.Application.Models
+@using ConShield.Contracts.Enums
+@model IReadOnlyCollection<SiemRuleDefinition>
+@{
+    ViewData["Title"] = "Правила корреляции";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Правила корреляции</h1>
+    <a asp-action="Index" class="btn btn-outline-light">К оповещениям</a>
+</div>
+
+<div class="alert alert-info">
+    На этой странице приведен каталог встроенных правил корреляции, которые используются прототипом SIEM-подсистемы ConShield.
+</div>
+
+<div class="table-responsive">
+    <table class="table table-dark table-striped align-middle">
+        <thead>
+            <tr>
+                <th>RuleCode</th>
+                <th>Название</th>
+                <th>Критичность</th>
+                <th>Условие</th>
+                <th>Окно наблюдения</th>
+                <th>Объект группировки</th>
+                <th>Описание</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.RuleCode</td>
+                <td>@item.RuleName</td>
+                <td>
+                    @switch (item.Severity)
+                    {
+                        case EventSeverity.Critical:
+                            <span class="badge text-bg-danger">Critical</span>
+                            break;
+                        case EventSeverity.High:
+                            <span class="badge text-bg-primary">High</span>
+                            break;
+                        case EventSeverity.Warning:
+                            <span class="badge text-bg-warning">Warning</span>
+                            break;
+                        default:
+                            <span class="badge text-bg-info">Info</span>
+                            break;
+                    }
+                </td>
+                <td>@item.ConditionText</td>
+                <td>@item.WindowText</td>
+                <td>@item.TriggerEntityText</td>
+                <td>@item.Description</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

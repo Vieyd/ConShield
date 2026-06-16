@@ -1,0 +1,147 @@
+@using ConShield.Contracts.Constants
+@using ConShield.Contracts.Enums
+@using ConShield.Web.Infrastructure
+@model ConShield.Web.ViewModels.SiemAlertIndexViewModel
+@{
+    ViewData["Title"] = "SIEM-оповещения";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">SIEM-оповещения</h1>
+    <div class="d-flex gap-2">
+        <a asp-action="Rules" class="btn btn-outline-light">Правила корреляции</a>
+        @if (User.IsInRole(AppRoles.AdminIB))
+        {
+            <form asp-action="ResetState" method="post" onsubmit="return confirm('Очистить все SIEM-оповещения и автоматически сформированные инциденты?');">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-outline-warning" type="submit">Очистить SIEM</button>
+            </form>
+            <form asp-action="GenerateScenario" method="post">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-outline-info" type="submit">Сгенерировать события</button>
+            </form>
+            <form asp-action="RunCorrelation" method="post">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-primary" type="submit">Запустить корреляцию</button>
+            </form>
+        }
+    </div>
+</div>
+
+@if (TempData["SiemMessage"] is string message)
+{
+    <div class="alert alert-info">@message</div>
+}
+
+<form method="get" class="card card-body mb-3">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">Статус</label>
+            <select name="Status" class="form-select">
+                <option value="">Все</option>
+                @foreach (var status in AlertStatuses.All)
+                {
+                    <option value="@status" selected="@(Model.Filter.Status == status)">@status</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Критичность</label>
+            <select name="Severity" class="form-select">
+                <option value="">Все</option>
+                @foreach (EventSeverity severity in Enum.GetValues(typeof(EventSeverity)))
+                {
+                    <option value="@((int)severity)" selected="@(Model.Filter.Severity == severity)">@severity</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">RuleCode</label>
+            <input name="RuleCode" value="@Model.Filter.RuleCode" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Поиск</label>
+            <input name="SearchText" value="@Model.Filter.SearchText" class="form-control" placeholder="Описание / ключ / правило" />
+        </div>
+    </div>
+    <div class="mt-3">
+        <button type="submit" class="btn btn-outline-light">Применить</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Сбросить</a>
+    </div>
+</form>
+
+<div class="table-responsive">
+    <table class="table table-dark table-striped align-middle">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Создан</th>
+                <th>RuleCode</th>
+                <th>Правило</th>
+                <th>Критичность</th>
+                <th>Статус</th>
+                <th>IncidentId</th>
+                <th>Описание</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td>@item.Id</td>
+                <td>@item.CreatedAtUtc.ToMoscowDisplay()</td>
+                <td>@item.RuleCode</td>
+                <td>@item.RuleName</td>
+                <td>
+                    @switch (item.Severity)
+                    {
+                        case EventSeverity.Critical:
+                            <span class="badge text-bg-danger">Critical</span>
+                            break;
+                        case EventSeverity.High:
+                            <span class="badge text-bg-primary">High</span>
+                            break;
+                        case EventSeverity.Warning:
+                            <span class="badge text-bg-warning">Warning</span>
+                            break;
+                        default:
+                            <span class="badge text-bg-info">Info</span>
+                            break;
+                    }
+                </td>
+                <td>@item.Status</td>
+                <td>
+                    @if (item.IncidentId.HasValue)
+                    {
+                        <a asp-controller="Incidents" asp-action="Details" asp-route-id="@item.IncidentId.Value">@item.IncidentId.Value</a>
+                    }
+                    else
+                    {
+                        <span>—</span>
+                    }
+                </td>
+                <td>@item.Description</td>
+                <td class="text-nowrap">
+                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-light">Открыть</a>
+                    @if (User.IsInRole(AppRoles.AdminIB))
+                    {
+                        <form asp-action="ChangeStatus" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <input type="hidden" name="status" value="@AlertStatuses.Acknowledged" />
+                            <button class="btn btn-sm btn-outline-primary" type="submit">Подтвердить</button>
+                        </form>
+                        <form asp-action="ChangeStatus" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <input type="hidden" name="status" value="@AlertStatuses.Closed" />
+                            <button class="btn btn-sm btn-outline-secondary" type="submit">Закрыть</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
