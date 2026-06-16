@@ -11,6 +11,9 @@ The project is intentionally practical. It demonstrates how a security team can 
 - User exception management with audit events for create, update, and delete operations.
 - Incident registry with severity, status, source event links, and lifecycle actions.
 - SIEM-style correlation rules for repeated login failures, suspicious exception changes, and repeated critical events from one source.
+- Protected external security event ingestion endpoint: `POST /api/v1/security-events`.
+- API-key authentication, request validation, request size limit, rate limiting, and idempotency for external events.
+- `ConShield.Collector`, a small console client for sending generated or JSON-file security events.
 - Demo scenario generation for portfolio walkthroughs.
 - UTC storage with GMT+3 display for the current Russian-language UI.
 
@@ -76,7 +79,8 @@ docker compose -f infra/docker-compose.yml up -d postgres
 4. Replace `CHANGE_ME` in the local development file with the same local password.
 5. Open `ConShield.sln`.
 6. Set `ConShield.Web` as the startup project.
-7. Run the application from Visual Studio or with:
+7. Set a local ingestion API key in `src/ConShield.Web/appsettings.Development.json` under `ExternalEventIngestion:ApiKey`.
+8. Run the application from Visual Studio or with:
 
 ```powershell
 dotnet run --project src/ConShield.Web/ConShield.Web.csproj
@@ -85,6 +89,68 @@ dotnet run --project src/ConShield.Web/ConShield.Web.csproj
 In `Development`, pending EF Core migrations are applied at startup and `DbSeeder` creates reproducible demo data on a clean PostgreSQL database.
 
 The development configuration is intentionally ignored by Git. Keep real local connection strings only in `appsettings.Development.json` or environment variables.
+
+## External Event Ingestion
+
+The current prototype includes a protected HTTP ingestion endpoint:
+
+```http
+POST /api/v1/security-events
+X-ConShield-Api-Key: <local-api-key>
+```
+
+Minimal request shape:
+
+```json
+{
+  "externalEventId": "11111111-1111-1111-1111-111111111111",
+  "occurredAtUtc": "2026-06-16T10:00:00Z",
+  "sourceSystem": "ConShield.Collector",
+  "eventType": "CollectorTestEvent",
+  "severity": "Info",
+  "userName": "collector",
+  "sourceHost": "dev-host",
+  "description": "Test event from Collector.",
+  "additionalData": {
+    "demo": true
+  }
+}
+```
+
+Run the Collector with environment variables:
+
+```powershell
+$env:CONSHIELD_BASE_URL = "http://127.0.0.1:56895"
+$env:CONSHIELD_API_KEY = "your-local-api-key"
+dotnet run --project src/ConShield.Collector -- --generate --external-event-id "11111111-1111-1111-1111-111111111111"
+dotnet run --project src/ConShield.Collector -- --generate --external-event-id "11111111-1111-1111-1111-111111111111"
+```
+
+The second command returns the same saved security event id and does not create a duplicate. Use `--file path-to-event.json` to send an event from a JSON file.
+
+Implemented now:
+
+- protected HTTP ingestion endpoint;
+- local prototype API-key authentication;
+- schema validation;
+- request size limit;
+- rate limiting;
+- idempotency by `sourceSystem + externalEventId`;
+- first `ConShield.Collector`.
+
+Not implemented yet:
+
+- RabbitMQ;
+- MongoDB;
+- long-term key rotation;
+- production machine identity;
+- mTLS;
+- centralized secret manager;
+- image scanning;
+- policy engine;
+- runtime monitoring;
+- Falco;
+- Kubernetes integration.
 
 ## Demo Accounts
 
@@ -145,7 +211,8 @@ docker compose -f infra/docker-compose.yml up -d postgres
 4. Замените `CHANGE_ME` в локальном файле на свой локальный пароль.
 5. Откройте `ConShield.sln`.
 6. Выберите стартовым проектом `ConShield.Web`.
-7. Запустите проект из Visual Studio или командой:
+7. Задайте локальный API key в `src/ConShield.Web/appsettings.Development.json` в секции `ExternalEventIngestion:ApiKey`.
+8. Запустите проект из Visual Studio или командой:
 
 ```powershell
 dotnet run --project src/ConShield.Web/ConShield.Web.csproj

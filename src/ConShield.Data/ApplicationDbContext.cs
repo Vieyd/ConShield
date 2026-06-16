@@ -38,6 +38,12 @@ public class ApplicationDbContext : DbContext
             entity.Property(x => x.Description).HasMaxLength(2000).IsRequired();
             entity.Property(x => x.UserName).HasMaxLength(128);
             entity.Property(x => x.SourceIp).HasMaxLength(64);
+            entity.Property(x => x.SourceSystem).HasMaxLength(128);
+            entity.Property(x => x.ExternalEventType).HasMaxLength(128);
+            entity.Property(x => x.SourceHost).HasMaxLength(256);
+            entity.HasIndex(x => new { x.SourceSystem, x.ExternalEventId })
+                .IsUnique()
+                .HasFilter("\"SourceSystem\" IS NOT NULL AND \"ExternalEventId\" IS NOT NULL");
         });
 
         modelBuilder.Entity<IncidentRecord>(entity =>

@@ -10,5 +10,6 @@ public enum SecurityEventType
     UserExceptionDeleted = 5,
     CorrelationAlert = 6,
     IncidentCreated = 7,
-    IncidentUpdated = 8
+    IncidentUpdated = 8,
+    ExternalEvent = 9
 }

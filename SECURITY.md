@@ -10,6 +10,8 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Audit logging for login attempts and security-relevant operations.
 - SIEM-style correlation for selected suspicious patterns.
 - PostgreSQL schema management through EF Core migrations.
+- External event ingestion protected by a local API key.
+- Validation, request size limit, rate limiting, and idempotency for external events.
 - Local development configuration is excluded from Git.
 
 ## Current Limitations
@@ -18,6 +20,8 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Passwords are compared directly in demo mode and are not hashed.
 - There is no login rate limiting yet.
 - Demo PostgreSQL credentials are local-only and must not be committed.
+- Ingestion API keys are local-only and must not be committed.
+- The ingestion API key is a local prototype mechanism, not production machine identity.
 - Runtime JSONL logs may contain usernames, IP addresses, and event metadata. They must not be committed.
 - The app is designed for local portfolio demonstration, not internet exposure.
 
@@ -27,6 +31,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Use `src/ConShield.Web/appsettings.Development.example.json` as a public template.
 - Do not commit real credentials, tokens, database files, or runtime logs.
 - Keep PostgreSQL passwords in local environment variables, user secrets, or ignored development settings.
+- Keep `ExternalEventIngestion:ApiKey` in local configuration or environment variables only.
 
 ## Recommended Hardening Roadmap
 
@@ -36,3 +41,4 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Add authorization and correlation tests.
 - Add security headers and cookie hardening settings.
 - Add a documented threat model.
+- Add API key rotation, mTLS, centralized secret management, and per-source credentials before production exposure.
