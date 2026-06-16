@@ -28,30 +28,8 @@ public class SiemController : Controller
 
     public async Task<IActionResult> Index([FromQuery] SiemAlertFilterViewModel filter, CancellationToken cancellationToken)
     {
-        var query = _dbContext.SiemAlerts.AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(filter.Status))
-        {
-            var status = filter.Status.Trim();
-            query = query.Where(x => x.Status == status);
-        }
-
-        if (filter.Severity.HasValue)
-        {
-            query = query.Where(x => x.Severity == filter.Severity.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter.RuleCode))
-        {
-            var ruleCode = filter.RuleCode.Trim();
-            query = query.Where(x => x.RuleCode.Contains(ruleCode));
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter.SearchText))
-        {
-            var search = filter.SearchText.Trim();
-            query = query.Where(x => x.Description.Contains(search) || x.RuleName.Contains(search) || x.TriggerKey.Contains(search));
-        }
+        var query = _dbContext.SiemAlerts
+            .ApplySiemAlertFilters(filter.Status, filter.Severity, filter.RuleCode, filter.SearchText);
 
         var items = await query.OrderByDescending(x => x.CreatedAtUtc).ToListAsync(cancellationToken);
 
@@ -147,11 +125,11 @@ public class SiemController : Controller
     {
         var alerts = await _dbContext.SiemAlerts.ToListAsync(cancellationToken);
         var allIncidents = await _dbContext.Incidents.ToListAsync(cancellationToken);
-        var incidents = allIncidents
-            .Where(x => x.Name.StartsWith("[", StringComparison.Ordinal)
-                        || x.Name.Contains("демонстрационный", StringComparison.OrdinalIgnoreCase)
-                        || (x.Notes?.Contains("демонстрац", StringComparison.OrdinalIgnoreCase) ?? false))
-            .ToList();
+        var incidents = await _dbContext.Incidents
+            .Where(x => EF.Functions.ILike(x.Name, "[%")
+                        || EF.Functions.ILike(x.Name, "%демонстрационный%")
+                        || (x.Notes != null && EF.Functions.ILike(x.Notes, "%демонстрац%")))
+            .ToListAsync(cancellationToken);
 
         var removedAlerts = alerts.Count;
         var removedIncidents = incidents.Count;

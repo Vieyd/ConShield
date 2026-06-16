@@ -16,7 +16,7 @@ builder.Services.AddControllersWithViews()
 builder.Services.AddLocalization();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -52,8 +52,11 @@ app.UseRequestLocalization(new RequestLocalizationOptions
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.EnsureCreated();
-    await DbSeeder.SeedAsync(db);
+    if (app.Environment.IsDevelopment())
+    {
+        await db.Database.MigrateAsync();
+        await DbSeeder.SeedAsync(db);
+    }
 }
 
 if (!app.Environment.IsDevelopment())

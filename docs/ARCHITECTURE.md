@@ -21,6 +21,7 @@ src/ConShield.Data
 ```
 
 Entity Framework Core DbContext and persistent entities for user exceptions, security events, incidents, and SIEM alerts.
+PostgreSQL is the current database and Npgsql is the EF Core provider.
 
 ```text
 src/ConShield.Contracts
@@ -39,7 +40,7 @@ Audit event writer that stores security events in the database and appends runti
 1. A user signs in with local demo credentials.
 2. MVC actions enforce role-based access.
 3. Important operations write security events through `ISecurityEventWriter`.
-4. Security events are stored in SQL Server and appended to a local JSONL log.
+4. Security events are stored in PostgreSQL and appended to a local JSONL log.
 5. The SIEM correlation service scans recent events and creates alerts.
 6. Alerts can create linked incidents for investigation.
 
@@ -51,4 +52,4 @@ The intended long-term direction is to split event collection from event analysi
 Web app -> Security event writer -> Queue -> Worker -> Event store -> Correlation engine -> Alerts -> Incidents
 ```
 
-The existing `infra/docker-compose.yml` already reserves RabbitMQ and MongoDB as possible infrastructure for this pipeline.
+The existing `infra/docker-compose.yml` runs PostgreSQL for the current application database. RabbitMQ and MongoDB are kept behind the `future-infra` profile and are not connected to the application flow yet.

@@ -1,9 +1,25 @@
-version: "3.9"
-
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: conshield-postgres
+    environment:
+      POSTGRES_DB: ${CONSHIELD_POSTGRES_DB:-conshield}
+      POSTGRES_USER: ${CONSHIELD_POSTGRES_USER:-conshield}
+      POSTGRES_PASSWORD: ${CONSHIELD_POSTGRES_PASSWORD:?Set CONSHIELD_POSTGRES_PASSWORD before starting PostgreSQL}
+    ports:
+      - "${CONSHIELD_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: conshield-rabbitmq
+    profiles: ["future-infra"]
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -11,10 +27,12 @@ services:
   mongo:
     image: mongo:7
     container_name: conshield-mongo
+    profiles: ["future-infra"]
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
 
 volumes:
+  postgres_data:
   mongo_data:

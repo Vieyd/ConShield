@@ -27,11 +27,14 @@ public class ApplicationDbContext : DbContext
             entity.Property(x => x.ExceptionType).HasMaxLength(128).IsRequired();
             entity.Property(x => x.Description).HasMaxLength(1000).IsRequired();
             entity.Property(x => x.CreatedBy).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.CreatedAtUtc).HasColumnType("timestamp with time zone").IsRequired();
+            entity.Property(x => x.ExpiresAtUtc).HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<SecurityEventEntry>(entity =>
         {
             entity.ToTable("SecurityEvents");
+            entity.Property(x => x.OccurredAtUtc).HasColumnType("timestamp with time zone").IsRequired();
             entity.Property(x => x.Description).HasMaxLength(2000).IsRequired();
             entity.Property(x => x.UserName).HasMaxLength(128);
             entity.Property(x => x.SourceIp).HasMaxLength(64);
@@ -40,6 +43,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<IncidentRecord>(entity =>
         {
             entity.ToTable("Incidents");
+            entity.Property(x => x.CreatedAtUtc).HasColumnType("timestamp with time zone").IsRequired();
             entity.Property(x => x.Name).HasMaxLength(256).IsRequired();
             entity.Property(x => x.Status).HasMaxLength(64).IsRequired();
             entity.Property(x => x.Notes).HasMaxLength(2000);
@@ -48,6 +52,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<SiemAlertRecord>(entity =>
         {
             entity.ToTable("SiemAlerts");
+            entity.Property(x => x.CreatedAtUtc).HasColumnType("timestamp with time zone").IsRequired();
             entity.Property(x => x.RuleCode).HasMaxLength(128).IsRequired();
             entity.Property(x => x.RuleName).HasMaxLength(256).IsRequired();
             entity.Property(x => x.TriggerKey).HasMaxLength(256).IsRequired();

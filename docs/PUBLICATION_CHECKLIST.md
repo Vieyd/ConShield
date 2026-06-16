@@ -36,7 +36,7 @@ Use this checklist before creating a public GitHub repository.
 3. Search for secrets:
 
 ```powershell
-rg -n --hidden -g '!**/bin/**' -g '!**/obj/**' -g '!**/.vs/**' "password|secret|token|api_key|ConnectionStrings|AdminIB123|Operator123"
+rg -n --hidden -g '!**/bin/**' -g '!**/obj/**' -g '!**/.vs/**' "password|secret|token|api_key|ConnectionStrings|AdminIB123|Operator123|LocalDB|UseSqlServer"
 ```
 
 4. Confirm that only example/demo placeholders are visible in public files.

@@ -10,7 +10,6 @@
 
 ## v0.2 Security Foundation
 
-- Replace `EnsureCreated` with Entity Framework migrations.
 - Add automated tests for SIEM correlation rules.
 - Add authorization boundary tests for `AdminIB` and `Operator`.
 - Document audit event taxonomy.
