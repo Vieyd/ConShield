@@ -89,15 +89,18 @@ internal sealed class CollectorOptions
         if (string.IsNullOrWhiteSpace(baseUrl))
             return Invalid("CONSHIELD_BASE_URL or --base-url is required.");
 
-        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out _))
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
             return Invalid("Base URL must be an absolute URL.");
+
+        if (baseUri.Scheme is not ("http" or "https"))
+            return Invalid("Base URL must use http or https.");
 
         if (string.IsNullOrWhiteSpace(apiKey))
             return Invalid("CONSHIELD_API_KEY or --api-key is required.");
 
-        var payload = CreatePayload(values);
+        var payload = CreatePayload(values, out var payloadError);
         if (payload is null)
-            return Invalid("Use --generate or --file <path>.");
+            return Invalid(payloadError ?? "Use --generate or --file <path>.");
 
         return new CollectorOptions
         {
@@ -108,14 +111,22 @@ internal sealed class CollectorOptions
         };
     }
 
-    private static object? CreatePayload(Dictionary<string, string?> values)
+    private static object? CreatePayload(Dictionary<string, string?> values, out string? error)
     {
+        error = null;
+
         if (values.ContainsKey("generate"))
         {
             var id = GetValue(values, "external-event-id");
+            if (id is not null && !Guid.TryParse(id, out _))
+            {
+                error = "--external-event-id must be a valid UUID.";
+                return null;
+            }
+
             return new
             {
-                externalEventId = Guid.TryParse(id, out var parsedId) ? parsedId : Guid.NewGuid(),
+                externalEventId = id is null ? Guid.NewGuid() : Guid.Parse(id),
                 occurredAtUtc = DateTime.UtcNow,
                 sourceSystem = "ConShield.Collector",
                 eventType = "CollectorTestEvent",

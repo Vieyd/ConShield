@@ -35,6 +35,8 @@ ConShield demonstrates a small security monitoring workflow:
 | `UE-001` | Suspicious user exception activity | 5 or more user exception update/delete events by one user in 30 seconds |
 | `CR-001` | Repeated critical events from one source | 2 or more critical events from one source IP in 5 minutes |
 
+External events ingested through `POST /api/v1/security-events` are stored as `SecurityEventType.ExternalEvent` with the source-specific type preserved separately as `ExternalEventType`. `CR-001` can trigger for an external critical event when another critical event shares the same `SourceIp`; `BF-001` and `UE-001` do not yet map arbitrary external event types into their built-in rule semantics.
+
 ## Portfolio Strengths
 
 - The project is domain-specific to information security.

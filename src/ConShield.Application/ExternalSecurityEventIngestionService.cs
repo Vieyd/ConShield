@@ -46,7 +46,7 @@ public sealed class ExternalSecurityEventIngestionService : IExternalSecurityEve
         ValidateOptionalString(result, nameof(request.UserName), request.UserName, UserNameMaxLength);
         ValidateOptionalString(result, nameof(request.SourceHost), request.SourceHost, SourceHostMaxLength);
 
-        if (!Enum.TryParse<EventSeverity>(request.Severity, ignoreCase: true, out _))
+        if (!TryParsePublishedSeverity(request.Severity, out _))
             result.Add(nameof(request.Severity), "severity is not supported.");
 
         if (request.AdditionalData.HasValue && request.AdditionalData.Value.ValueKind != JsonValueKind.Object)
@@ -65,7 +65,8 @@ public sealed class ExternalSecurityEventIngestionService : IExternalSecurityEve
         if (existing is not null)
             return ExternalSecurityEventIngestResult.Existing(existing.Id);
 
-        var severity = Enum.Parse<EventSeverity>(request.Severity, ignoreCase: true);
+        if (!TryParsePublishedSeverity(request.Severity, out var severity))
+            throw new InvalidOperationException("External event severity was not validated before ingest.");
 
         try
         {
@@ -141,5 +142,17 @@ public sealed class ExternalSecurityEventIngestionService : IExternalSecurityEve
     private static string? NormalizeOptional(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static bool TryParsePublishedSeverity(string? value, out EventSeverity severity)
+    {
+        severity = default;
+
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        return Enum.TryParse(value.Trim(), ignoreCase: true, out severity)
+            && Enum.IsDefined(severity)
+            && !int.TryParse(value.Trim(), out _);
     }
 }

@@ -65,3 +65,13 @@ Reason: Collector retries should be safe, and the PostgreSQL unique index remain
 The external ingestion endpoint has its own ASP.NET Core rate limiting policy.
 
 Reason: Collector abuse controls should not change MVC dashboard behavior or operator workflows.
+
+The current partition key is only the transport `RemoteIpAddress`. It does not include the submitted API key and does not trust `X-Forwarded-For`.
+
+Reason: unauthenticated callers can change invalid API-key values on every request, so using the header value would allow limiter bypass and unbounded partition growth. Reverse-proxy headers should only be trusted after explicit trusted proxy configuration.
+
+## 011. Keep External Event Type Mapping as Future Work
+
+External ingestion saves events as `SecurityEventType.ExternalEvent` and stores the source-specific type in `ExternalEventType`.
+
+Reason: the first ingestion stage should preserve external context without changing the semantics of existing SIEM rules. `CR-001` can still match external critical events by source IP, while `BF-001` and `UE-001` remain tied to built-in ConShield event types until an explicit mapping layer is designed.

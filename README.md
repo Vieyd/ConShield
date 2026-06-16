@@ -128,13 +128,17 @@ dotnet run --project src/ConShield.Collector -- --generate --external-event-id "
 
 The second command returns the same saved security event id and does not create a duplicate. Use `--file path-to-event.json` to send an event from a JSON file.
 
+Prefer `CONSHIELD_API_KEY` over `--api-key` so the key is not left in shell history or process listings. The Collector accepts only `http` and `https` base URLs.
+
+Ingested external events are saved as `SecurityEventType.ExternalEvent`. The current SIEM rules do not interpret arbitrary `externalEventType` values: `BF-001` and `UE-001` are still based on built-in ConShield event types. `CR-001` can match an external critical event when the normal source-IP conditions are met. Full mapping from external event types to SIEM rules is planned as a separate future stage.
+
 Implemented now:
 
 - protected HTTP ingestion endpoint;
 - local prototype API-key authentication;
 - schema validation;
 - request size limit;
-- rate limiting;
+- rate limiting for this endpoint only;
 - idempotency by `sourceSystem + externalEventId`;
 - first `ConShield.Collector`.
 
