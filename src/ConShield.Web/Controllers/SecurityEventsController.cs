@@ -1,3 +1,4 @@
+using ConShield.Application;
 using ConShield.Data;
 using ConShield.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -18,32 +19,8 @@ public class SecurityEventsController : Controller
 
     public async Task<IActionResult> Index([FromQuery] SecurityEventFilterViewModel filter, CancellationToken cancellationToken)
     {
-        var query = _dbContext.SecurityEvents.AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(filter.UserName))
-        {
-            var userName = filter.UserName.Trim();
-            query = query.Where(x => x.UserName != null && x.UserName.Contains(userName));
-        }
-
-        if (filter.Severity.HasValue)
-        {
-            query = query.Where(x => x.Severity == filter.Severity.Value);
-        }
-
-        if (filter.EventType.HasValue)
-        {
-            query = query.Where(x => x.EventType == filter.EventType.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter.SearchText))
-        {
-            var searchText = filter.SearchText.Trim();
-            query = query.Where(x =>
-                x.Description.Contains(searchText) ||
-                (x.AdditionalDataJson != null && x.AdditionalDataJson.Contains(searchText)) ||
-                (x.SourceIp != null && x.SourceIp.Contains(searchText)));
-        }
+        var query = _dbContext.SecurityEvents
+            .ApplySecurityEventFilters(filter.UserName, filter.Severity, filter.EventType, filter.SearchText);
 
         var events = await query
             .OrderByDescending(x => x.OccurredAtUtc)

@@ -22,6 +22,7 @@ ConShield demonstrates a small security monitoring workflow:
 | Event storage | Security events are persisted through EF Core | `ApplicationDbContext.SecurityEvents` |
 | User exception governance | Create, edit, delete, list, and details flows | `UserExceptionsController`, `UserExceptionService` |
 | Incident handling | Incidents have severity, status, source event, and notes | `IncidentRecord`, `IncidentsController` |
+| Database provider | PostgreSQL through Npgsql | `ConShield.Data`, `Program.cs`, EF Core migrations |
 | SIEM correlation | Rules generate alerts and incidents from event windows | `SiemCorrelationService` |
 | Detection catalog | Human-readable rule definitions | `SiemRuleCatalog` |
 | Local demo | Scenario generation for repeatable walkthroughs | `SiemController.GenerateScenario` |
@@ -48,4 +49,4 @@ ConShield demonstrates a small security monitoring workflow:
 - Incident lifecycle.
 - Audit event taxonomy.
 - Role model and access boundaries.
-- Planned RabbitMQ/MongoDB event pipeline.
+- Planned RabbitMQ/MongoDB event pipeline. These components are not active in the current runtime flow.

@@ -1,3 +1,4 @@
+using ConShield.Application;
 using ConShield.Contracts.Constants;
 using ConShield.Contracts.Enums;
 using ConShield.Data;
@@ -25,27 +26,8 @@ public class IncidentsController : Controller
 
     public async Task<IActionResult> Index([FromQuery] IncidentFilterViewModel filter, CancellationToken cancellationToken)
     {
-        var query = _dbContext.Incidents.AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(filter.Status))
-        {
-            var status = filter.Status.Trim();
-            query = query.Where(x => x.Status == status);
-        }
-
-        if (filter.Severity.HasValue)
-        {
-            query = query.Where(x => x.Severity == filter.Severity.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter.SearchText))
-        {
-            var searchText = filter.SearchText.Trim();
-            query = query.Where(x =>
-                x.Name.Contains(searchText) ||
-                (x.Notes != null && x.Notes.Contains(searchText)) ||
-                (x.SourceEventId.HasValue && x.SourceEventId.Value.ToString().Contains(searchText)));
-        }
+        var query = _dbContext.Incidents
+            .ApplyIncidentFilters(filter.Status, filter.Severity, filter.SearchText);
 
         var items = await query
             .OrderByDescending(x => x.CreatedAtUtc)

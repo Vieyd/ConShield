@@ -26,13 +26,21 @@ Database timestamps should be stored in UTC. The current UI displays GMT+3.
 
 Reason: UTC storage avoids ambiguous timestamps and keeps future integrations predictable.
 
-## 005. Treat RabbitMQ and MongoDB as Planned Infrastructure
+## 005. Use PostgreSQL as the Prototype Database
+
+PostgreSQL is the current supported relational database. Entity Framework Core uses `Npgsql.EntityFrameworkCore.PostgreSQL`.
+
+Reason: PostgreSQL is cross-platform, easy to run in containers, and aligns better with a public portfolio prototype than a Windows-only local database.
+
+For deployment in a regulated Russian organization, a compatible domestic PostgreSQL edition may be considered. Do not claim certification for a specific product without current source verification.
+
+## 006. Treat RabbitMQ and MongoDB as Planned Infrastructure
 
 `infra/docker-compose.yml` currently describes future infrastructure. RabbitMQ and MongoDB are not part of the running application flow yet.
 
 Reason: public documentation must not overstate implemented capabilities.
 
-## 006. Keep Demo Authentication Until Replaced Deliberately
+## 007. Keep Demo Authentication Until Replaced Deliberately
 
 The current authentication mechanism remains unchanged for now. Hardening should happen as a separate task.
 
