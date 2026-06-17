@@ -27,6 +27,46 @@ public class PolicyGateTests
     }
 
     [Fact]
+    public async Task Gate_SourceSystemOption_ReturnsInvalidArgumentsBeforeScan()
+    {
+        var trivy = new FakeTrivyRunner();
+        var result = await RunAsync(["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--source-system", "conshield.container-guard", "--no-submit"], trivy);
+
+        Assert.Equal(ExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Equal(0, trivy.Calls);
+    }
+
+    [Fact]
+    public async Task Gate_MissingPolicyValue_ReturnsInvalidArgumentsBeforeScan()
+    {
+        var trivy = new FakeTrivyRunner();
+        var result = await RunAsync(["gate", "--image", "repo/app:1", "--policy", "--no-submit"], trivy);
+
+        Assert.Equal(ExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Equal(0, trivy.Calls);
+    }
+
+    [Fact]
+    public async Task Gate_AcceptWarningWithoutExecute_ReturnsInvalidArgumentsBeforeScan()
+    {
+        var trivy = new FakeTrivyRunner();
+        var result = await RunAsync(["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--no-submit", "--accept-warning"], trivy);
+
+        Assert.Equal(ExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Equal(0, trivy.Calls);
+    }
+
+    [Fact]
+    public async Task Gate_ValidWithoutCustomSourceSystem_ParsesAndRuns()
+    {
+        var result = await RunAsync(
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--no-submit"],
+            trivy: new FakeTrivyRunner(low: 1, total: 1));
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+    }
+
+    [Fact]
     public async Task Gate_BlockDryRun_DoesNotLaunch()
     {
         var runtime = new FakeContainerRuntime();
@@ -101,7 +141,7 @@ public class PolicyGateTests
     {
         var runtime = new FakeContainerRuntime();
         var result = await RunAsync(
-            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "secret"],
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key"],
             trivy: new FakeTrivyRunner(low: 1, total: 1),
             ingestion: new FakeIngestionClient(success: false),
             runtime: runtime);
@@ -116,7 +156,7 @@ public class PolicyGateTests
         var ingestion = new FakeIngestionClient();
         var eventId = Guid.NewGuid().ToString();
         var result = await RunAsync(
-            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "secret", "--external-event-id", eventId],
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--external-event-id", eventId],
             trivy: new FakeTrivyRunner(low: 1, total: 1),
             ingestion: ingestion);
 
@@ -125,6 +165,24 @@ public class PolicyGateTests
         Assert.All(ingestion.Requests, x => Assert.Equal(Guid.Parse(eventId), x.ExternalEventId));
         Assert.Contains(ingestion.Requests, x => x.SourceSystem == ScannerConstants.SourceSystem);
         Assert.Contains(ingestion.Requests, x => x.SourceSystem == ScannerConstants.PolicySourceSystem);
+        Assert.NotEqual(ingestion.Requests[0].SourceSystem, ingestion.Requests[1].SourceSystem);
+    }
+
+    [Fact]
+    public async Task Gate_AuditInvariantViolation_DoesNotSubmitOrLaunch()
+    {
+        var ingestion = new FakeIngestionClient();
+        var runtime = new FakeContainerRuntime();
+        var result = await RunAsync(
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--execute"],
+            trivy: new FakeTrivyRunner(low: 1, total: 1),
+            ingestion: ingestion,
+            runtime: runtime,
+            gateAuditEventFactory: new CollidingGateAuditEventFactory());
+
+        Assert.Equal(ExitCodes.PolicyEvaluationFailed, result.ExitCode);
+        Assert.Empty(ingestion.Requests);
+        Assert.Equal(0, runtime.Calls);
     }
 
     [Fact]
@@ -155,7 +213,8 @@ public class PolicyGateTests
         string[] args,
         FakeTrivyRunner? trivy = null,
         FakeIngestionClient? ingestion = null,
-        FakeContainerRuntime? runtime = null)
+        FakeContainerRuntime? runtime = null,
+        IGateAuditEventFactory? gateAuditEventFactory = null)
     {
         using var output = new StringWriter();
         using var error = new StringWriter();
@@ -165,6 +224,7 @@ public class PolicyGateTests
             runtime ?? new FakeContainerRuntime(),
             new ContainerPolicyLoader(),
             new ContainerPolicyEvaluator(),
+            gateAuditEventFactory ?? new GateAuditEventFactory(),
             output,
             error);
 
@@ -274,6 +334,23 @@ public class PolicyGateTests
         {
             Calls++;
             return Task.FromResult(ContainerRuntimeResult.Started());
+        }
+    }
+
+    private sealed class CollidingGateAuditEventFactory : IGateAuditEventFactory
+    {
+        public GateAuditEventPair Build(
+            ScannerOptions options,
+            ImageScanSummary summary,
+            long scanDurationMs,
+            ContainerPolicyDocument policy,
+            ContainerPolicyEvaluation evaluation)
+        {
+            var scanEvent = ImageScanEventBuilder.BuildPolicyEvaluation(options, summary, policy, evaluation);
+            scanEvent.EventType = ScannerConstants.ExternalEventType;
+            return new GateAuditEventPair(
+                scanEvent,
+                ImageScanEventBuilder.BuildPolicyEvaluation(options, summary, policy, evaluation));
         }
     }
 

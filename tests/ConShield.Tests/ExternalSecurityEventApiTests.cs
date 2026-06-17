@@ -368,6 +368,24 @@ public class ExternalSecurityEventApiTests
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         Assert.Equal(2, await db.SecurityEvents.CountAsync(x => x.ExternalEventId == externalEventId));
+        Assert.Equal(1, await db.SecurityEvents.CountAsync(x =>
+            x.ExternalEventId == externalEventId
+            && x.SourceSystem == "conshield.image-scanner"
+            && x.ExternalEventType == "container.image.scan.completed"));
+        Assert.Equal(1, await db.SecurityEvents.CountAsync(x =>
+            x.ExternalEventId == externalEventId
+            && x.SourceSystem == "conshield.container-guard"
+            && x.ExternalEventType == "container.image.policy.evaluated"));
+        Assert.Equal(2, await db.SecurityEvents
+            .Where(x => x.ExternalEventId == externalEventId)
+            .Select(x => x.SourceSystem)
+            .Distinct()
+            .CountAsync());
+        Assert.Equal(2, await db.SecurityEvents
+            .Where(x => x.ExternalEventId == externalEventId)
+            .Select(x => x.ExternalEventType)
+            .Distinct()
+            .CountAsync());
 
         var correlation = scope.ServiceProvider.GetRequiredService<ISiemCorrelationService>();
         var firstRun = await correlation.RunAsync();

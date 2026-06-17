@@ -90,6 +90,49 @@ public class ImageScannerAppTests
         Assert.Contains("***:***@registry.example.com/app:1", result.Output);
     }
 
+    [Fact]
+    public async Task UnknownOption_ReturnsInvalidArgumentsBeforeScan()
+    {
+        var trivy = new FakeTrivyRunner();
+        var result = await RunAsync(["scan", "--image", "repo/app:1", "--no-submit", "--typo"], trivy);
+
+        Assert.Equal(ExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Equal(0, trivy.Calls);
+    }
+
+    [Fact]
+    public async Task DuplicateImage_ReturnsInvalidArgumentsBeforeScan()
+    {
+        var trivy = new FakeTrivyRunner();
+        var result = await RunAsync(["scan", "--image", "repo/app:1", "--image", "repo/app:2", "--no-submit"], trivy);
+
+        Assert.Equal(ExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Equal(0, trivy.Calls);
+    }
+
+    [Fact]
+    public async Task PositionalGarbage_ReturnsInvalidArgumentsBeforeScan()
+    {
+        var trivy = new FakeTrivyRunner();
+        var result = await RunAsync(["scan", "--image", "repo/app:1", "garbage", "--no-submit"], trivy);
+
+        Assert.Equal(ExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Equal(0, trivy.Calls);
+    }
+
+    [Fact]
+    public async Task ValidScan_WithCustomSourceSystem_StillWorks()
+    {
+        var ingestion = new FakeIngestionClient();
+        var result = await RunAsync([
+            "scan", "--image", "repo/app:1", "--base-url", "http://127.0.0.1:5000", "--api-key", "local-key", "--source-system", "custom-source"
+        ], ingestion: ingestion);
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.Equal(1, ingestion.Calls);
+        Assert.Equal("custom-source", ingestion.Requests.Single().SourceSystem);
+    }
+
     private static async Task<AppRunResult> RunAsync(
         string[] args,
         FakeTrivyRunner? trivy = null,
@@ -103,6 +146,7 @@ public class ImageScannerAppTests
             new FakeContainerRuntime(),
             new ContainerPolicyLoader(),
             new ContainerPolicyEvaluator(),
+            new GateAuditEventFactory(),
             output,
             error);
 
@@ -145,10 +189,12 @@ public class ImageScannerAppTests
         }
 
         public int Calls { get; private set; }
+        public List<ImageScanIngestRequest> Requests { get; } = new();
 
         public Task<IngestionSubmitResult> SubmitAsync(ScannerOptions options, ImageScanIngestRequest request, CancellationToken cancellationToken)
         {
             Calls++;
+            Requests.Add(request);
             return Task.FromResult(_success
                 ? IngestionSubmitResult.Accepted(201, "1", true)
                 : IngestionSubmitResult.Rejected(400, "validation_failed"));

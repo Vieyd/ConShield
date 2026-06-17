@@ -142,12 +142,16 @@ Supported options:
 --accept-warning
 ```
 
+`--source-system` is intentionally not supported by `gate`. It remains available only for the `scan` command. Gate audit records use reserved source systems so a single operation cannot collapse into one idempotent ingestion record.
+
 ## Audit Events
 
 The gate uses one `externalEventId` for two source systems:
 
 - `conshield.image-scanner` / `container.image.scan.completed`;
 - `conshield.container-guard` / `container.image.policy.evaluated`.
+
+These source systems are reserved and immutable for `gate`. Idempotency is safe because ingestion keys are `sourceSystem + externalEventId`: retries keep exactly two records, one scan event and one policy event.
 
 Policy event `additionalData` contains only summary data:
 
@@ -203,6 +207,8 @@ docker run --rm --pull=never --network=none --read-only --cap-drop=ALL --securit
 No arbitrary Docker arguments, host networking, host volumes, privileged mode, Docker socket mount, device mounts, or environment secret injection are supported.
 
 When Trivy provides a valid sha256 digest reference, Docker launch uses that immutable digest reference. If no digest is available, launch uses the scanned image reference and the remaining tag TOCTOU limitation is documented rather than hidden.
+
+The policy event records `executionRequested` and `warningAccepted`. It is not proof that Docker launch succeeded; a separate launch-result audit event is a known future hardening step.
 
 ## Exit Codes
 

@@ -2,6 +2,42 @@ namespace ConShield.ImageScanner;
 
 public static class CommandLineParser
 {
+    private static readonly HashSet<string> ScanValueOptions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image",
+        "base-url",
+        "api-key",
+        "trivy-path",
+        "external-event-id",
+        "timeout-seconds",
+        "source-system"
+    };
+
+    private static readonly HashSet<string> ScanFlagOptions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "no-submit"
+    };
+
+    private static readonly HashSet<string> GateValueOptions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image",
+        "policy",
+        "base-url",
+        "api-key",
+        "trivy-path",
+        "docker-path",
+        "external-event-id",
+        "timeout-seconds",
+        "run-timeout-seconds"
+    };
+
+    private static readonly HashSet<string> GateFlagOptions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "no-submit",
+        "execute",
+        "accept-warning"
+    };
+
     public static ParseResult Parse(string[] args)
     {
         if (args.Length == 0)
@@ -11,7 +47,14 @@ public static class CommandLineParser
         if (command is not ("scan" or "gate"))
             return ParseResult.Invalid("Usage: ConShield.ImageScanner scan|gate --image <image-reference> [options]");
 
-        var values = ReadArgs(args.Skip(1).ToArray());
+        var read = ReadArgs(
+            args.Skip(1).ToArray(),
+            command == "scan" ? ScanValueOptions : GateValueOptions,
+            command == "scan" ? ScanFlagOptions : GateFlagOptions);
+        if (!read.IsValid)
+            return ParseResult.Invalid(read.Error!);
+
+        var values = read.Values!;
         var image = GetValue(values, "image");
         if (!IsValidImageReference(image, out var imageError))
             return ParseResult.Invalid(imageError);
@@ -23,8 +66,8 @@ public static class CommandLineParser
         if (command == "gate" && string.IsNullOrWhiteSpace(policyPath))
             return ParseResult.Invalid("--policy is required for gate.");
 
-        if (command == "scan" && (execute || acceptWarning || policyPath is not null || values.ContainsKey("docker-path") || values.ContainsKey("run-timeout-seconds")))
-            return ParseResult.Invalid("Gate options are only supported by the gate command.");
+        if (command == "gate" && acceptWarning && !execute)
+            return ParseResult.Invalid("--accept-warning requires --execute.");
 
         var baseUrl = GetValue(values, "base-url") ?? Environment.GetEnvironmentVariable("CONSHIELD_BASE_URL");
         if (!noSubmit)
@@ -71,7 +114,9 @@ public static class CommandLineParser
             }
         }
 
-        var sourceSystem = GetValue(values, "source-system") ?? ScannerConstants.SourceSystem;
+        var sourceSystem = command == "gate"
+            ? ScannerConstants.SourceSystem
+            : GetValue(values, "source-system") ?? ScannerConstants.SourceSystem;
         if (string.IsNullOrWhiteSpace(sourceSystem) || sourceSystem.Trim().Length > 128)
             return ParseResult.Invalid("--source-system must be between 1 and 128 characters.");
 
@@ -119,34 +164,73 @@ public static class CommandLineParser
         return true;
     }
 
-    private static Dictionary<string, string?> ReadArgs(string[] args)
+    private static ArgReadResult ReadArgs(
+        string[] args,
+        HashSet<string> valueOptions,
+        HashSet<string> flagOptions)
     {
         var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < args.Length; i++)
         {
             if (!args[i].StartsWith("--", StringComparison.Ordinal))
-                continue;
+                return ArgReadResult.Invalid($"Unexpected positional argument '{SafeArg(args[i])}'.");
 
             var key = args[i][2..];
-            var next = i + 1 < args.Length ? args[i + 1] : null;
-            if (next is not null && !next.StartsWith("--", StringComparison.Ordinal))
-            {
-                values[key] = next;
-                i++;
-            }
-            else
+            if (string.IsNullOrWhiteSpace(key))
+                return ArgReadResult.Invalid("Empty option name is not allowed.");
+
+            if (key.Contains('=', StringComparison.Ordinal))
+                return ArgReadResult.Invalid($"Option '--{SafeArg(key.Split('=')[0])}' must not use '=' syntax.");
+
+            if (!valueOptions.Contains(key) && !flagOptions.Contains(key))
+                return ArgReadResult.Invalid($"Unknown option '--{SafeArg(key)}'.");
+
+            if (values.ContainsKey(key))
+                return ArgReadResult.Invalid($"Duplicate option '--{SafeArg(key)}'.");
+
+            if (flagOptions.Contains(key))
             {
                 values[key] = null;
+                continue;
             }
+
+            var next = i + 1 < args.Length ? args[i + 1] : null;
+            if (next is null || next.StartsWith("--", StringComparison.Ordinal))
+                return ArgReadResult.Invalid($"Option '--{SafeArg(key)}' requires a value.");
+
+            values[key] = next;
+            i++;
         }
 
-        return values;
+        return ArgReadResult.Valid(values);
     }
 
     private static string? GetValue(Dictionary<string, string?> values, string key)
     {
         return values.TryGetValue(key, out var value) ? value : null;
     }
+
+    private static string SafeArg(string value)
+    {
+        var safe = new string(value.Where(x => !char.IsControl(x)).ToArray()).Trim();
+        return safe.Length <= 64 ? safe : safe[..64];
+    }
+}
+
+internal sealed class ArgReadResult
+{
+    private ArgReadResult(Dictionary<string, string?>? values, string? error)
+    {
+        Values = values;
+        Error = error;
+    }
+
+    public bool IsValid => Values is not null;
+    public Dictionary<string, string?>? Values { get; }
+    public string? Error { get; }
+
+    public static ArgReadResult Valid(Dictionary<string, string?> values) => new(values, null);
+    public static ArgReadResult Invalid(string error) => new(null, error);
 }
 
 public sealed class ParseResult
