@@ -36,6 +36,16 @@ public static class SiemRuleCatalog
             ConditionText = "2 и более критических события",
             WindowText = "5 минут",
             TriggerEntityText = "IP-источник события"
+        },
+        new SiemRuleDefinition
+        {
+            RuleCode = "IMG-001",
+            RuleName = "Критические уязвимости в контейнерном образе",
+            Severity = EventSeverity.Critical,
+            Description = "Правило выявляет результаты Trivy-сканирования контейнерного образа с критическими уязвимостями.",
+            ConditionText = "criticalCount >= 1",
+            WindowText = "24 часа",
+            TriggerEntityText = "Digest или reference контейнерного образа"
         }
     ];
 }

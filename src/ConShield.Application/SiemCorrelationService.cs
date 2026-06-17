@@ -78,7 +78,13 @@ public class SiemCorrelationService : ISiemCorrelationService
         Merge(result, created2);
 
         var recentCriticalEvents = await _dbContext.SecurityEvents
-            .Where(x => x.Severity == EventSeverity.Critical && x.OccurredAtUtc >= now.AddMinutes(-5))
+            .Where(x => x.Severity == EventSeverity.Critical
+                        && x.OccurredAtUtc >= now.AddMinutes(-5)
+                        && x.SourceIp != null
+                        && x.SourceIp.Trim() != string.Empty
+                        && x.EventType != SecurityEventType.CorrelationAlert
+                        && x.EventType != SecurityEventType.IncidentCreated
+                        && x.EventType != SecurityEventType.IncidentUpdated)
             .ToListAsync(cancellationToken);
 
         var created3 = await ProcessRuleAsync(
@@ -88,7 +94,7 @@ public class SiemCorrelationService : ISiemCorrelationService
             descriptionFactory: group => $"С источника {group.Key} зарегистрировано {group.Count} критических события за последние 5 минут.",
             eventIdsFactory: group => group.EventIds,
             groups: recentCriticalEvents
-                .GroupBy(x => string.IsNullOrWhiteSpace(x.SourceIp) ? "unknown-ip" : x.SourceIp!)
+                .GroupBy(x => x.SourceIp!.Trim())
                 .Select(g => new RuleCandidate
                 {
                     Key = g.Key,
@@ -101,6 +107,29 @@ public class SiemCorrelationService : ISiemCorrelationService
             cancellationToken: cancellationToken);
 
         Merge(result, created3);
+
+        var recentImageScanEvents = await _dbContext.SecurityEvents
+            .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                        && x.ExternalEventType == "container.image.scan.completed"
+                        && x.Severity == EventSeverity.Critical
+                        && x.OccurredAtUtc >= now.AddHours(-24))
+            .ToListAsync(cancellationToken);
+
+        var created4 = await ProcessRuleAsync(
+            ruleCode: "IMG-001",
+            ruleName: "Критические уязвимости в контейнерном образе",
+            severity: EventSeverity.Critical,
+            descriptionFactory: group => group.Description,
+            eventIdsFactory: group => group.EventIds,
+            groups: recentImageScanEvents
+                .Select(TryCreateImageScanCandidate)
+                .Where(x => x is not null)
+                .Select(x => x!)
+                .ToList(),
+            createIncident: true,
+            cancellationToken: cancellationToken);
+
+        Merge(result, created4);
         return result;
     }
 
@@ -201,6 +230,83 @@ public class SiemCorrelationService : ISiemCorrelationService
     {
         public string Key { get; set; } = string.Empty;
         public int Count { get; set; }
+        public string Description { get; set; } = string.Empty;
         public List<long> EventIds { get; set; } = new();
+    }
+
+    private static RuleCandidate? TryCreateImageScanCandidate(SecurityEventEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.AdditionalDataJson))
+            return null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(entry.AdditionalDataJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return null;
+
+            var criticalCount = ReadNonNegativeInt(root, "criticalCount");
+            if (criticalCount < 1)
+                return null;
+
+            var imageReference = ReadString(root, "imageReference", 512);
+            if (string.IsNullOrWhiteSpace(imageReference))
+                return null;
+
+            var imageDigest = ReadString(root, "imageDigest", 512);
+            var triggerEntity = !string.IsNullOrWhiteSpace(imageDigest)
+                ? imageDigest
+                : NormalizeTriggerValue(imageReference);
+
+            if (string.IsNullOrWhiteSpace(triggerEntity))
+                return null;
+
+            var highCount = ReadNonNegativeInt(root, "highCount");
+            var totalCount = ReadNonNegativeInt(root, "totalCount");
+
+            return new RuleCandidate
+            {
+                Key = triggerEntity,
+                Count = 1,
+                Description = $"Trivy обнаружил критические уязвимости в контейнерном образе {imageReference}: critical={criticalCount}, high={highCount}, total={totalCount}. Source event #{entry.Id}.",
+                EventIds = [entry.Id]
+            };
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static int ReadNonNegativeInt(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+            return 0;
+
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number))
+            return Math.Max(0, number);
+
+        return 0;
+    }
+
+    private static string? ReadString(JsonElement root, string propertyName, int maxLength)
+    {
+        if (!root.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.String)
+            return null;
+
+        var text = value.GetString()?.Trim();
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        text = new string(text.Where(x => !char.IsControl(x)).ToArray());
+        return text.Length <= maxLength ? text : text[..maxLength];
+    }
+
+    private static string NormalizeTriggerValue(string value)
+    {
+        var normalized = value.Trim().ToLowerInvariant();
+        normalized = new string(normalized.Where(x => !char.IsControl(x)).ToArray());
+        return normalized.Length <= 512 ? normalized : normalized[..512];
     }
 }

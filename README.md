@@ -14,6 +14,8 @@ The project is intentionally practical. It demonstrates how a security team can 
 - Protected external security event ingestion endpoint: `POST /api/v1/security-events`.
 - API-key authentication, request validation, request size limit, rate limiting, and idempotency for external events.
 - `ConShield.Collector`, a small console client for sending generated or JSON-file security events.
+- `ConShield.ImageScanner`, a Trivy-based console scanner for container image vulnerability summaries.
+- `IMG-001` SIEM correlation for critical vulnerabilities in container images.
 - Demo scenario generation for portfolio walkthroughs.
 - UTC storage with GMT+3 display for the current Russian-language UI.
 
@@ -35,6 +37,7 @@ ConShield.Application      Use cases, SIEM correlation, application services
 ConShield.Data             EF Core DbContext and domain entities
 ConShield.Contracts        Shared constants, enums, DTO models
 ConShield.SecurityEvents   Security event writer and audit log model
+ConShield.ImageScanner     Trivy-based container image scanner CLI
 infra/                     Future infrastructure for message/event pipeline
 docs/                      Architecture, roadmap, security notes
 ```
@@ -150,11 +153,35 @@ Not implemented yet:
 - production machine identity;
 - mTLS;
 - centralized secret manager;
-- image scanning;
 - policy engine;
 - runtime monitoring;
 - Falco;
 - Kubernetes integration.
+
+## Container Image Scanning
+
+ConShield includes a first working container image scanning vertical based on Trivy:
+
+```text
+Trivy -> ConShield.ImageScanner -> ingestion API -> PostgreSQL -> IMG-001 -> alert and incident
+```
+
+Run without submitting:
+
+```powershell
+dotnet run --project src/ConShield.ImageScanner -- scan --image alpine:3.20 --no-submit
+```
+
+Run and submit:
+
+```powershell
+$env:CONSHIELD_BASE_URL = "http://127.0.0.1:56895"
+$env:CONSHIELD_API_KEY = "your-local-api-key"
+$env:CONSHIELD_TRIVY_PATH = "C:\Tools\trivy\trivy.exe"
+dotnet run --project src/ConShield.ImageScanner -- scan --image alpine:3.20
+```
+
+See [docs/CONTAINER_IMAGE_SCANNING.md](docs/CONTAINER_IMAGE_SCANNING.md).
 
 ## Demo Accounts
 

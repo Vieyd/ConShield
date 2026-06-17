@@ -16,10 +16,12 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - Protected external security event ingestion endpoint with local API-key authentication.
 - Request validation, endpoint-scoped request size limit, IP-partitioned rate limiting, and idempotency for external events.
 - First `ConShield.Collector` console client for sending external events.
+- `ConShield.ImageScanner` console client for local Trivy container image scans.
 - Correlation rules:
   - `BF-001`: repeated login failures for one account.
   - `UE-001`: repeated user exception changes by one actor.
-- `CR-001`: repeated critical events from one source IP.
+- `CR-001`: repeated critical source events from one real source IP. SIEM-generated audit events are not inputs for this rule.
+- `IMG-001`: critical vulnerabilities in a container image scan summary.
 - External ingested events are stored as `SecurityEventType.ExternalEvent`. `CR-001` can trigger for external critical events when the source-IP conditions match. `BF-001` and `UE-001` do not yet interpret arbitrary external event types.
 
 ## Not Implemented Yet
@@ -31,7 +33,7 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - Long-term API key rotation.
 - External event-type mapping to SIEM rules.
 - Production machine identity, mTLS, and centralized secret management.
-- Image scanning, policy engine, runtime monitoring, Falco, and Kubernetes integration.
+- Policy engine, runtime monitoring, Falco, and Kubernetes integration.
 - Full Dockerized application stack.
 - MITRE ATT&CK mapping.
 - UI screenshots and release assets.

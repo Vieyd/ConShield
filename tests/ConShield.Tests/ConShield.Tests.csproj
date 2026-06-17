@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\ConShield.Data\ConShield.Data.csproj" />
     <ProjectReference Include="..\..\src\ConShield.SecurityEvents\ConShield.SecurityEvents.csproj" />
     <ProjectReference Include="..\..\src\ConShield.Web\ConShield.Web.csproj" />
+    <ProjectReference Include="..\..\src\ConShield.ImageScanner\ConShield.ImageScanner.csproj" />
   </ItemGroup>
 
   <ItemGroup>
