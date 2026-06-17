@@ -16,6 +16,8 @@ The project is intentionally practical. It demonstrates how a security team can 
 - `ConShield.Collector`, a small console client for sending generated or JSON-file security events.
 - `ConShield.ImageScanner`, a Trivy-based console scanner for container image vulnerability summaries.
 - `IMG-001` SIEM correlation for critical vulnerabilities in container images.
+- `ConShield.ContainerPolicy`, a pure local evaluator for container policy decisions.
+- `POL-001` SIEM correlation for Block decisions from Container Policy Gate.
 - Demo scenario generation for portfolio walkthroughs.
 - UTC storage with GMT+3 display for the current Russian-language UI.
 
@@ -38,6 +40,7 @@ ConShield.Data             EF Core DbContext and domain entities
 ConShield.Contracts        Shared constants, enums, DTO models
 ConShield.SecurityEvents   Security event writer and audit log model
 ConShield.ImageScanner     Trivy-based container image scanner CLI
+ConShield.ContainerPolicy  Pure policy validation and evaluation library
 infra/                     Future infrastructure for message/event pipeline
 docs/                      Architecture, roadmap, security notes
 ```
@@ -182,6 +185,30 @@ dotnet run --project src/ConShield.ImageScanner -- scan --image alpine:3.20
 ```
 
 See [docs/CONTAINER_IMAGE_SCANNING.md](docs/CONTAINER_IMAGE_SCANNING.md).
+
+## Container Policy Gate
+
+ConShield includes a local policy gate on top of Trivy scan summaries:
+
+```text
+Trivy -> ConShield.ImageScanner gate -> ConShield.ContainerPolicy -> ingestion API -> PostgreSQL -> POL-001 -> alert and incident
+```
+
+Dry run without submitting:
+
+```powershell
+dotnet run --project src/ConShield.ImageScanner -- gate --image alpine:3.20 --policy config/policies/container-baseline-v1.json --no-submit
+```
+
+Submit scan and policy audit events:
+
+```powershell
+$env:CONSHIELD_BASE_URL = "http://127.0.0.1:56895"
+$env:CONSHIELD_API_KEY = "your-local-api-key"
+dotnet run --project src/ConShield.ImageScanner -- gate --image alpine:3.20 --policy config/policies/container-baseline-v1.json
+```
+
+`Block` decisions cannot be bypassed by CLI flag. `Warn` decisions launch only with `--execute --accept-warning`. See [docs/CONTAINER_POLICY_GATE.md](docs/CONTAINER_POLICY_GATE.md).
 
 ## Demo Accounts
 

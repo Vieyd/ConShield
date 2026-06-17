@@ -15,6 +15,8 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - The ingestion rate limiter is scoped only to `POST /api/v1/security-events` and partitions by transport `RemoteIpAddress`.
 - Trivy-based container image scanning through a separate console scanner.
 - `IMG-001` correlation for critical vulnerabilities in container image scan summaries.
+- Local Container Policy Gate with deterministic Allow/Warn/Block decisions.
+- `POL-001` correlation for policy Block decisions.
 - Local development configuration is excluded from Git.
 
 ## Current Limitations
@@ -29,6 +31,8 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Runtime JSONL logs may contain usernames, IP addresses, and event metadata. They must not be committed.
 - Trivy reports, archives, vulnerability databases, and scanner local config must not be committed.
 - `ConShield.ImageScanner` summarizes scan results and does not store full CVE lists in PostgreSQL.
+- `ConShield.ImageScanner gate` can optionally launch Docker locally, but only after scan, policy evaluation, and audit submission.
+- Container Policy Gate is not a Kubernetes admission controller and does not provide remote policy distribution, waivers, or policy signing.
 - The app is designed for local portfolio demonstration, not internet exposure.
 
 ## Secret Handling
@@ -41,6 +45,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Prefer `CONSHIELD_API_KEY` for the Collector instead of command-line `--api-key`, because command-line arguments may be visible in shell history or process listings.
 - Prefer `CONSHIELD_API_KEY` for `ConShield.ImageScanner` for the same reason.
 - Keep `CONSHIELD_TRIVY_PATH` local and do not commit Trivy binaries or archives.
+- Keep `CONSHIELD_DOCKER_PATH` local when used. Do not store registry credentials or Docker config exports in the repository.
 
 ## Recommended Hardening Roadmap
 

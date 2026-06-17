@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using ConShield.ContainerPolicy;
 
 namespace ConShield.ImageScanner;
 
@@ -7,17 +8,27 @@ public sealed class ImageScannerApp
 {
     private readonly ITrivyRunner _trivyRunner;
     private readonly IIngestionClient _ingestionClient;
+    private readonly IContainerRuntime _containerRuntime;
+    private readonly ContainerPolicyLoader _policyLoader;
+    private readonly ContainerPolicyEvaluator _policyEvaluator;
     private readonly TextWriter _output;
     private readonly TextWriter _error;
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web) { WriteIndented = false };
 
     public ImageScannerApp(
         ITrivyRunner trivyRunner,
         IIngestionClient ingestionClient,
+        IContainerRuntime containerRuntime,
+        ContainerPolicyLoader policyLoader,
+        ContainerPolicyEvaluator policyEvaluator,
         TextWriter output,
         TextWriter error)
     {
         _trivyRunner = trivyRunner;
         _ingestionClient = ingestionClient;
+        _containerRuntime = containerRuntime;
+        _policyLoader = policyLoader;
+        _policyEvaluator = policyEvaluator;
         _output = output;
         _error = error;
     }
@@ -31,6 +42,9 @@ public sealed class ImageScannerApp
         var app = new ImageScannerApp(
             new TrivyRunner(new ProcessRunner()),
             new IngestionClient(),
+            new DockerContainerRuntime(new ProcessRunner()),
+            new ContainerPolicyLoader(),
+            new ContainerPolicyEvaluator(),
             output,
             error);
 
@@ -48,6 +62,14 @@ public sealed class ImageScannerApp
         }
 
         var options = parse.Options!;
+        if (options.Command == "gate")
+            return await RunGateAsync(options, cancellationToken);
+
+        return await RunScanAsync(options, cancellationToken);
+    }
+
+    private async Task<ExitCodes> RunScanAsync(ScannerOptions options, CancellationToken cancellationToken)
+    {
         var stopwatch = Stopwatch.StartNew();
         TrivyRunResult trivyResult;
 
@@ -89,10 +111,170 @@ public sealed class ImageScannerApp
         if (options.NoSubmit)
         {
             await _output.WriteLineAsync("No-submit mode: normalized event was not sent.");
-            await _output.WriteLineAsync(JsonSerializer.Serialize(request, ImageScannerJsonContext.Default.ImageScanIngestRequest));
+            await _output.WriteLineAsync(JsonSerializer.Serialize(request, SerializerOptions));
             return ExitCodes.Success;
         }
 
+        return await SubmitEventAsync(options, request, "Event", cancellationToken);
+    }
+
+    private async Task<ExitCodes> RunGateAsync(ScannerOptions options, CancellationToken cancellationToken)
+    {
+        var policyResult = _policyLoader.LoadFromFile(options.PolicyPath);
+        if (!policyResult.Success)
+        {
+            await _error.WriteLineAsync(policyResult.Error);
+            return ExitCodes.InvalidPolicy;
+        }
+
+        var scanExit = await RunScanForGateAsync(options, cancellationToken);
+        if (scanExit.ExitCode != ExitCodes.Success)
+            return scanExit.ExitCode;
+
+        var evaluationResult = _policyEvaluator.Evaluate(policyResult.Policy!, ToPolicySummary(scanExit.Summary!));
+        if (!evaluationResult.Success)
+        {
+            await _error.WriteLineAsync(evaluationResult.Error);
+            return ExitCodes.PolicyEvaluationFailed;
+        }
+
+        var evaluation = evaluationResult.Evaluation!;
+        var policyEvent = ImageScanEventBuilder.BuildPolicyEvaluation(options, scanExit.Summary!, policyResult.Policy!, evaluation);
+
+        await _output.WriteLineAsync($"Policy decision: {evaluation.Decision}; reasons={string.Join(",", evaluation.ReasonCodes)}");
+
+        if (options.NoSubmit)
+        {
+            await _output.WriteLineAsync("No-submit mode: policy evaluation event was not sent.");
+            await _output.WriteLineAsync(JsonSerializer.Serialize(policyEvent, SerializerOptions));
+        }
+        else
+        {
+            var submitExit = await SubmitEventAsync(options, policyEvent, "Policy event", cancellationToken);
+            if (submitExit != ExitCodes.Success)
+            {
+                await _error.WriteLineAsync("Container launch denied because audit submission failed.");
+                return submitExit;
+            }
+        }
+
+        if (!options.Execute)
+        {
+            await _output.WriteLineAsync("DRY RUN: Docker launch was not requested.");
+            return evaluation.Decision switch
+            {
+                ContainerPolicyDecision.Block => ExitCodes.PolicyBlocked,
+                ContainerPolicyDecision.Warn => ExitCodes.WarningNotAccepted,
+                _ => ExitCodes.Success
+            };
+        }
+
+        if (evaluation.Decision == ContainerPolicyDecision.Block)
+        {
+            await _error.WriteLineAsync("Container launch blocked by policy.");
+            return ExitCodes.PolicyBlocked;
+        }
+
+        if (evaluation.Decision == ContainerPolicyDecision.Warn && !options.AcceptWarning)
+        {
+            await _error.WriteLineAsync("Container launch requires --accept-warning for Warn decisions.");
+            return ExitCodes.WarningNotAccepted;
+        }
+
+        try
+        {
+            var launch = await _containerRuntime.LaunchAsync(options, scanExit.Summary!, cancellationToken);
+            if (launch.Success)
+            {
+                await _output.WriteLineAsync("Container launched through hardened docker run.");
+                return ExitCodes.Success;
+            }
+
+            await _error.WriteLineAsync(Redaction.TrimForSafeOutput(launch.Error ?? "Container launch failed.", ScannerConstants.StderrDisplayLimit));
+            if (launch.TimedOut)
+                return ExitCodes.LaunchTimeoutOrCancellation;
+
+            return launch.Unavailable ? ExitCodes.DockerUnavailable : ExitCodes.LaunchFailed;
+        }
+        catch (OperationCanceledException)
+        {
+            await _error.WriteLineAsync("Container launch was canceled.");
+            return ExitCodes.LaunchTimeoutOrCancellation;
+        }
+    }
+
+    private async Task<GateScanResult> RunScanForGateAsync(ScannerOptions options, CancellationToken cancellationToken)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        TrivyRunResult trivyResult;
+
+        try
+        {
+            trivyResult = await _trivyRunner.ScanAsync(options, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            await _error.WriteLineAsync("Scan was canceled.");
+            return new GateScanResult(ExitCodes.TimeoutOrCancellation, null);
+        }
+
+        if (!trivyResult.IsSuccess)
+        {
+            await _error.WriteLineAsync(Redaction.TrimForSafeOutput(trivyResult.Error ?? "Trivy scan failed.", ScannerConstants.StderrDisplayLimit));
+            return new GateScanResult(trivyResult.FailureExitCode ?? ExitCodes.ScanFailed, null);
+        }
+
+        ImageScanSummary summary;
+        try
+        {
+            summary = TrivyReportParser.Parse(
+                trivyResult.ReportJson!,
+                trivyResult.ScannerVersion ?? "unknown",
+                options.ImageReference);
+        }
+        catch (TrivyReportParseException ex)
+        {
+            await _error.WriteLineAsync(ex.Message);
+            return new GateScanResult(ExitCodes.ReportParsingFailed, null);
+        }
+
+        stopwatch.Stop();
+        var scanEvent = ImageScanEventBuilder.Build(options, summary, stopwatch.ElapsedMilliseconds);
+        await _output.WriteLineAsync($"Image scan completed: image={Redaction.RedactImageReference(summary.ImageReference)}, critical={summary.CriticalCount}, high={summary.HighCount}, total={summary.TotalCount}");
+
+        if (options.NoSubmit)
+        {
+            await _output.WriteLineAsync("No-submit mode: scan event was not sent.");
+            await _output.WriteLineAsync(JsonSerializer.Serialize(scanEvent, SerializerOptions));
+            return new GateScanResult(ExitCodes.Success, summary);
+        }
+
+        var submitExit = await SubmitEventAsync(options, scanEvent, "Scan event", cancellationToken);
+        return new GateScanResult(submitExit, submitExit == ExitCodes.Success ? summary : null);
+    }
+
+    private static ContainerImageScanSummary ToPolicySummary(ImageScanSummary summary)
+    {
+        return new ContainerImageScanSummary
+        {
+            ImageReference = summary.ImageReference,
+            ImageDigest = summary.ImageDigest,
+            ReportSha256 = summary.ReportSha256,
+            UnknownCount = summary.UnknownCount,
+            LowCount = summary.LowCount,
+            MediumCount = summary.MediumCount,
+            HighCount = summary.HighCount,
+            CriticalCount = summary.CriticalCount,
+            TotalCount = summary.TotalCount
+        };
+    }
+
+    private async Task<ExitCodes> SubmitEventAsync(
+        ScannerOptions options,
+        ImageScanIngestRequest request,
+        string label,
+        CancellationToken cancellationToken)
+    {
         try
         {
             var submit = await _ingestionClient.SubmitAsync(options, request, cancellationToken);
@@ -103,8 +285,8 @@ public sealed class ImageScannerApp
             }
 
             await _output.WriteLineAsync(submit.Created
-                ? $"Event accepted. securityEventId={submit.SecurityEventId}"
-                : $"Event already exists. securityEventId={submit.SecurityEventId}");
+                ? $"{label} accepted. securityEventId={submit.SecurityEventId}"
+                : $"{label} already exists. securityEventId={submit.SecurityEventId}");
             return ExitCodes.Success;
         }
         catch (OperationCanceledException)
@@ -118,4 +300,6 @@ public sealed class ImageScannerApp
             return ExitCodes.ApiRejectedRequest;
         }
     }
+
+    private sealed record GateScanResult(ExitCodes ExitCode, ImageScanSummary? Summary);
 }

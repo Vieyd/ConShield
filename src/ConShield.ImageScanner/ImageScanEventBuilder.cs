@@ -1,4 +1,5 @@
 using System.Net;
+using ConShield.ContainerPolicy;
 
 namespace ConShield.ImageScanner;
 
@@ -53,6 +54,49 @@ public static class ImageScanEventBuilder
         return "Info";
     }
 
+    public static ImageScanIngestRequest BuildPolicyEvaluation(
+        ScannerOptions options,
+        ImageScanSummary summary,
+        ContainerPolicyDocument policy,
+        ContainerPolicyEvaluation evaluation)
+    {
+        return new ImageScanIngestRequest
+        {
+            ExternalEventId = options.ExternalEventId,
+            OccurredAtUtc = DateTime.UtcNow,
+            SourceSystem = ScannerConstants.PolicySourceSystem,
+            EventType = ScannerConstants.PolicyExternalEventType,
+            Severity = evaluation.Decision switch
+            {
+                ContainerPolicyDecision.Block => "High",
+                ContainerPolicyDecision.Warn => "Warning",
+                _ => "Info"
+            },
+            UserName = null,
+            SourceHost = GetSafeHostName(),
+            Description = $"Container policy {policy.PolicyId}/{policy.Version} evaluated {evaluation.Decision} for {Redaction.RedactImageReference(summary.ImageReference)}.",
+            AdditionalData = new PolicyEvaluationAdditionalData
+            {
+                Decision = evaluation.Decision.ToString(),
+                PolicyId = policy.PolicyId,
+                PolicyVersion = policy.Version,
+                PolicySha256 = policy.PolicySha256,
+                ImageReference = Redaction.RedactImageReference(summary.ImageReference),
+                ImageDigest = summary.ImageDigest,
+                ReportSha256 = summary.ReportSha256,
+                UnknownCount = summary.UnknownCount,
+                LowCount = summary.LowCount,
+                MediumCount = summary.MediumCount,
+                HighCount = summary.HighCount,
+                CriticalCount = summary.CriticalCount,
+                TotalCount = summary.TotalCount,
+                ReasonCodes = evaluation.ReasonCodes.ToArray(),
+                ExecutionRequested = options.Execute,
+                WarningAccepted = options.AcceptWarning
+            }
+        };
+    }
+
     private static string BuildDescription(ImageScanSummary summary)
     {
         var image = Redaction.RedactImageReference(summary.ImageReference);
@@ -80,7 +124,7 @@ public sealed class ImageScanIngestRequest
     public string? UserName { get; set; }
     public string SourceHost { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public ImageScanAdditionalData AdditionalData { get; set; } = new();
+    public object AdditionalData { get; set; } = new ImageScanAdditionalData();
 }
 
 public sealed class ImageScanAdditionalData
@@ -102,4 +146,25 @@ public sealed class ImageScanAdditionalData
     public int AffectedTargetCount { get; set; }
     public string ReportSha256 { get; set; } = string.Empty;
     public long DurationMs { get; set; }
+}
+
+public sealed class PolicyEvaluationAdditionalData
+{
+    public int SchemaVersion { get; set; } = 1;
+    public string Decision { get; set; } = string.Empty;
+    public string PolicyId { get; set; } = string.Empty;
+    public string PolicyVersion { get; set; } = string.Empty;
+    public string PolicySha256 { get; set; } = string.Empty;
+    public string ImageReference { get; set; } = string.Empty;
+    public string? ImageDigest { get; set; }
+    public string ReportSha256 { get; set; } = string.Empty;
+    public int UnknownCount { get; set; }
+    public int LowCount { get; set; }
+    public int MediumCount { get; set; }
+    public int HighCount { get; set; }
+    public int CriticalCount { get; set; }
+    public int TotalCount { get; set; }
+    public string[] ReasonCodes { get; set; } = [];
+    public bool ExecutionRequested { get; set; }
+    public bool WarningAccepted { get; set; }
 }

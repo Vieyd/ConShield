@@ -46,6 +46,16 @@ public static class SiemRuleCatalog
             ConditionText = "criticalCount >= 1",
             WindowText = "24 часа",
             TriggerEntityText = "Digest или reference контейнерного образа"
+        },
+        new SiemRuleDefinition
+        {
+            RuleCode = "POL-001",
+            RuleName = "Блокировка контейнерного образа политикой",
+            Severity = EventSeverity.Critical,
+            Description = "Правило выявляет решения Container Policy Gate с результатом Block.",
+            ConditionText = "decision == Block",
+            WindowText = "24 часа",
+            TriggerEntityText = "Policy + digest или reference контейнерного образа"
         }
     ];
 }

@@ -26,6 +26,7 @@ ConShield demonstrates a small security monitoring workflow:
 | SIEM correlation | Rules generate alerts and incidents from event windows | `SiemCorrelationService` |
 | Detection catalog | Human-readable rule definitions | `SiemRuleCatalog` |
 | Container image scanning | Trivy scan summaries are ingested as external security events | `ConShield.ImageScanner` |
+| Container policy gate | Local Allow/Warn/Block policy decision with optional hardened Docker launch | `ConShield.ContainerPolicy`, `ConShield.ImageScanner gate` |
 | Local demo | Scenario generation for repeatable walkthroughs | `SiemController.GenerateScenario` |
 
 ## Detection Rule Mapping
@@ -36,6 +37,7 @@ ConShield demonstrates a small security monitoring workflow:
 | `UE-001` | Suspicious user exception activity | 5 or more user exception update/delete events by one user in 30 seconds |
 | `CR-001` | Repeated critical events from one source | 2 or more critical events from one source IP in 5 minutes |
 | `IMG-001` | Critical vulnerabilities in container image | Trivy scan summary with `criticalCount >= 1` |
+| `POL-001` | Container image blocked by policy | Policy evaluation event with `decision == Block` |
 
 External events ingested through `POST /api/v1/security-events` are stored as `SecurityEventType.ExternalEvent` with the source-specific type preserved separately as `ExternalEventType`. `CR-001` can trigger for an external critical event when another critical event shares the same `SourceIp`; `BF-001` and `UE-001` do not yet map arbitrary external event types into their built-in rule semantics.
 
@@ -45,6 +47,7 @@ External events ingested through `POST /api/v1/security-events` are stored as `S
 - It includes both preventive access control and detective monitoring.
 - It contains testable detection logic.
 - It includes a working container image scanning vertical.
+- It includes a local policy gate that turns vulnerability summaries into enforceable decisions.
 - It has a roadmap toward event-driven SIEM architecture.
 
 ## Future Report Sections

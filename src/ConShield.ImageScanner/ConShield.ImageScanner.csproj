@@ -13,4 +13,8 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ConShield.ContainerPolicy\ConShield.ContainerPolicy.csproj" />
+  </ItemGroup>
+
 </Project>

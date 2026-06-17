@@ -93,3 +93,21 @@ Reason: normalized summaries are enough for `IMG-001`, reduce data exposure, avo
 `CR-001` analyzes only critical source events with a real `SourceIp`. It excludes SIEM-generated audit events such as `CorrelationAlert`, `IncidentCreated`, and `IncidentUpdated`.
 
 Reason: correlation and incident audit events can themselves be critical. Treating them as inputs would create self-correlation loops and false `CR-001` alerts.
+
+## 015. Keep Container Policy Evaluation Pure
+
+`ConShield.ContainerPolicy` contains only policy models, validation, hashing, and deterministic evaluation. It has no ASP.NET, EF Core, PostgreSQL, Trivy, Docker, or HTTP dependencies.
+
+Reason: policy behavior should be easy to test, safe to reuse, and independent from process execution or storage concerns.
+
+## 016. Fail Closed for Container Policy Gate
+
+Invalid policy files, invalid scan summaries, failed audit submission, Block decisions, and technical launch failures must not result in container launch. Block decisions have no CLI bypass.
+
+Reason: the gate is a security control. Demonstration convenience must not weaken the policy decision.
+
+## 017. Keep Docker Launch Local, Fixed, and Hardened
+
+`ConShield.ImageScanner gate --execute` is the only component that may launch Docker. It uses a fixed `docker run` argument set and does not support arbitrary Docker flags, host volumes, host networking, privileged mode, or Docker socket mounts.
+
+Reason: arbitrary runtime flags would turn the gate into an unsafe command launcher and undermine the portfolio security story.

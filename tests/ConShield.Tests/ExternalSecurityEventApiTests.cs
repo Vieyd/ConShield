@@ -347,6 +347,41 @@ public class ExternalSecurityEventApiTests
         Assert.Equal(1, await db.Incidents.CountAsync(x => x.Name.Contains("IMG-001")));
     }
 
+    [PostgreSqlFact]
+    public async Task PolicyGateEvents_IngestAndTriggerImg001AndPol001WithoutDuplicates()
+    {
+        await using var factory = await CreateFactoryAsync();
+        using var client = factory.CreateClient();
+        AddApiKey(client);
+        var externalEventId = Guid.NewGuid();
+
+        var scanFirst = await client.PostAsJsonAsync("/api/v1/security-events", ImageScanPayload(externalEventId));
+        var policyFirst = await client.PostAsJsonAsync("/api/v1/security-events", PolicyGatePayload(externalEventId));
+        var scanSecond = await client.PostAsJsonAsync("/api/v1/security-events", ImageScanPayload(externalEventId));
+        var policySecond = await client.PostAsJsonAsync("/api/v1/security-events", PolicyGatePayload(externalEventId));
+
+        Assert.Equal(HttpStatusCode.Created, scanFirst.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, policyFirst.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, scanSecond.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, policySecond.StatusCode);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(2, await db.SecurityEvents.CountAsync(x => x.ExternalEventId == externalEventId));
+
+        var correlation = scope.ServiceProvider.GetRequiredService<ISiemCorrelationService>();
+        var firstRun = await correlation.RunAsync();
+        var secondRun = await correlation.RunAsync();
+
+        Assert.Equal(2, firstRun.CreatedAlerts);
+        Assert.Equal(2, firstRun.CreatedIncidents);
+        Assert.Equal(0, secondRun.CreatedAlerts);
+        Assert.Equal(0, secondRun.CreatedIncidents);
+        Assert.Equal(1, await db.SiemAlerts.CountAsync(x => x.RuleCode == "IMG-001"));
+        Assert.Equal(1, await db.SiemAlerts.CountAsync(x => x.RuleCode == "POL-001"));
+        Assert.Equal(0, await db.SiemAlerts.CountAsync(x => x.RuleCode == "CR-001"));
+    }
+
     private static async Task<WebApplicationFactory<Program>> CreateFactoryAsync(int maxRequestBodyBytes = 32768)
     {
         var connectionString = Environment.GetEnvironmentVariable("CONSHIELD_TEST_POSTGRES_CONNECTION")
@@ -431,6 +466,41 @@ public class ExternalSecurityEventApiTests
                 affectedTargetCount = 1,
                 reportSha256 = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
                 durationMs = 1000
+            }
+        };
+    }
+
+    private static object PolicyGatePayload(Guid externalEventId)
+    {
+        return new
+        {
+            externalEventId,
+            occurredAtUtc = DateTime.UtcNow,
+            sourceSystem = "conshield.container-guard",
+            eventType = "container.image.policy.evaluated",
+            severity = "High",
+            userName = (string?)null,
+            sourceHost = "test-host",
+            description = "Container policy container-baseline/1.0.0 evaluated Block for repo/app:latest.",
+            additionalData = new
+            {
+                schemaVersion = 1,
+                decision = "Block",
+                policyId = "container-baseline",
+                policyVersion = "1.0.0",
+                policySha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                imageReference = "repo/app:latest",
+                imageDigest = "repo/app@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                reportSha256 = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                unknownCount = 0,
+                lowCount = 0,
+                mediumCount = 0,
+                highCount = 2,
+                criticalCount = 1,
+                totalCount = 3,
+                reasonCodes = new[] { "CRITICAL_THRESHOLD_REACHED" },
+                executionRequested = false,
+                warningAccepted = false
             }
         };
     }

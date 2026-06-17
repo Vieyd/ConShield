@@ -4,16 +4,29 @@ public static class CommandLineParser
 {
     public static ParseResult Parse(string[] args)
     {
-        if (args.Length == 0 || !args[0].Equals("scan", StringComparison.OrdinalIgnoreCase))
-            return ParseResult.Invalid("Usage: ConShield.ImageScanner scan --image <image-reference> [options]");
+        if (args.Length == 0)
+            return ParseResult.Invalid("Usage: ConShield.ImageScanner scan|gate --image <image-reference> [options]");
+
+        var command = args[0].ToLowerInvariant();
+        if (command is not ("scan" or "gate"))
+            return ParseResult.Invalid("Usage: ConShield.ImageScanner scan|gate --image <image-reference> [options]");
 
         var values = ReadArgs(args.Skip(1).ToArray());
         var image = GetValue(values, "image");
         if (!IsValidImageReference(image, out var imageError))
             return ParseResult.Invalid(imageError);
 
-        var baseUrl = GetValue(values, "base-url") ?? Environment.GetEnvironmentVariable("CONSHIELD_BASE_URL");
         var noSubmit = values.ContainsKey("no-submit");
+        var execute = values.ContainsKey("execute");
+        var acceptWarning = values.ContainsKey("accept-warning");
+        var policyPath = GetValue(values, "policy");
+        if (command == "gate" && string.IsNullOrWhiteSpace(policyPath))
+            return ParseResult.Invalid("--policy is required for gate.");
+
+        if (command == "scan" && (execute || acceptWarning || policyPath is not null || values.ContainsKey("docker-path") || values.ContainsKey("run-timeout-seconds")))
+            return ParseResult.Invalid("Gate options are only supported by the gate command.");
+
+        var baseUrl = GetValue(values, "base-url") ?? Environment.GetEnvironmentVariable("CONSHIELD_BASE_URL");
         if (!noSubmit)
         {
             if (string.IsNullOrWhiteSpace(baseUrl))
@@ -46,20 +59,38 @@ public static class CommandLineParser
             }
         }
 
+        var runTimeout = ScannerOptions.DefaultRunTimeoutSeconds;
+        var runTimeoutValue = GetValue(values, "run-timeout-seconds");
+        if (runTimeoutValue is not null)
+        {
+            if (!int.TryParse(runTimeoutValue, out runTimeout)
+                || runTimeout < ScannerOptions.MinRunTimeoutSeconds
+                || runTimeout > ScannerOptions.MaxRunTimeoutSeconds)
+            {
+                return ParseResult.Invalid($"--run-timeout-seconds must be between {ScannerOptions.MinRunTimeoutSeconds} and {ScannerOptions.MaxRunTimeoutSeconds}.");
+            }
+        }
+
         var sourceSystem = GetValue(values, "source-system") ?? ScannerConstants.SourceSystem;
         if (string.IsNullOrWhiteSpace(sourceSystem) || sourceSystem.Trim().Length > 128)
             return ParseResult.Invalid("--source-system must be between 1 and 128 characters.");
 
         return ParseResult.Valid(new ScannerOptions
         {
+            Command = command,
             ImageReference = image!.Trim(),
             BaseUrl = baseUrl?.TrimEnd('/'),
             ApiKey = apiKey,
             TrivyPath = GetValue(values, "trivy-path") ?? Environment.GetEnvironmentVariable("CONSHIELD_TRIVY_PATH"),
+            DockerPath = GetValue(values, "docker-path") ?? Environment.GetEnvironmentVariable("CONSHIELD_DOCKER_PATH"),
+            PolicyPath = policyPath,
             ExternalEventId = externalEventIdValue is null ? Guid.NewGuid() : Guid.Parse(externalEventIdValue),
             TimeoutSeconds = timeout,
+            RunTimeoutSeconds = runTimeout,
             SourceSystem = sourceSystem.Trim(),
-            NoSubmit = noSubmit
+            NoSubmit = noSubmit,
+            Execute = execute,
+            AcceptWarning = acceptWarning
         });
     }
 

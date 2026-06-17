@@ -287,6 +287,122 @@ public class SiemCorrelationServiceTests
         Assert.Equal("IMG-001:repo/app:latest", alert.TriggerKey);
     }
 
+    [Fact]
+    public async Task POL001_BlockPolicyEvent_CreatesAlertAndIncident()
+    {
+        await using var db = CreateDbContext();
+        AddPolicyEvent(db, "Block", imageDigest: "repo/app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result = await service.RunAsync();
+
+        Assert.Equal(1, result.CreatedAlerts);
+        Assert.Equal(1, result.CreatedIncidents);
+
+        var alert = await db.SiemAlerts.SingleAsync();
+        Assert.Equal("POL-001", alert.RuleCode);
+        Assert.Equal("POL-001:container-baseline:1.0.0:repo/app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", alert.TriggerKey);
+        Assert.Contains("blocked image", alert.Description);
+        Assert.Equal(EventSeverity.Critical, alert.Severity);
+
+        var incident = await db.Incidents.SingleAsync();
+        Assert.Equal(alert.IncidentId, incident.Id);
+    }
+
+    [Theory]
+    [InlineData("Allow")]
+    [InlineData("Warn")]
+    [InlineData("Unknown")]
+    public async Task POL001_NonBlockDecision_DoesNotCreateAlert(string decision)
+    {
+        await using var db = CreateDbContext();
+        AddPolicyEvent(db, decision);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result = await service.RunAsync();
+
+        Assert.Equal(0, result.CreatedAlerts);
+        Assert.Empty(db.SiemAlerts);
+    }
+
+    [Fact]
+    public async Task POL001_MalformedAdditionalData_DoesNotBreakCorrelation()
+    {
+        await using var db = CreateDbContext();
+        db.SecurityEvents.Add(new SecurityEventEntry
+        {
+            OccurredAtUtc = DateTime.UtcNow,
+            EventType = SecurityEventType.ExternalEvent,
+            ExternalEventType = "container.image.policy.evaluated",
+            Severity = EventSeverity.High,
+            Description = "Malformed policy event",
+            AdditionalDataJson = "{"
+        });
+        AddLoginFailures(db, "operator", 3);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result = await service.RunAsync();
+
+        Assert.Equal(1, result.CreatedAlerts);
+        Assert.Contains(await db.SiemAlerts.ToListAsync(), x => x.RuleCode == "BF-001");
+    }
+
+    [Fact]
+    public async Task POL001_RepeatedRun_DoesNotCreateDuplicateActiveAlert()
+    {
+        await using var db = CreateDbContext();
+        AddPolicyEvent(db, "Block");
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var first = await service.RunAsync();
+        var second = await service.RunAsync();
+
+        Assert.Equal(1, first.CreatedAlerts);
+        Assert.Equal(0, second.CreatedAlerts);
+        Assert.Equal(1, await db.SiemAlerts.CountAsync(x => x.RuleCode == "POL-001"));
+    }
+
+    [Fact]
+    public async Task POL001_UsesImageReferenceFallback()
+    {
+        await using var db = CreateDbContext();
+        AddPolicyEvent(db, "Block", imageDigest: null, imageReference: "Repo/App:Latest");
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        await service.RunAsync();
+
+        var alert = await db.SiemAlerts.SingleAsync();
+        Assert.Equal("POL-001:container-baseline:1.0.0:repo/app:latest", alert.TriggerKey);
+    }
+
+    [Fact]
+    public async Task POL001_DoesNotTriggerCR001SelfCorrelation()
+    {
+        await using var db = CreateDbContext();
+        AddPolicyEvent(db, "Block");
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var first = await service.RunAsync();
+        var second = await service.RunAsync();
+
+        Assert.Equal(1, first.CreatedAlerts);
+        Assert.Equal(0, second.CreatedAlerts);
+        Assert.Equal(0, await db.SiemAlerts.CountAsync(x => x.RuleCode == "CR-001"));
+        Assert.Equal(1, await db.SiemAlerts.CountAsync(x => x.RuleCode == "POL-001"));
+    }
+
     private static ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -376,6 +492,38 @@ public class SiemCorrelationServiceTests
                 highCount,
                 totalCount,
                 reportSha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            })
+        });
+    }
+
+    private static void AddPolicyEvent(
+        ApplicationDbContext dbContext,
+        string decision,
+        string? imageDigest = "repo/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        string imageReference = "repo/app:latest")
+    {
+        dbContext.SecurityEvents.Add(new SecurityEventEntry
+        {
+            OccurredAtUtc = DateTime.UtcNow.AddSeconds(-10),
+            EventType = SecurityEventType.ExternalEvent,
+            ExternalEventType = "container.image.policy.evaluated",
+            Severity = decision.Equals("Block", StringComparison.OrdinalIgnoreCase) ? EventSeverity.High : EventSeverity.Warning,
+            SourceSystem = "conshield.container-guard",
+            Description = "Container policy evaluated.",
+            AdditionalDataJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                schemaVersion = 1,
+                decision,
+                policyId = "container-baseline",
+                policyVersion = "1.0.0",
+                policySha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                imageReference,
+                imageDigest,
+                reportSha256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                criticalCount = 1,
+                highCount = 0,
+                totalCount = 1,
+                reasonCodes = new[] { "CRITICAL_THRESHOLD_REACHED" }
             })
         });
     }

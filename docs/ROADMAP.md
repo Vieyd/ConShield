@@ -18,7 +18,8 @@
 
 ## v0.3 SIEM and Event Pipeline
 
-- Extend image scanning with a small policy engine for Allow/Warn/Block decisions.
+- Extend the current Container Policy Gate into a richer policy engine with explicit Allow/Warn/Block rules and reviewable policy test fixtures.
+- Add a demonstration policy gate flow that can explain why a container launch was blocked.
 - Add a background event dispatcher.
 - Use RabbitMQ for security event transport.
 - Use MongoDB or another event store for raw events.
@@ -32,6 +33,7 @@
 - Add dashboard visualizations for severity, timelines, and incident states.
 - Add sample attack/detection scenarios.
 - Add a guided container image scanning demo.
+- Add a guided Container Policy Gate demo.
 - Publish a tagged GitHub release.
 
 ## Backlog
