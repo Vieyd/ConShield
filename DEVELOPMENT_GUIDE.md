@@ -12,12 +12,14 @@ ConShield development rules:
 - Npgsql is the EF Core provider for PostgreSQL.
 - All security events are created through `ISecurityEventWriter` or a documented application service that preserves the same audit boundary.
 - `ISecurityEventWriter` must create `SecurityEvents` and `SecurityEventOutbox` rows atomically; do not write JSONL directly from HTTP/MVC requests.
-- `ConShield.EventPipeline` owns outbox dispatch, retry, DeadLetter transitions, and sink abstractions.
+- `ConShield.EventPipeline` owns outbox dispatch, retry, DeadLetter transitions, JSONL/RabbitMQ sink abstractions, topology declaration, and inbox processing.
+- `ConShield.EventConsumer` is the standalone RabbitMQ consumer process and must remain independent from MVC/Razor.
 - Controllers and API endpoints must stay thin.
 - Time is stored in UTC, and the interface displays GMT+3.
 - `Operator` has read-only access to critical functions.
 - Do not use internal course/archive labels in the interface.
-- Do not treat RabbitMQ and MongoDB as implemented components until they are actually connected.
+- Do not treat MongoDB as an implemented component until it is actually connected.
+- RabbitMQ transport must use RabbitMQ.Client 7.x async APIs, publisher confirms, mandatory routing, quorum queues, and manual acknowledgements.
 - Do not reintroduce SQL Server or LocalDB as working dependencies.
 - Do not commit Trivy binaries, archives, vulnerability databases, full reports, scanner local config, registry credentials, or API keys.
 - Do not add a CLI bypass for Container Policy `Block` decisions.

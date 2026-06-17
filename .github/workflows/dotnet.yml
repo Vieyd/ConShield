@@ -23,6 +23,11 @@ jobs:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
       CONSHIELD_TEST_POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=conshield_tests;Username=postgres
+      CONSHIELD_TEST_RABBITMQ_HOST: localhost
+      CONSHIELD_TEST_RABBITMQ_PORT: 5672
+      CONSHIELD_TEST_RABBITMQ_VHOST: /conshield
+      CONSHIELD_TEST_RABBITMQ_USERNAME: conshield_ci
+      CONSHIELD_TEST_RABBITMQ_PASSWORD: conshield_ci_password_not_for_production
 
     services:
       postgres:
@@ -38,6 +43,19 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      rabbitmq:
+        image: rabbitmq:4.3-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: conshield_ci
+          RABBITMQ_DEFAULT_PASS: conshield_ci_password_not_for_production
+          RABBITMQ_DEFAULT_VHOST: /conshield
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
     steps:
       - name: Checkout

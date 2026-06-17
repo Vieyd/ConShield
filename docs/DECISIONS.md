@@ -34,9 +34,9 @@ Reason: PostgreSQL is cross-platform, easy to run in containers, and aligns bett
 
 For deployment in a regulated Russian organization, a compatible domestic PostgreSQL edition may be considered. Do not claim certification for a specific product without current source verification.
 
-## 006. Treat RabbitMQ and MongoDB as Planned Infrastructure
+## 006. Treat MongoDB as Planned Infrastructure
 
-`infra/docker-compose.yml` currently describes future infrastructure. RabbitMQ and MongoDB are not part of the running application flow yet.
+`infra/docker-compose.yml` keeps MongoDB as future infrastructure. MongoDB is not part of the running application flow yet.
 
 Reason: public documentation must not overstate implemented capabilities.
 
@@ -126,4 +126,16 @@ Reason: ingestion idempotency is keyed by `sourceSystem + externalEventId`. Usin
 
 Reason: a file sink failure must not roll back accepted security events, and a committed security event should not be left without a durable delivery message.
 
-The initial sink is local JSONL with at-least-once delivery. RabbitMQ can be added later as another outbox transport without changing the writer contract.
+The initial sink is local JSONL with at-least-once delivery. RabbitMQ is implemented as another outbox transport without changing the writer contract.
+
+## 020. Use RabbitMQ As A Selectable Outbox Transport
+
+`SecurityEventOutbox:Transport` selects either `Jsonl` or `RabbitMq`. ConShield deliberately does not publish to both sinks in one attempt.
+
+Reason: if JSONL succeeded and RabbitMQ failed, a retry would duplicate JSONL even though the outbox row was not delivered. One transport per attempt keeps delivery semantics understandable.
+
+## 021. Use PostgreSQL Inbox Receipts For RabbitMQ Idempotency
+
+`ConShield.EventConsumer` records one `SecurityEventInboxReceipts` row per RabbitMQ `MessageId` before acking the delivery.
+
+Reason: RabbitMQ redelivers after consumer crashes. A unique `MessageId` gives replay-safe consumer side effects without claiming distributed exactly-once.

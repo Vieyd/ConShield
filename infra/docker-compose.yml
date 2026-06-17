@@ -17,12 +17,23 @@ services:
       retries: 10
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:4.3-management-alpine
     container_name: conshield-rabbitmq
-    profiles: ["future-infra"]
+    profiles: ["messaging"]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${CONSHIELD_RABBITMQ_USER:?Set CONSHIELD_RABBITMQ_USER before starting RabbitMQ}
+      RABBITMQ_DEFAULT_PASS: ${CONSHIELD_RABBITMQ_PASSWORD:?Set CONSHIELD_RABBITMQ_PASSWORD before starting RabbitMQ}
+      RABBITMQ_DEFAULT_VHOST: /conshield
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${CONSHIELD_RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "127.0.0.1:${CONSHIELD_RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   mongo:
     image: mongo:7
@@ -35,4 +46,5 @@ services:
 
 volumes:
   postgres_data:
+  rabbitmq_data:
   mongo_data:

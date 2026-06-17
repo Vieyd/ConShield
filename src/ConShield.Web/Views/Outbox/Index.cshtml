@@ -45,9 +45,48 @@
     <span class="badge @(Model.IsDegraded ? "bg-warning text-dark" : "bg-success")">
         @(Model.IsDegraded ? "Degraded" : "Healthy")
     </span>
+    <span class="ms-3">Transport: <strong>@Model.Transport</strong></span>
     <span class="ms-3">Oldest pending age: @(Model.OldestPendingAge?.ToString(@"hh\:mm\:ss") ?? "-")</span>
     <span class="ms-3">Last delivered UTC: @(Model.LastDeliveredAtUtc?.ToString("u") ?? "-")</span>
 </div>
+
+@if (Model.RabbitMq is not null)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">RabbitMQ</div>
+                    <div class="fs-5">@(Model.RabbitMq.Connected ? "Connected" : Model.RabbitMq.ErrorCode ?? "Disabled")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Main queue</div>
+                    <div class="fs-5">@(Model.RabbitMq.MainQueueCount?.ToString() ?? "-")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">DLQ</div>
+                    <div class="fs-5">@(Model.RabbitMq.DeadLetterQueueCount?.ToString() ?? "-")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Inbox receipts</div>
+                    <div class="fs-5">@Model.RabbitMq.InboxReceiptCount</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <table class="table table-sm table-striped align-middle">
     <thead>

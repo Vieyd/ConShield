@@ -13,6 +13,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<UserException> UserExceptions => Set<UserException>();
     public DbSet<SecurityEventEntry> SecurityEvents => Set<SecurityEventEntry>();
     public DbSet<SecurityEventOutboxMessage> SecurityEventOutboxMessages => Set<SecurityEventOutboxMessage>();
+    public DbSet<SecurityEventInboxReceipt> SecurityEventInboxReceipts => Set<SecurityEventInboxReceipt>();
     public DbSet<IncidentRecord> Incidents => Set<IncidentRecord>();
     public DbSet<SiemAlertRecord> SiemAlerts => Set<SiemAlertRecord>();
 
@@ -71,6 +72,19 @@ public class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.SecurityEventId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SecurityEventInboxReceipt>(entity =>
+        {
+            entity.ToTable("SecurityEventInboxReceipts", table =>
+                table.HasCheckConstraint("CK_SecurityEventInboxReceipts_DeliveryCount_Positive", "\"DeliveryCount\" >= 1"));
+            entity.Property(x => x.MessageType).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.PayloadSha256).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.RoutingKey).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.ReceivedAtUtc).HasColumnType("timestamp with time zone").IsRequired();
+            entity.Property(x => x.ProcessedAtUtc).HasColumnType("timestamp with time zone");
+            entity.HasIndex(x => x.MessageId).IsUnique();
+            entity.HasIndex(x => x.SecurityEventId);
         });
 
         modelBuilder.Entity<IncidentRecord>(entity =>

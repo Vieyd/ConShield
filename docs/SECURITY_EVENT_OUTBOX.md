@@ -8,11 +8,11 @@ ConShield uses a PostgreSQL transactional outbox for security event delivery:
 ISecurityEventWriter
 -> PostgreSQL transaction: SecurityEvents + SecurityEventOutbox
 -> background dispatcher
--> JSONL audit sink
+-> JSONL audit sink or RabbitMQ publisher sink
 -> Delivered / retry / DeadLetter
 ```
 
-The goal is durable background delivery without introducing RabbitMQ or MongoDB yet.
+The goal is durable background delivery. JSONL is the default local transport; RabbitMQ is available as an explicit transport mode.
 
 ## Atomicity Boundary
 
@@ -78,6 +78,15 @@ Transient sink failures increment `AttemptCount`, return the row to `Pending`, a
 
 Permanent failures or exhausted attempts move the row to `DeadLetter`. Error code and summary are bounded and sanitized; raw exceptions and stack traces are not stored.
 
+## Transport Modes
+
+`SecurityEventOutbox:Transport` controls delivery:
+
+- `Jsonl`: default local sink.
+- `RabbitMq`: broker-confirmed publish to `conshield.security.events.v1`.
+
+There is no composite mode. One outbox attempt writes to one sink only.
+
 ## JSONL Sink
 
 The current sink writes one UTF-8 JSON line per envelope to:
@@ -93,6 +102,8 @@ Only safe relative paths inside `ContentRoot` are accepted. Absolute paths and `
 Delivery is at-least-once. If the process crashes after appending a JSONL line but before marking the row `Delivered`, the dispatcher may write the same envelope again after lock recovery.
 
 Each line contains a stable `messageId`; future consumers must deduplicate by `messageId`. ConShield does not claim distributed exactly-once delivery.
+
+In RabbitMQ mode, `Delivered` means the broker confirmed and routed the persistent message. Consumer processing is tracked separately by PostgreSQL inbox receipts.
 
 ## Background Service
 
@@ -110,6 +121,7 @@ If the worker is disabled, `SecurityEventWriter` still creates durable outbox ro
 {
   "SecurityEventOutbox": {
     "Enabled": true,
+    "Transport": "Jsonl",
     "PollIntervalMilliseconds": 1000,
     "BatchSize": 20,
     "LockSeconds": 30,
@@ -134,7 +146,6 @@ Options are validated on startup. The path must be relative and contained inside
 
 ## Not Implemented
 
-- RabbitMQ transport.
 - MongoDB raw event store.
 - Distributed exactly-once delivery.
 - Automatic retention cleanup.
