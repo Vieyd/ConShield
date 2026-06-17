@@ -28,6 +28,8 @@ jobs:
       CONSHIELD_TEST_RABBITMQ_VHOST: /conshield
       CONSHIELD_TEST_RABBITMQ_USERNAME: conshield_ci
       CONSHIELD_TEST_RABBITMQ_PASSWORD: conshield_ci_password_not_for_production
+      CONSHIELD_TEST_MONGODB_CONNECTION: mongodb://conshield_ci:conshield_ci_password_not_for_production@localhost:27017/conshield_events?authSource=admin
+      CONSHIELD_TEST_MONGODB_DATABASE: conshield_events
 
     services:
       postgres:
@@ -53,6 +55,19 @@ jobs:
           - 5672:5672
         options: >-
           --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      mongo:
+        image: mongo:8.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: conshield_ci
+          MONGO_INITDB_ROOT_PASSWORD: conshield_ci_password_not_for_production
+          MONGO_INITDB_DATABASE: conshield_events
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet -u conshield_ci -p conshield_ci_password_not_for_production --authenticationDatabase admin --eval \"db.adminCommand('ping').ok\" | grep 1"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20

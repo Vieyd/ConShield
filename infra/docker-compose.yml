@@ -36,13 +36,25 @@ services:
       retries: 20
 
   mongo:
-    image: mongo:7
+    image: mongo:8.0
     container_name: conshield-mongo
-    profiles: ["future-infra"]
+    profiles: ["projection"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${CONSHIELD_MONGO_ROOT_USERNAME:?Set CONSHIELD_MONGO_ROOT_USERNAME before starting MongoDB}
+      MONGO_INITDB_ROOT_PASSWORD: ${CONSHIELD_MONGO_ROOT_PASSWORD:?Set CONSHIELD_MONGO_ROOT_PASSWORD before starting MongoDB}
+      MONGO_INITDB_DATABASE: conshield_events
+      CONSHIELD_MONGO_APP_USERNAME: ${CONSHIELD_MONGO_APP_USERNAME:?Set CONSHIELD_MONGO_APP_USERNAME before starting MongoDB}
+      CONSHIELD_MONGO_APP_PASSWORD: ${CONSHIELD_MONGO_APP_PASSWORD:?Set CONSHIELD_MONGO_APP_PASSWORD before starting MongoDB}
     ports:
-      - "27017:27017"
+      - "127.0.0.1:${CONSHIELD_MONGO_PORT:-27017}:27017"
     volumes:
       - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet -u \"$${MONGO_INITDB_ROOT_USERNAME}\" -p \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval \"db.adminCommand('ping').ok\" | grep 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
   postgres_data:

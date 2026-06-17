@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Outbox";
+    var mongo = ViewBag.MongoProjection as ConShield.MongoProjection.MongoProjectionStatusSnapshot;
 }
 
 <h1 class="mb-3">Security Event Outbox</h1>
@@ -82,6 +83,44 @@
                 <div class="card-body">
                     <div class="text-muted small">Inbox receipts</div>
                     <div class="fs-5">@Model.RabbitMq.InboxReceiptCount</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (mongo is not null)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Mongo projection</div>
+                    <div class="fs-5">@(mongo.Enabled ? (mongo.Connected ? "Connected" : mongo.ErrorCode ?? "Unavailable") : "Disabled")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Collection</div>
+                    <div class="fs-6">@mongo.DatabaseName / @mongo.CollectionName</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Documents</div>
+                    <div class="fs-5">@(mongo.EstimatedDocumentCount?.ToString() ?? "-")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Retention / last UTC</div>
+                    <div class="fs-6">@mongo.RetentionDays d / @(mongo.LastProjectedAtUtc?.ToString("u") ?? "-")</div>
                 </div>
             </div>
         </div>

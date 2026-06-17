@@ -18,7 +18,7 @@ ConShield development rules:
 - Time is stored in UTC, and the interface displays GMT+3.
 - `Operator` has read-only access to critical functions.
 - Do not use internal course/archive labels in the interface.
-- Do not treat MongoDB as an implemented component until it is actually connected.
+- MongoDB is implemented only as the optional raw-event projection after RabbitMQ consumer validation; PostgreSQL remains the system of record.
 - RabbitMQ transport must use RabbitMQ.Client 7.x async APIs, publisher confirms, mandatory routing, quorum queues, and manual acknowledgements.
 - Do not reintroduce SQL Server or LocalDB as working dependencies.
 - Do not commit Trivy binaries, archives, vulnerability databases, full reports, scanner local config, registry credentials, or API keys.

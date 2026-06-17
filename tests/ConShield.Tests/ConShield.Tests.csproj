@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.8" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="MongoDB.Driver" Version="3.9.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.8" />
     <PackageReference Include="RabbitMQ.Client" Version="7.2.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -26,6 +27,7 @@
     <ProjectReference Include="..\..\src\ConShield.ImageScanner\ConShield.ImageScanner.csproj" />
     <ProjectReference Include="..\..\src\ConShield.ContainerPolicy\ConShield.ContainerPolicy.csproj" />
     <ProjectReference Include="..\..\src\ConShield.EventPipeline\ConShield.EventPipeline.csproj" />
+    <ProjectReference Include="..\..\src\ConShield.MongoProjection\ConShield.MongoProjection.csproj" />
   </ItemGroup>
 
   <ItemGroup>

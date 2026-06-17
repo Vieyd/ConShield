@@ -13,6 +13,7 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - Background dispatcher that delivers outbox messages to the local JSONL audit sink.
 - Optional RabbitMQ outbox transport with publisher confirms and mandatory routing.
 - `ConShield.EventConsumer` with idempotent PostgreSQL inbox receipts and manual ack.
+- Optional MongoDB raw-event projection with immutable `_id = MessageId` documents, TTL retention, and Mongo-before-Inbox checkpoint ordering.
 - Admin-only outbox status page.
 - Incident registry with status changes.
 - SIEM alert list, details page, rule catalog, correlation trigger, and demo scenario generation.
@@ -36,7 +37,8 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 
 ## Not Implemented Yet
 
-- MongoDB event store.
+- Projection backfill for existing inbox/outbox rows.
+- Automatic DLQ replay.
 - ASP.NET Core Identity or production authentication.
 - Long-term API key rotation.
 - External event-type mapping to SIEM rules.
@@ -53,4 +55,4 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - Keep persistent entities in `ConShield.Data`.
 - Store timestamps in UTC and convert for the UI at the presentation boundary.
 - Treat demo authentication as a local development mechanism.
-- Do not document MongoDB as an active application component until it is wired into the runtime flow.
+- Document MongoDB only as the optional raw-event projection; PostgreSQL remains the system of record.
