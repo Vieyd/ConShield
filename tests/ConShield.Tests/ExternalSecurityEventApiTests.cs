@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ConShield.Application;
 using ConShield.Contracts.Enums;
 using ConShield.Data;
 using Microsoft.AspNetCore.Hosting;
@@ -312,6 +313,38 @@ public class ExternalSecurityEventApiTests
         Assert.DoesNotContain(ApiKey, body, StringComparison.Ordinal);
     }
 
+    [PostgreSqlFact]
+    public async Task ImageScanEvent_IngestsAndTriggersImg001WithoutDuplicates()
+    {
+        await using var factory = await CreateFactoryAsync();
+        using var client = factory.CreateClient();
+        AddApiKey(client);
+        var externalEventId = Guid.NewGuid();
+
+        var first = await client.PostAsJsonAsync("/api/v1/security-events", ImageScanPayload(externalEventId));
+        var second = await client.PostAsJsonAsync("/api/v1/security-events", ImageScanPayload(externalEventId));
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(1, await db.SecurityEvents.CountAsync(x =>
+            x.SourceSystem == "conshield.image-scanner"
+            && x.ExternalEventType == "container.image.scan.completed"
+            && x.ExternalEventId == externalEventId));
+
+        var correlation = scope.ServiceProvider.GetRequiredService<ISiemCorrelationService>();
+        var firstRun = await correlation.RunAsync();
+        var secondRun = await correlation.RunAsync();
+
+        Assert.Equal(1, firstRun.CreatedAlerts);
+        Assert.Equal(1, firstRun.CreatedIncidents);
+        Assert.Equal(0, secondRun.CreatedAlerts);
+        Assert.Equal(1, await db.SiemAlerts.CountAsync(x => x.RuleCode == "IMG-001"));
+        Assert.Equal(1, await db.Incidents.CountAsync(x => x.Name.Contains("IMG-001")));
+    }
+
     private static async Task<WebApplicationFactory<Program>> CreateFactoryAsync(int maxRequestBodyBytes = 32768)
     {
         var connectionString = Environment.GetEnvironmentVariable("CONSHIELD_TEST_POSTGRES_CONNECTION")
@@ -362,6 +395,41 @@ public class ExternalSecurityEventApiTests
             sourceHost = "test-host",
             description,
             additionalData = new { test = true }
+        };
+    }
+
+    private static object ImageScanPayload(Guid externalEventId)
+    {
+        return new
+        {
+            externalEventId,
+            occurredAtUtc = DateTime.UtcNow,
+            sourceSystem = "conshield.image-scanner",
+            eventType = "container.image.scan.completed",
+            severity = "Critical",
+            userName = (string?)null,
+            sourceHost = "test-host",
+            description = "Trivy image scan completed for repo/app:latest: critical=1, high=2, total=3.",
+            additionalData = new
+            {
+                schemaVersion = 1,
+                scanner = "trivy",
+                scannerVersion = "Version: 0.0.0",
+                imageReference = "repo/app:latest",
+                imageDigest = "repo/app@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                artifactType = "container_image",
+                scanStatus = "completed",
+                unknownCount = 0,
+                lowCount = 0,
+                mediumCount = 0,
+                highCount = 2,
+                criticalCount = 1,
+                totalCount = 3,
+                fixAvailableCount = 2,
+                affectedTargetCount = 1,
+                reportSha256 = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                durationMs = 1000
+            }
         };
     }
 

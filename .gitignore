@@ -15,6 +15,7 @@ obj/
 src/**/appsettings.Development.json
 src/**/appsettings.Local.json
 src/ConShield.Collector/collector.local.json
+src/ConShield.ImageScanner/scanner.local.json
 *.env
 .env
 .env.*
@@ -31,6 +32,12 @@ logs/
 *.ldf
 *.sqlite
 *.sqlite3
+trivy.exe
+trivy
+*.zip
+*.tar
+*.tar.gz
+*trivy-report*.json
 
 # Generated/cache files
 *.cache
@@ -38,3 +45,4 @@ TestResults/
 coverage/
 *.tmp
 *.bak
+temp/

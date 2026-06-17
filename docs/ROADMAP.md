@@ -18,6 +18,7 @@
 
 ## v0.3 SIEM and Event Pipeline
 
+- Extend image scanning with a small policy engine for Allow/Warn/Block decisions.
 - Add a background event dispatcher.
 - Use RabbitMQ for security event transport.
 - Use MongoDB or another event store for raw events.
@@ -30,6 +31,7 @@
 - Provide a full Docker Compose setup for app and dependencies.
 - Add dashboard visualizations for severity, timelines, and incident states.
 - Add sample attack/detection scenarios.
+- Add a guided container image scanning demo.
 - Publish a tagged GitHub release.
 
 ## Backlog

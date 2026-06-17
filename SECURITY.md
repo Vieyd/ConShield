@@ -13,6 +13,8 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - External event ingestion protected by a local API key.
 - Validation, request size limit, rate limiting, and idempotency for external events.
 - The ingestion rate limiter is scoped only to `POST /api/v1/security-events` and partitions by transport `RemoteIpAddress`.
+- Trivy-based container image scanning through a separate console scanner.
+- `IMG-001` correlation for critical vulnerabilities in container image scan summaries.
 - Local development configuration is excluded from Git.
 
 ## Current Limitations
@@ -25,6 +27,8 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - The ingestion API key is a local prototype mechanism, not production machine identity.
 - `X-Forwarded-For` is not trusted by the ingestion limiter unless a trusted reverse proxy is deliberately configured in a future task.
 - Runtime JSONL logs may contain usernames, IP addresses, and event metadata. They must not be committed.
+- Trivy reports, archives, vulnerability databases, and scanner local config must not be committed.
+- `ConShield.ImageScanner` summarizes scan results and does not store full CVE lists in PostgreSQL.
 - The app is designed for local portfolio demonstration, not internet exposure.
 
 ## Secret Handling
@@ -35,6 +39,8 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Keep PostgreSQL passwords in local environment variables, user secrets, or ignored development settings.
 - Keep `ExternalEventIngestion:ApiKey` in local configuration or environment variables only.
 - Prefer `CONSHIELD_API_KEY` for the Collector instead of command-line `--api-key`, because command-line arguments may be visible in shell history or process listings.
+- Prefer `CONSHIELD_API_KEY` for `ConShield.ImageScanner` for the same reason.
+- Keep `CONSHIELD_TRIVY_PATH` local and do not commit Trivy binaries or archives.
 
 ## Recommended Hardening Roadmap
 

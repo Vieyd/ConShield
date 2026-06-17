@@ -75,3 +75,15 @@ Reason: unauthenticated callers can change invalid API-key values on every reque
 External ingestion saves events as `SecurityEventType.ExternalEvent` and stores the source-specific type in `ExternalEventType`.
 
 Reason: the first ingestion stage should preserve external context without changing the semantics of existing SIEM rules. `CR-001` can still match external critical events by source IP, while `BF-001` and `UE-001` remain tied to built-in ConShield event types until an explicit mapping layer is designed.
+
+## 012. Run Container Image Scanning Outside the Web Process
+
+`ConShield.ImageScanner` is a separate console project that starts Trivy locally and submits normalized scan summaries through the existing ingestion API.
+
+Reason: starting local security tools from MVC requests would increase the web application's privilege and denial-of-service risk. A console scanner keeps process execution, timeouts, and registry credentials outside the Web/MVC boundary.
+
+## 013. Store Only Normalized Image Scan Summaries
+
+The scanner submits counts, image metadata, duration, and `reportSha256`; it does not submit the full Trivy report or full CVE list.
+
+Reason: normalized summaries are enough for `IMG-001`, reduce data exposure, avoid large database records, and keep registry credential leakage risk lower.

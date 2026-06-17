@@ -109,6 +109,118 @@ public class SiemCorrelationServiceTests
         Assert.Equal("CR-001:172.16.5.44", alert.TriggerKey);
     }
 
+    [Fact]
+    public async Task IMG001_CriticalImageScan_CreatesAlertAndIncident()
+    {
+        await using var db = CreateDbContext();
+        AddImageScanEvent(db, criticalCount: 2, highCount: 3, totalCount: 10, imageDigest: "repo/app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result = await service.RunAsync();
+
+        Assert.Equal(1, result.CreatedAlerts);
+        Assert.Equal(1, result.CreatedIncidents);
+
+        var alert = await db.SiemAlerts.SingleAsync();
+        Assert.Equal("IMG-001", alert.RuleCode);
+        Assert.Equal("IMG-001:repo/app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", alert.TriggerKey);
+        Assert.Contains("critical=2", alert.Description);
+
+        var incident = await db.Incidents.SingleAsync();
+        Assert.Equal(alert.IncidentId, incident.Id);
+        Assert.Equal(EventSeverity.Critical, incident.Severity);
+        Assert.NotNull(incident.SourceEventId);
+        Assert.Contains(incident.SourceEventId.Value.ToString(), alert.SourceEventIdsJson);
+    }
+
+    [Fact]
+    public async Task IMG001_ZeroCritical_DoesNotCreateAlert()
+    {
+        await using var db = CreateDbContext();
+        AddImageScanEvent(db, criticalCount: 0, highCount: 5, totalCount: 5);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result = await service.RunAsync();
+
+        Assert.Equal(0, result.CreatedAlerts);
+        Assert.Empty(db.SiemAlerts);
+    }
+
+    [Fact]
+    public async Task IMG001_OtherExternalType_DoesNotCreateAlert()
+    {
+        await using var db = CreateDbContext();
+        AddImageScanEvent(db, criticalCount: 1, highCount: 0, totalCount: 1, externalEventType: "other.event");
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result = await service.RunAsync();
+
+        Assert.Equal(0, result.CreatedAlerts);
+        Assert.Empty(db.SiemAlerts);
+    }
+
+    [Fact]
+    public async Task IMG001_MalformedAdditionalData_DoesNotBreakCorrelation()
+    {
+        await using var db = CreateDbContext();
+        db.SecurityEvents.Add(new SecurityEventEntry
+        {
+            OccurredAtUtc = DateTime.UtcNow,
+            EventType = SecurityEventType.ExternalEvent,
+            ExternalEventType = "container.image.scan.completed",
+            Severity = EventSeverity.Critical,
+            Description = "Malformed scan event",
+            AdditionalDataJson = "{"
+        });
+        AddLoginFailures(db, "operator", 3);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result = await service.RunAsync();
+
+        Assert.Equal(1, result.CreatedAlerts);
+        Assert.Contains(await db.SiemAlerts.ToListAsync(), x => x.RuleCode == "BF-001");
+    }
+
+    [Fact]
+    public async Task IMG001_RepeatedRun_DoesNotCreateDuplicateActiveAlert()
+    {
+        await using var db = CreateDbContext();
+        AddImageScanEvent(db, criticalCount: 1, highCount: 0, totalCount: 1);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var first = await service.RunAsync();
+        var second = await service.RunAsync();
+
+        Assert.Equal(1, first.CreatedAlerts);
+        Assert.Equal(0, second.CreatedAlerts);
+        Assert.Equal(1, await db.SiemAlerts.CountAsync(x => x.RuleCode == "IMG-001"));
+    }
+
+    [Fact]
+    public async Task IMG001_UsesImageReferenceFallback()
+    {
+        await using var db = CreateDbContext();
+        AddImageScanEvent(db, criticalCount: 1, highCount: 0, totalCount: 1, imageDigest: null, imageReference: "Repo/App:Latest");
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        await service.RunAsync();
+
+        var alert = await db.SiemAlerts.SingleAsync();
+        Assert.Equal("IMG-001:repo/app:latest", alert.TriggerKey);
+    }
+
     private static ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -169,6 +281,37 @@ public class SiemCorrelationServiceTests
                 Description = "Критическое событие контроля выполнения контейнера."
             });
         }
+    }
+
+    private static void AddImageScanEvent(
+        ApplicationDbContext dbContext,
+        int criticalCount,
+        int highCount,
+        int totalCount,
+        string? imageDigest = "repo/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        string imageReference = "repo/app:latest",
+        string externalEventType = "container.image.scan.completed")
+    {
+        dbContext.SecurityEvents.Add(new SecurityEventEntry
+        {
+            OccurredAtUtc = DateTime.UtcNow.AddSeconds(-10),
+            EventType = SecurityEventType.ExternalEvent,
+            ExternalEventType = externalEventType,
+            Severity = criticalCount > 0 ? EventSeverity.Critical : EventSeverity.High,
+            SourceSystem = "conshield.image-scanner",
+            Description = "Trivy image scan completed.",
+            AdditionalDataJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                schemaVersion = 1,
+                scanner = "trivy",
+                imageReference,
+                imageDigest,
+                criticalCount,
+                highCount,
+                totalCount,
+                reportSha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            })
+        });
     }
 
     private sealed class SpySecurityEventWriter : ISecurityEventWriter
