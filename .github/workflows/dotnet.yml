@@ -2,13 +2,28 @@ name: .NET
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main]
   pull_request:
-    branches: [ main, master ]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dotnet-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      CONSHIELD_TEST_POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=conshield_tests;Username=postgres
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -24,17 +39,16 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
-    env:
-      CONSHIELD_TEST_POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=conshield_tests;Username=postgres
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: '8.0.x'
 
       - name: Restore local tools
         run: dotnet tool restore
