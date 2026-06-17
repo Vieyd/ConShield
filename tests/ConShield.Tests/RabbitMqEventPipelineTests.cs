@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 using RabbitMQ.Client.Events;
 
 namespace ConShield.Tests;
@@ -79,6 +80,44 @@ public class RabbitMqEventPipelineTests
         Assert.Equal("body_too_large", result.ErrorCode);
     }
 
+    [Fact]
+    public void RabbitMqPublishFailureClassifier_MapsMandatoryReturnToMandatoryReturn()
+    {
+        var result = RabbitMqSecurityEventOutboxSink.ClassifyPublishFailure(
+            new PublishReturnException(1, "exchange", "security.event.unbound", "message-id", 312, "NO_ROUTE"));
+
+        Assert.Equal(OutboxSinkResultType.TransientFailure, result.Type);
+        Assert.Equal("mandatory_return", result.ErrorCode);
+    }
+
+    [Fact]
+    public void RabbitMqPublishFailureClassifier_MapsPublisherNackToPublisherNack()
+    {
+        var result = RabbitMqSecurityEventOutboxSink.ClassifyPublishFailure(new PublishException(1, false));
+
+        Assert.Equal(OutboxSinkResultType.TransientFailure, result.Type);
+        Assert.Equal("publisher_nack", result.ErrorCode);
+    }
+
+    [Fact]
+    public void RabbitMqPublishFailureClassifier_MapsBrokerUnavailableToTransient()
+    {
+        var result = RabbitMqSecurityEventOutboxSink.ClassifyPublishFailure(
+            new BrokerUnreachableException(new IOException("network unavailable")));
+
+        Assert.Equal(OutboxSinkResultType.TransientFailure, result.Type);
+        Assert.Equal("rabbitmq_unavailable", result.ErrorCode);
+    }
+
+    [Fact]
+    public void RabbitMqPublishFailureClassifier_MapsCancellationToPublishTimeout()
+    {
+        var result = RabbitMqSecurityEventOutboxSink.ClassifyPublishFailure(new OperationCanceledException());
+
+        Assert.Equal(OutboxSinkResultType.TransientFailure, result.Type);
+        Assert.Equal("publish_timeout", result.ErrorCode);
+    }
+
     [PostgreSqlFact]
     public async Task Inbox_InsertDuplicateAndConcurrentDuplicate_CreateOneRow()
     {
@@ -125,6 +164,11 @@ public class RabbitMqEventPipelineTests
         var failure = await unroutable.DeliverAsync(Envelope(), CancellationToken.None);
         Assert.Equal(OutboxSinkResultType.TransientFailure, failure.Type);
         Assert.Equal("mandatory_return", failure.ErrorCode);
+        Assert.Equal(1u, await channel.MessageCountAsync(options.QueueName, CancellationToken.None));
+
+        var afterReturn = await sink.DeliverAsync(Envelope(), CancellationToken.None);
+        Assert.Equal(OutboxSinkResultType.Succeeded, afterReturn.Type);
+        Assert.Equal(2u, await channel.MessageCountAsync(options.QueueName, CancellationToken.None));
     }
 
     [RabbitMqFact]

@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Exceptions;
 
 namespace ConShield.EventPipeline;
 
@@ -59,12 +59,10 @@ public sealed class RabbitMqSecurityEventOutboxSink : ISecurityEventOutboxSink
                     consumerDispatchConcurrency: null),
                 timeout.Token);
 
-            var returned = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-            channel.BasicReturnAsync += OnReturnAsync;
-
             await _topology.DeclareAsync(channel, timeout.Token);
 
             var properties = CreateProperties(envelope);
+            // With confirmation tracking enabled, RabbitMQ.Client throws on mandatory returns and nacks.
             await channel.BasicPublishAsync(
                 _options.ExchangeName,
                 _options.RoutingKey,
@@ -73,18 +71,17 @@ public sealed class RabbitMqSecurityEventOutboxSink : ISecurityEventOutboxSink
                 body: body,
                 cancellationToken: timeout.Token);
 
-            var returnOrDelay = await Task.WhenAny(returned.Task, Task.Delay(100, timeout.Token));
-            if (returnOrDelay == returned.Task)
-                return OutboxSinkResult.TransientFailure("mandatory_return", "RabbitMQ returned the message as unroutable.");
-
-            channel.BasicReturnAsync -= OnReturnAsync;
             return OutboxSinkResult.Succeeded();
-
-            Task OnReturnAsync(object sender, BasicReturnEventArgs args)
-            {
-                returned.TrySetResult(args.RoutingKey);
-                return Task.CompletedTask;
-            }
+        }
+        catch (PublishReturnException)
+        {
+            _logger.LogDebug("RabbitMQ mandatory return for message {MessageId}.", envelope.MessageId);
+            return OutboxSinkResult.TransientFailure("mandatory_return", "RabbitMQ returned the message as unroutable.");
+        }
+        catch (PublishException)
+        {
+            _logger.LogDebug("RabbitMQ publisher nack for message {MessageId}.", envelope.MessageId);
+            return OutboxSinkResult.TransientFailure("publisher_nack", "RabbitMQ did not confirm the published message.");
         }
         catch (OperationCanceledException)
         {
@@ -93,9 +90,7 @@ public sealed class RabbitMqSecurityEventOutboxSink : ISecurityEventOutboxSink
         catch (Exception ex)
         {
             _logger.LogWarning("RabbitMQ publish failed for message {MessageId}.", envelope.MessageId);
-            return IsPermanentTopologyOrConfig(ex)
-                ? OutboxSinkResult.PermanentFailure("rabbitmq_config_error", "RabbitMQ topology or configuration is invalid.")
-                : OutboxSinkResult.TransientFailure("rabbitmq_unavailable", "RabbitMQ publish failed transiently.");
+            return ClassifyPublishFailure(ex);
         }
     }
 
@@ -120,11 +115,23 @@ public sealed class RabbitMqSecurityEventOutboxSink : ISecurityEventOutboxSink
         };
     }
 
-    private static bool IsPermanentTopologyOrConfig(Exception ex)
+    public static OutboxSinkResult ClassifyPublishFailure(Exception ex)
     {
-        var name = ex.GetType().Name;
-        return name.Contains("OperationInterrupted", StringComparison.OrdinalIgnoreCase)
-            || name.Contains("BrokerUnreachable", StringComparison.OrdinalIgnoreCase) is false
-                && name.Contains("Authentication", StringComparison.OrdinalIgnoreCase);
+        return ex switch
+        {
+            PublishReturnException => OutboxSinkResult.TransientFailure("mandatory_return", "RabbitMQ returned the message as unroutable."),
+            PublishException => OutboxSinkResult.TransientFailure("publisher_nack", "RabbitMQ did not confirm the published message."),
+            OperationCanceledException => OutboxSinkResult.TransientFailure("publish_timeout", "RabbitMQ publish timed out or was cancelled."),
+            BrokerUnreachableException => OutboxSinkResult.TransientFailure("rabbitmq_unavailable", "RabbitMQ publish failed transiently."),
+            AuthenticationFailureException => OutboxSinkResult.PermanentFailure("rabbitmq_config_error", "RabbitMQ topology or configuration is invalid."),
+            OperationInterruptedException operation when IsPreconditionFailure(operation) =>
+                OutboxSinkResult.PermanentFailure("rabbitmq_config_error", "RabbitMQ topology or configuration is invalid."),
+            _ => OutboxSinkResult.TransientFailure("rabbitmq_unavailable", "RabbitMQ publish failed transiently.")
+        };
+    }
+
+    private static bool IsPreconditionFailure(OperationInterruptedException ex)
+    {
+        return ex.ShutdownReason?.ReplyCode is 403 or 404 or 405 or 406;
     }
 }
