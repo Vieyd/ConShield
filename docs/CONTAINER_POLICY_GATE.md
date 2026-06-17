@@ -11,6 +11,7 @@ image reference
 -> scan audit event
 -> policy audit event
 -> optional hardened local docker run
+-> launch result audit event
 -> POL-001 alert and incident when decision is Block
 ```
 
@@ -22,6 +23,7 @@ The gate demonstrates policy enforcement for a local portfolio scenario. It is n
 - `ConShield.ImageScanner gate` runs Trivy, evaluates the policy, submits audit events, and optionally starts Docker.
 - `ConShield.Application` correlates Block policy decisions through `POL-001`.
 - `ConShield.Web` does not start Trivy or Docker.
+- For `--execute`, the policy audit event is the at-most-once launch reservation. A replayed operation with an existing policy event does not start Docker again.
 
 ## Trust Boundaries
 
@@ -36,6 +38,7 @@ user or CI
 -> PostgreSQL
 -> SIEM correlation
 -> optional local Docker executable
+-> launch result ingestion
 ```
 
 Controls:
@@ -46,6 +49,8 @@ Controls:
 - invalid policy or invalid scan summary fails closed;
 - Block has no CLI bypass;
 - Docker launch is fixed to a hardened argument set;
+- Docker launch requires a policy event created by the current command;
+- duplicate policy audit events stop replayed Docker side effects;
 - API keys, registry credentials, executable paths, and full reports are not submitted.
 
 ## Policy File
@@ -144,14 +149,24 @@ Supported options:
 
 `--source-system` is intentionally not supported by `gate`. It remains available only for the `scan` command. Gate audit records use reserved source systems so a single operation cannot collapse into one idempotent ingestion record.
 
+`--execute` cannot be combined with `--no-submit`. Launch audit is part of the security boundary, so Docker cannot run in no-submit mode.
+
 ## Audit Events
 
-The gate uses one `externalEventId` for two source systems:
+The gate uses one `externalEventId` for three source systems:
 
 - `conshield.image-scanner` / `container.image.scan.completed`;
-- `conshield.container-guard` / `container.image.policy.evaluated`.
+- `conshield.container-guard` / `container.image.policy.evaluated`;
+- `conshield.container-runtime` / `container.image.launch.result`.
 
-These source systems are reserved and immutable for `gate`. Idempotency is safe because ingestion keys are `sourceSystem + externalEventId`: retries keep exactly two records, one scan event and one policy event.
+These source systems are reserved and immutable for `gate`. Idempotency is safe because ingestion keys are `sourceSystem + externalEventId`: retries keep one scan event, one policy event, and one launch result event.
+
+For `gate --execute`, the policy event is the launch reservation:
+
+- scan `Created` + policy `Created` -> Docker may run;
+- scan `Existing` + policy `Created` -> Docker may run after a scan retry;
+- scan `Existing` + policy `Existing` -> operation already processed, Docker does not run;
+- scan `Created` + policy `Existing` -> inconsistent audit state, Docker does not run.
 
 Policy event `additionalData` contains only summary data:
 
@@ -176,6 +191,38 @@ Policy event `additionalData` contains only summary data:
   "warningAccepted": false
 }
 ```
+
+Launch result event `additionalData` contains only bounded runtime metadata:
+
+```json
+{
+  "schemaVersion": 1,
+  "runtime": "docker",
+  "runtimeProfile": "docker-hardened-v1",
+  "outcome": "Succeeded",
+  "dockerRunInvoked": true,
+  "processExitCode": 0,
+  "durationMs": 25,
+  "runtimeVersion": "26.0.0",
+  "launchReference": "repo/app@sha256:...",
+  "imageReference": "repo/app:tag",
+  "imageDigest": "repo/app@sha256:...",
+  "reportSha256": "lowercase-hex",
+  "safeErrorCategory": null
+}
+```
+
+Supported launch outcomes:
+
+```text
+Succeeded
+Failed
+TimedOut
+Cancelled
+Unavailable
+```
+
+Full stdout, stderr, registry credentials, API keys, Docker config paths, and absolute user paths are not submitted.
 
 ## POL-001
 
@@ -208,7 +255,7 @@ No arbitrary Docker arguments, host networking, host volumes, privileged mode, D
 
 When Trivy provides a valid sha256 digest reference, Docker launch uses that immutable digest reference. If no digest is available, launch uses the scanned image reference and the remaining tag TOCTOU limitation is documented rather than hidden.
 
-The policy event records `executionRequested` and `warningAccepted`. It is not proof that Docker launch succeeded; a separate launch-result audit event is a known future hardening step.
+The policy event records `executionRequested` and `warningAccepted`. It is not proof that Docker launch succeeded; the actual runtime outcome is recorded separately by `container.image.launch.result`.
 
 ## Exit Codes
 
@@ -227,6 +274,10 @@ The policy event records `executionRequested` and `warningAccepted`. It is not p
 23 Docker unavailable
 24 Docker launch failed
 25 Docker timeout or cancellation
+26 operation already processed; Docker was not replayed
+27 Docker succeeded but launch-result audit failed
+28 Docker failed or did not start and launch-result audit failed
+29 inconsistent scan/policy audit idempotency state
 ```
 
 ## Troubleshooting
@@ -236,6 +287,8 @@ The policy event records `executionRequested` and `warningAccepted`. It is not p
 - `10`: rerun with `--accept-warning` only if launching a Warn image is intentional.
 - `23`: install Docker or set `CONSHIELD_DOCKER_PATH`.
 - `6`: check Web, `CONSHIELD_BASE_URL`, and `CONSHIELD_API_KEY`.
+- `26`: the same `externalEventId` was already processed; use a new operation id only for a genuinely new launch attempt.
+- `27` or `28`: inspect Web availability and ingestion API key; Docker is not retried automatically.
 
 ## Not Implemented
 

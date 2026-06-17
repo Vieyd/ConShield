@@ -19,5 +19,7 @@ ConShield development rules:
 - Do not reintroduce SQL Server or LocalDB as working dependencies.
 - Do not commit Trivy binaries, archives, vulnerability databases, full reports, scanner local config, registry credentials, or API keys.
 - Do not add a CLI bypass for Container Policy `Block` decisions.
+- Do not allow `gate --execute` to run Docker unless policy audit creation reserved the operation in the current command.
+- Keep scan, policy, and launch result source systems reserved as `conshield.image-scanner`, `conshield.container-guard`, and `conshield.container-runtime`.
 - Do not add arbitrary Docker arguments, host networking, host volumes, privileged mode, or Docker socket mounts to the gate command.
 - After changes, run restore, build, and tests.

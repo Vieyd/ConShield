@@ -15,5 +15,9 @@ public enum ExitCodes
     PolicyEvaluationFailed = 22,
     DockerUnavailable = 23,
     LaunchFailed = 24,
-    LaunchTimeoutOrCancellation = 25
+    LaunchTimeoutOrCancellation = 25,
+    OperationAlreadyProcessed = 26,
+    LaunchSucceededAuditFailed = 27,
+    LaunchOutcomeAuditFailed = 28,
+    InconsistentAuditState = 29
 }

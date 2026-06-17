@@ -61,13 +61,15 @@ public sealed class ProcessRunner : IProcessRunner
         catch (OperationCanceledException)
         {
             TryKill(process);
-            return ProcessRunResult.TimedOut();
+            return cancellationToken.IsCancellationRequested && !timeoutCts.IsCancellationRequested
+                ? ProcessRunResult.CanceledResult()
+                : ProcessRunResult.TimedOutResult();
         }
 
         var stdout = await stdoutTask;
         var stderr = await stderrTask;
 
-        if (stdout.Oversized)
+        if (stdout.Oversized || stderr.Oversized)
             return ProcessRunResult.OversizedOutput(stdout.Text, stderr.Text);
 
         return new ProcessRunResult(
@@ -75,9 +77,8 @@ public sealed class ProcessRunner : IProcessRunner
             ExitCode: process.ExitCode,
             StandardOutput: stdout.Text,
             StandardError: stderr.Text,
-            TimedOutOrCanceled: false,
-            OutputTooLarge: false,
-            StartError: null);
+            StartError: null)
+        { TerminationReason = ProcessTerminationReason.Completed };
     }
 
     private static async Task<LimitedReadResult> ReadLimitedAsync(
@@ -124,13 +125,34 @@ public sealed record ProcessRunResult(
     int ExitCode,
     string StandardOutput,
     string StandardError,
-    bool TimedOutOrCanceled,
-    bool OutputTooLarge,
     string? StartError)
 {
-    public static ProcessRunResult Failed(string error) => new(false, -1, string.Empty, string.Empty, false, false, error);
-    public static ProcessRunResult TimedOut() => new(true, -1, string.Empty, string.Empty, true, false, null);
-    public static ProcessRunResult OversizedOutput(string stdout, string stderr) => new(true, -1, stdout, stderr, false, true, null);
+    public ProcessTerminationReason TerminationReason { get; init; } = ProcessTerminationReason.Completed;
+    public bool TimedOutOrCanceled => TerminationReason is ProcessTerminationReason.TimedOut or ProcessTerminationReason.Canceled;
+    public bool TimedOut => TerminationReason == ProcessTerminationReason.TimedOut;
+    public bool Canceled => TerminationReason == ProcessTerminationReason.Canceled;
+    public bool OutputTooLarge => TerminationReason == ProcessTerminationReason.OutputTooLarge;
+
+    public static ProcessRunResult Failed(string error) =>
+        new(false, -1, string.Empty, string.Empty, error) { TerminationReason = ProcessTerminationReason.StartFailed };
+
+    public static ProcessRunResult TimedOutResult() =>
+        new(true, -1, string.Empty, string.Empty, null) { TerminationReason = ProcessTerminationReason.TimedOut };
+
+    public static ProcessRunResult CanceledResult() =>
+        new(true, -1, string.Empty, string.Empty, null) { TerminationReason = ProcessTerminationReason.Canceled };
+
+    public static ProcessRunResult OversizedOutput(string stdout, string stderr) =>
+        new(true, -1, stdout, stderr, null) { TerminationReason = ProcessTerminationReason.OutputTooLarge };
 }
 
 internal sealed record LimitedReadResult(string Text, bool Oversized);
+
+public enum ProcessTerminationReason
+{
+    Completed,
+    StartFailed,
+    TimedOut,
+    Canceled,
+    OutputTooLarge
+}

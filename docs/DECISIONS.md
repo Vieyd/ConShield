@@ -111,3 +111,11 @@ Reason: the gate is a security control. Demonstration convenience must not weake
 `ConShield.ImageScanner gate --execute` is the only component that may launch Docker. It uses a fixed `docker run` argument set and does not support arbitrary Docker flags, host volumes, host networking, privileged mode, or Docker socket mounts.
 
 Reason: arbitrary runtime flags would turn the gate into an unsafe command launcher and undermine the portfolio security story.
+
+## 018. Treat Policy Audit Creation as the Docker Launch Reservation
+
+For `ConShield.ImageScanner gate --execute`, the scan, policy, and launch-result events share one `externalEventId` but use distinct reserved source systems: `conshield.image-scanner`, `conshield.container-guard`, and `conshield.container-runtime`.
+
+Docker may run only when the policy event is created by the current command. If the policy event already exists, the operation is treated as already processed and Docker is not launched again.
+
+Reason: ingestion idempotency is keyed by `sourceSystem + externalEventId`. Using the policy event as an at-most-once reservation preserves retry safety without changing the database uniqueness model or generating a second operation id.

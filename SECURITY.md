@@ -17,6 +17,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - `IMG-001` correlation for critical vulnerabilities in container image scan summaries.
 - Local Container Policy Gate with deterministic Allow/Warn/Block decisions.
 - `POL-001` correlation for policy Block decisions.
+- Replay-safe launch audit for guarded Docker execution outcomes.
 - Local development configuration is excluded from Git.
 
 ## Current Limitations
@@ -32,9 +33,10 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Trivy reports, archives, vulnerability databases, and scanner local config must not be committed.
 - `ConShield.ImageScanner` summarizes scan results and does not store full CVE lists in PostgreSQL.
 - `ConShield.ImageScanner gate` can optionally launch Docker locally, but only after scan, policy evaluation, and audit submission.
-- Container Policy Gate reserves `conshield.image-scanner` and `conshield.container-guard` as distinct source systems for one shared `externalEventId`.
+- Container Policy Gate reserves `conshield.image-scanner`, `conshield.container-guard`, and `conshield.container-runtime` as distinct source systems for one shared `externalEventId`.
+- For `gate --execute`, the policy audit event is treated as the at-most-once launch reservation. If the same operation is replayed and the policy event already exists, Docker is not launched again.
 - Container Policy Gate is not a Kubernetes admission controller and does not provide remote policy distribution, waivers, or policy signing.
-- Policy evaluation events record requested execution and warning acknowledgement, but they are not a separate audit record of Docker launch success or failure.
+- Policy evaluation events record requested execution and warning acknowledgement. Actual Docker launch outcomes are recorded separately as `container.image.launch.result`.
 - The app is designed for local portfolio demonstration, not internet exposure.
 
 ## Secret Handling

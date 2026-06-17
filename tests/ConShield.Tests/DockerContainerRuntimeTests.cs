@@ -62,6 +62,7 @@ public class DockerContainerRuntimeTests
 
         Assert.False(result.Success);
         Assert.True(result.TimedOut);
+        Assert.Equal(ContainerLaunchOutcome.TimedOut, result.Outcome);
     }
 
     private static string WriteTempExecutable()
@@ -92,9 +93,9 @@ public class DockerContainerRuntimeTests
         {
             Calls.Add(new ProcessCall(fileName, arguments.ToArray()));
             if (_timeoutOnRun && arguments.FirstOrDefault() == "run")
-                return Task.FromResult(ProcessRunResult.TimedOut());
+                return Task.FromResult(ProcessRunResult.TimedOutResult());
 
-            return Task.FromResult(new ProcessRunResult(true, 0, "ok", string.Empty, false, false, null));
+            return Task.FromResult(new ProcessRunResult(true, 0, "ok", string.Empty, null));
         }
     }
 

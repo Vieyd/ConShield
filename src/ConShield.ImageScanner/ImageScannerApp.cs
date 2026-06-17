@@ -167,18 +167,30 @@ public sealed class ImageScannerApp
         }
         else
         {
-            var scanSubmitExit = await SubmitEventAsync(options, auditEvents.ScanEvent, "Scan event", cancellationToken);
-            if (scanSubmitExit != ExitCodes.Success)
+            var scanSubmit = await SubmitEventDetailedAsync(options, auditEvents.ScanEvent, "Scan event", cancellationToken);
+            if (!scanSubmit.Accepted)
             {
                 await _error.WriteLineAsync("Container launch denied because scan audit submission failed.");
-                return scanSubmitExit;
+                return scanSubmit.ExitCode;
             }
 
-            var policySubmitExit = await SubmitEventAsync(options, auditEvents.PolicyEvent, "Policy event", cancellationToken);
-            if (policySubmitExit != ExitCodes.Success)
+            var policySubmit = await SubmitEventDetailedAsync(options, auditEvents.PolicyEvent, "Policy event", cancellationToken);
+            if (!policySubmit.Accepted)
             {
                 await _error.WriteLineAsync("Container launch denied because audit submission failed.");
-                return policySubmitExit;
+                return policySubmit.ExitCode;
+            }
+
+            if (options.Execute)
+            {
+                var reservation = ValidateLaunchReservation(scanSubmit, policySubmit);
+                if (reservation != ExitCodes.Success)
+                {
+                    await _error.WriteLineAsync(reservation == ExitCodes.OperationAlreadyProcessed
+                        ? "Container launch denied because this gate operation was already processed."
+                        : "Container launch denied because audit idempotency state is inconsistent.");
+                    return reservation;
+                }
             }
         }
 
@@ -208,6 +220,14 @@ public sealed class ImageScannerApp
         try
         {
             var launch = await _containerRuntime.LaunchAsync(options, scanExit.Summary!, cancellationToken);
+            var launchEvent = LaunchResultEventBuilder.Build(options, scanExit.Summary!, launch);
+            var launchAudit = await SubmitLaunchResultWithRetryAsync(options, launchEvent, cancellationToken);
+            if (!launchAudit.Accepted)
+            {
+                await _error.WriteLineAsync("Container launch result audit submission failed.");
+                return launch.Success ? ExitCodes.LaunchSucceededAuditFailed : ExitCodes.LaunchOutcomeAuditFailed;
+            }
+
             if (launch.Success)
             {
                 await _output.WriteLineAsync("Container launched through hardened docker run.");
@@ -218,11 +238,20 @@ public sealed class ImageScannerApp
             if (launch.TimedOut)
                 return ExitCodes.LaunchTimeoutOrCancellation;
 
+            if (launch.Canceled)
+                return ExitCodes.LaunchTimeoutOrCancellation;
+
             return launch.Unavailable ? ExitCodes.DockerUnavailable : ExitCodes.LaunchFailed;
         }
         catch (OperationCanceledException)
         {
             await _error.WriteLineAsync("Container launch was canceled.");
+            var canceled = ContainerRuntimeResult.Cancelled("Container launch was canceled.", launchReference: DockerContainerRuntime.SelectLaunchImage(scanExit.Summary!));
+            var launchEvent = LaunchResultEventBuilder.Build(options, scanExit.Summary!, canceled);
+            var launchAudit = await SubmitLaunchResultWithRetryAsync(options, launchEvent, CancellationToken.None);
+            if (!launchAudit.Accepted)
+                return ExitCodes.LaunchOutcomeAuditFailed;
+
             return ExitCodes.LaunchTimeoutOrCancellation;
         }
     }
@@ -291,31 +320,132 @@ public sealed class ImageScannerApp
         string label,
         CancellationToken cancellationToken)
     {
+        var result = await SubmitEventDetailedAsync(options, request, label, cancellationToken);
+        return result.Accepted ? ExitCodes.Success : result.ExitCode;
+    }
+
+    private async Task<AuditSubmissionResult> SubmitEventDetailedAsync(
+        ScannerOptions options,
+        ImageScanIngestRequest request,
+        string label,
+        CancellationToken cancellationToken)
+    {
         try
         {
             var submit = await _ingestionClient.SubmitAsync(options, request, cancellationToken);
             if (!submit.Success)
             {
                 await _error.WriteLineAsync($"API rejected event: HTTP {submit.StatusCode}. {submit.Error}");
-                return ExitCodes.ApiRejectedRequest;
+                return AuditSubmissionResult.Failed(ExitCodes.ApiRejectedRequest, submit.StatusCode);
             }
 
-            await _output.WriteLineAsync(submit.Created
-                ? $"{label} accepted. securityEventId={submit.SecurityEventId}"
-                : $"{label} already exists. securityEventId={submit.SecurityEventId}");
-            return ExitCodes.Success;
+            if (submit.StatusCode == StatusCodes.Created && submit.Created)
+            {
+                await _output.WriteLineAsync($"{label} accepted. securityEventId={submit.SecurityEventId}");
+                return AuditSubmissionResult.Created(submit.SecurityEventId, submit.StatusCode);
+            }
+
+            if (submit.StatusCode == StatusCodes.Existing && !submit.Created)
+            {
+                await _output.WriteLineAsync($"{label} already exists. securityEventId={submit.SecurityEventId}");
+                return AuditSubmissionResult.Existing(submit.SecurityEventId, submit.StatusCode);
+            }
+
+            await _error.WriteLineAsync($"API returned ambiguous idempotency state: HTTP {submit.StatusCode}.");
+            return AuditSubmissionResult.Failed(ExitCodes.ApiRejectedRequest, submit.StatusCode);
         }
         catch (OperationCanceledException)
         {
             await _error.WriteLineAsync("API request was canceled.");
-            return ExitCodes.TimeoutOrCancellation;
+            return AuditSubmissionResult.Failed(ExitCodes.TimeoutOrCancellation, StatusCodes.TransportFailure, transportFailure: true);
         }
         catch (HttpRequestException ex)
         {
             await _error.WriteLineAsync($"API request failed: {Redaction.TrimForSafeOutput(ex.Message, ScannerConstants.StderrDisplayLimit)}");
-            return ExitCodes.ApiRejectedRequest;
+            return AuditSubmissionResult.Failed(ExitCodes.ApiRejectedRequest, StatusCodes.TransportFailure, transportFailure: true);
         }
     }
 
+    private async Task<AuditSubmissionResult> SubmitLaunchResultWithRetryAsync(
+        ScannerOptions options,
+        ImageScanIngestRequest request,
+        CancellationToken cancellationToken)
+    {
+        var delays = new[] { TimeSpan.Zero, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(500) };
+        using var auditCts = new CancellationTokenSource(TimeSpan.FromSeconds(ScannerConstants.LaunchAuditTimeoutSeconds));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(auditCts.Token);
+
+        AuditSubmissionResult? last = null;
+        for (var attempt = 0; attempt < delays.Length; attempt++)
+        {
+            try
+            {
+                if (delays[attempt] > TimeSpan.Zero)
+                    await Task.Delay(delays[attempt], linkedCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return AuditSubmissionResult.Failed(ExitCodes.TimeoutOrCancellation, StatusCodes.TransportFailure, transportFailure: true);
+            }
+
+            last = await SubmitEventDetailedAsync(options, request, "Launch result event", linkedCts.Token);
+            if (last.Accepted || !last.IsTransient)
+                return last;
+        }
+
+        return last ?? AuditSubmissionResult.Failed(ExitCodes.ApiRejectedRequest, StatusCodes.TransportFailure, transportFailure: true);
+    }
+
+    private static ExitCodes ValidateLaunchReservation(AuditSubmissionResult scanSubmit, AuditSubmissionResult policySubmit)
+    {
+        if (scanSubmit.State == AuditSubmissionState.Created && policySubmit.State == AuditSubmissionState.Created)
+            return ExitCodes.Success;
+
+        if (scanSubmit.State == AuditSubmissionState.Existing && policySubmit.State == AuditSubmissionState.Created)
+            return ExitCodes.Success;
+
+        if (scanSubmit.State == AuditSubmissionState.Existing && policySubmit.State == AuditSubmissionState.Existing)
+            return ExitCodes.OperationAlreadyProcessed;
+
+        if (scanSubmit.State == AuditSubmissionState.Created && policySubmit.State == AuditSubmissionState.Existing)
+            return ExitCodes.InconsistentAuditState;
+
+        return ExitCodes.ApiRejectedRequest;
+    }
+
     private sealed record GateScanResult(ExitCodes ExitCode, ImageScanSummary? Summary, long ScanDurationMs = 0);
+
+    private enum AuditSubmissionState
+    {
+        Failed,
+        Created,
+        Existing
+    }
+
+    private sealed record AuditSubmissionResult(
+        AuditSubmissionState State,
+        ExitCodes ExitCode,
+        int StatusCode,
+        string? SecurityEventId,
+        bool TransportFailure)
+    {
+        public bool Accepted => State is AuditSubmissionState.Created or AuditSubmissionState.Existing;
+        public bool IsTransient => TransportFailure || StatusCode >= 500;
+
+        public static AuditSubmissionResult Created(string? securityEventId, int statusCode) =>
+            new(AuditSubmissionState.Created, ExitCodes.Success, statusCode, securityEventId, TransportFailure: false);
+
+        public static AuditSubmissionResult Existing(string? securityEventId, int statusCode) =>
+            new(AuditSubmissionState.Existing, ExitCodes.Success, statusCode, securityEventId, TransportFailure: false);
+
+        public static AuditSubmissionResult Failed(ExitCodes exitCode, int statusCode, bool transportFailure = false) =>
+            new(AuditSubmissionState.Failed, exitCode, statusCode, null, transportFailure);
+    }
+
+    private static class StatusCodes
+    {
+        public const int TransportFailure = 0;
+        public const int Created = 201;
+        public const int Existing = 200;
+    }
 }
