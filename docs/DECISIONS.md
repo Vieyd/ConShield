@@ -87,3 +87,9 @@ Reason: starting local security tools from MVC requests would increase the web a
 The scanner submits counts, image metadata, duration, and `reportSha256`; it does not submit the full Trivy report or full CVE list.
 
 Reason: normalized summaries are enough for `IMG-001`, reduce data exposure, avoid large database records, and keep registry credential leakage risk lower.
+
+## 014. Exclude SIEM-Generated Events from CR-001
+
+`CR-001` analyzes only critical source events with a real `SourceIp`. It excludes SIEM-generated audit events such as `CorrelationAlert`, `IncidentCreated`, and `IncidentUpdated`.
+
+Reason: correlation and incident audit events can themselves be critical. Treating them as inputs would create self-correlation loops and false `CR-001` alerts.

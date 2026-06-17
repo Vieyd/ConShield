@@ -341,7 +341,9 @@ public class ExternalSecurityEventApiTests
         Assert.Equal(1, firstRun.CreatedAlerts);
         Assert.Equal(1, firstRun.CreatedIncidents);
         Assert.Equal(0, secondRun.CreatedAlerts);
+        Assert.Equal(0, secondRun.CreatedIncidents);
         Assert.Equal(1, await db.SiemAlerts.CountAsync(x => x.RuleCode == "IMG-001"));
+        Assert.Equal(0, await db.SiemAlerts.CountAsync(x => x.RuleCode == "CR-001"));
         Assert.Equal(1, await db.Incidents.CountAsync(x => x.Name.Contains("IMG-001")));
     }
 

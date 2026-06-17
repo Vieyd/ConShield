@@ -78,7 +78,13 @@ public class SiemCorrelationService : ISiemCorrelationService
         Merge(result, created2);
 
         var recentCriticalEvents = await _dbContext.SecurityEvents
-            .Where(x => x.Severity == EventSeverity.Critical && x.OccurredAtUtc >= now.AddMinutes(-5))
+            .Where(x => x.Severity == EventSeverity.Critical
+                        && x.OccurredAtUtc >= now.AddMinutes(-5)
+                        && x.SourceIp != null
+                        && x.SourceIp.Trim() != string.Empty
+                        && x.EventType != SecurityEventType.CorrelationAlert
+                        && x.EventType != SecurityEventType.IncidentCreated
+                        && x.EventType != SecurityEventType.IncidentUpdated)
             .ToListAsync(cancellationToken);
 
         var created3 = await ProcessRuleAsync(
@@ -88,7 +94,7 @@ public class SiemCorrelationService : ISiemCorrelationService
             descriptionFactory: group => $"С источника {group.Key} зарегистрировано {group.Count} критических события за последние 5 минут.",
             eventIdsFactory: group => group.EventIds,
             groups: recentCriticalEvents
-                .GroupBy(x => string.IsNullOrWhiteSpace(x.SourceIp) ? "unknown-ip" : x.SourceIp!)
+                .GroupBy(x => x.SourceIp!.Trim())
                 .Select(g => new RuleCandidate
                 {
                     Key = g.Key,

@@ -110,6 +110,72 @@ public class SiemCorrelationServiceTests
     }
 
     [Fact]
+    public async Task CR001_DoesNotCorrelateSiemGeneratedEvents()
+    {
+        await using var db = CreateDbContext();
+        db.SecurityEvents.AddRange(
+            new SecurityEventEntry
+            {
+                OccurredAtUtc = DateTime.UtcNow.AddSeconds(-10),
+                EventType = SecurityEventType.CorrelationAlert,
+                Severity = EventSeverity.Critical,
+                UserName = "siem-engine",
+                SourceIp = null,
+                Description = "Generated SIEM alert audit event."
+            },
+            new SecurityEventEntry
+            {
+                OccurredAtUtc = DateTime.UtcNow.AddSeconds(-9),
+                EventType = SecurityEventType.IncidentCreated,
+                Severity = EventSeverity.Critical,
+                UserName = "siem-engine",
+                SourceIp = null,
+                Description = "Generated incident audit event."
+            });
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result = await service.RunAsync();
+
+        Assert.Equal(0, result.CreatedAlerts);
+        Assert.Equal(0, result.CreatedIncidents);
+        Assert.DoesNotContain(await db.SiemAlerts.ToListAsync(), x => x.RuleCode == "CR-001");
+    }
+
+    [Fact]
+    public async Task CR001_DoesNotCorrelateCriticalEventsWithoutSourceIp()
+    {
+        await using var db = CreateDbContext();
+        db.SecurityEvents.AddRange(
+            new SecurityEventEntry
+            {
+                OccurredAtUtc = DateTime.UtcNow.AddSeconds(-10),
+                EventType = SecurityEventType.AccessDenied,
+                Severity = EventSeverity.Critical,
+                SourceIp = null,
+                Description = "Critical source event without SourceIp."
+            },
+            new SecurityEventEntry
+            {
+                OccurredAtUtc = DateTime.UtcNow.AddSeconds(-9),
+                EventType = SecurityEventType.AccessDenied,
+                Severity = EventSeverity.Critical,
+                SourceIp = "   ",
+                Description = "Critical source event with blank SourceIp."
+            });
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result = await service.RunAsync();
+
+        Assert.Equal(0, result.CreatedAlerts);
+        Assert.Equal(0, result.CreatedIncidents);
+        Assert.DoesNotContain(await db.SiemAlerts.ToListAsync(), x => x.RuleCode == "CR-001");
+    }
+
+    [Fact]
     public async Task IMG001_CriticalImageScan_CreatesAlertAndIncident()
     {
         await using var db = CreateDbContext();
