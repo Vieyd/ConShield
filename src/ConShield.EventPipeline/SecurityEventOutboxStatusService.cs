@@ -10,15 +10,18 @@ public sealed class SecurityEventOutboxStatusService
     private readonly ApplicationDbContext _dbContext;
     private readonly IOutboxClock _clock;
     private readonly SecurityEventOutboxOptions _options;
+    private readonly RabbitMqStatusService? _rabbitMqStatusService;
 
     public SecurityEventOutboxStatusService(
         ApplicationDbContext dbContext,
         IOutboxClock clock,
-        IOptions<SecurityEventOutboxOptions> options)
+        IOptions<SecurityEventOutboxOptions> options,
+        RabbitMqStatusService? rabbitMqStatusService = null)
     {
         _dbContext = dbContext;
         _clock = clock;
         _options = options.Value;
+        _rabbitMqStatusService = rabbitMqStatusService;
     }
 
     public async Task<SecurityEventOutboxStatusSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
@@ -62,7 +65,12 @@ public sealed class SecurityEventOutboxStatusService
         var degraded = deadLetters > 0
             || (pendingAge.HasValue && pendingAge.Value > TimeSpan.FromSeconds(_options.DegradedPendingAgeSeconds));
 
+        var rabbitMq = _rabbitMqStatusService is null
+            ? null
+            : await _rabbitMqStatusService.GetSnapshotAsync(cancellationToken);
+
         return new SecurityEventOutboxStatusSnapshot(
+            Transport: _options.Transport.ToString(),
             PendingCount: GetCount(counts, SecurityEventOutboxStatus.Pending),
             ProcessingCount: GetCount(counts, SecurityEventOutboxStatus.Processing),
             DeliveredCount: GetCount(counts, SecurityEventOutboxStatus.Delivered),
@@ -70,7 +78,8 @@ public sealed class SecurityEventOutboxStatusService
             OldestPendingAge: pendingAge,
             LastDeliveredAtUtc: lastDelivered,
             IsDegraded: degraded,
-            LatestMessages: latest);
+            LatestMessages: latest,
+            RabbitMq: rabbitMq);
     }
 
     private static int GetCount(IEnumerable<StatusCount> counts, SecurityEventOutboxStatus status)
@@ -88,6 +97,7 @@ public sealed class SecurityEventOutboxStatusService
 }
 
 public sealed record SecurityEventOutboxStatusSnapshot(
+    string Transport,
     int PendingCount,
     int ProcessingCount,
     int DeliveredCount,
@@ -95,7 +105,8 @@ public sealed record SecurityEventOutboxStatusSnapshot(
     TimeSpan? OldestPendingAge,
     DateTime? LastDeliveredAtUtc,
     bool IsDegraded,
-    IReadOnlyList<SecurityEventOutboxMessageSummary> LatestMessages);
+    IReadOnlyList<SecurityEventOutboxMessageSummary> LatestMessages,
+    RabbitMqStatusSnapshot? RabbitMq);
 
 public sealed record SecurityEventOutboxMessageSummary(
     Guid MessageId,

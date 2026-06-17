@@ -19,7 +19,12 @@ builder.Services
     .AddOptions<SecurityEventOutboxOptions>()
     .Bind(builder.Configuration.GetSection("SecurityEventOutbox"))
     .ValidateOnStart();
+builder.Services
+    .AddOptions<RabbitMqOptions>()
+    .Bind(builder.Configuration.GetSection("RabbitMq"))
+    .ValidateOnStart();
 builder.Services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<SecurityEventOutboxOptions>, SecurityEventOutboxOptionsValidator>();
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<RabbitMqOptions>, RabbitMqOptionsValidator>();
 
 builder.Services.AddControllersWithViews()
     .ConfigureApiBehaviorOptions(options =>
@@ -73,10 +78,23 @@ builder.Services.AddScoped<ISiemCorrelationService, SiemCorrelationService>();
 builder.Services.AddScoped<IExternalSecurityEventIngestionService, ExternalSecurityEventIngestionService>();
 builder.Services.AddScoped<ISecurityEventWriter, SecurityEventWriter>();
 builder.Services.AddSingleton<IOutboxClock, SystemOutboxClock>();
+builder.Services.AddSingleton<IRabbitMqConnectionProvider, RabbitMqConnectionProvider>();
+builder.Services.AddSingleton<RabbitMqTopology>();
 builder.Services.AddScoped<SecurityEventOutboxDispatcher>();
 builder.Services.AddScoped<SecurityEventOutboxStatusService>();
+builder.Services.AddScoped<RabbitMqStatusService>();
 builder.Services.AddScoped<ISecurityEventOutboxSink>(serviceProvider =>
 {
+    var outboxOptions = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SecurityEventOutboxOptions>>().Value;
+    if (outboxOptions.Transport == SecurityEventOutboxTransport.RabbitMq)
+    {
+        return new RabbitMqSecurityEventOutboxSink(
+            serviceProvider.GetRequiredService<IRabbitMqConnectionProvider>(),
+            serviceProvider.GetRequiredService<RabbitMqTopology>(),
+            serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<RabbitMqOptions>>(),
+            serviceProvider.GetRequiredService<ILogger<RabbitMqSecurityEventOutboxSink>>());
+    }
+
     var env = serviceProvider.GetRequiredService<IWebHostEnvironment>();
     var options = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SecurityEventOutboxOptions>>();
     return new JsonlSecurityEventOutboxSink(env.ContentRootPath, options);

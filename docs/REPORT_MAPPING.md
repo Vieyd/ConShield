@@ -27,7 +27,8 @@ ConShield demonstrates a small security monitoring workflow:
 | Detection catalog | Human-readable rule definitions | `SiemRuleCatalog` |
 | Container image scanning | Trivy scan summaries are ingested as external security events | `ConShield.ImageScanner` |
 | Container policy gate | Local Allow/Warn/Block policy decision with replay-safe optional hardened Docker launch audit | `ConShield.ContainerPolicy`, `ConShield.ImageScanner gate` |
-| Event pipeline | Transactional outbox, background dispatcher, retry, DeadLetter, JSONL sink | `ConShield.EventPipeline`, `SecurityEventOutbox` |
+| Event pipeline | Transactional outbox, background dispatcher, retry, DeadLetter, JSONL and RabbitMQ transports | `ConShield.EventPipeline`, `SecurityEventOutbox` |
+| Consumer idempotency | RabbitMQ consumer records one PostgreSQL inbox receipt per `MessageId` before ack | `ConShield.EventConsumer`, `SecurityEventInboxReceipts` |
 | Local demo | Scenario generation for repeatable walkthroughs | `SiemController.GenerateScenario` |
 
 ## Detection Rule Mapping
@@ -50,7 +51,7 @@ External events ingested through `POST /api/v1/security-events` are stored as `S
 - It includes a working container image scanning vertical.
 - It includes a local policy gate that turns vulnerability summaries into enforceable decisions.
 - It audits guarded Docker launch outcomes without replaying the Docker side effect for duplicate operations.
-- It includes a durable PostgreSQL outbox foundation for future broker-based delivery.
+- It includes durable PostgreSQL outbox delivery through JSONL or RabbitMQ, plus inbox deduplication.
 - It has a roadmap toward event-driven SIEM architecture.
 
 ## Future Report Sections
@@ -60,4 +61,4 @@ External events ingested through `POST /api/v1/security-events` are stored as `S
 - Incident lifecycle.
 - Audit event taxonomy.
 - Role model and access boundaries.
-- Planned RabbitMQ/MongoDB event pipeline. These components are not active in the current runtime flow.
+- Planned MongoDB raw-event projection. MongoDB is not active in the current runtime flow.

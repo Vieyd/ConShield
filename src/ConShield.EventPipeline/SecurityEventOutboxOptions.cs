@@ -5,6 +5,7 @@ namespace ConShield.EventPipeline;
 public sealed class SecurityEventOutboxOptions
 {
     public bool Enabled { get; set; } = true;
+    public SecurityEventOutboxTransport Transport { get; set; } = SecurityEventOutboxTransport.Jsonl;
     public int PollIntervalMilliseconds { get; set; } = 1000;
     public int BatchSize { get; set; } = 20;
     public int LockSeconds { get; set; } = 30;
@@ -20,6 +21,8 @@ public sealed class SecurityEventOutboxOptionsValidator : IValidateOptions<Secur
     public ValidateOptionsResult Validate(string? name, SecurityEventOutboxOptions options)
     {
         var errors = new List<string>();
+        if (!Enum.IsDefined(options.Transport))
+            errors.Add("Transport must be Jsonl or RabbitMq.");
         if (options.PollIntervalMilliseconds is < 250 or > 60000)
             errors.Add("PollIntervalMilliseconds must be between 250 and 60000.");
         if (options.BatchSize is < 1 or > 200)
@@ -41,6 +44,12 @@ public sealed class SecurityEventOutboxOptionsValidator : IValidateOptions<Secur
             ? ValidateOptionsResult.Success
             : ValidateOptionsResult.Fail(errors);
     }
+}
+
+public enum SecurityEventOutboxTransport
+{
+    Jsonl,
+    RabbitMq
 }
 
 internal static class OutboxPathPolicy

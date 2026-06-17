@@ -11,7 +11,8 @@ The project is intentionally practical. It demonstrates how a security team can 
 - User exception management with audit events for create, update, and delete operations.
 - Incident registry with severity, status, source event links, and lifecycle actions.
 - SIEM-style correlation rules for repeated login failures, suspicious exception changes, and repeated critical events from one source.
-- PostgreSQL transactional outbox for durable security event delivery to the local JSONL audit sink.
+- PostgreSQL transactional outbox for durable security event delivery to JSONL or RabbitMQ.
+- `ConShield.EventConsumer`, an idempotent RabbitMQ consumer with PostgreSQL inbox receipts.
 - Protected external security event ingestion endpoint: `POST /api/v1/security-events`.
 - API-key authentication, request validation, request size limit, rate limiting, and idempotency for external events.
 - `ConShield.Collector`, a small console client for sending generated or JSON-file security events.
@@ -30,7 +31,7 @@ The project is intentionally practical. It demonstrates how a security team can 
 - PostgreSQL 16 for the current relational database
 - Npgsql Entity Framework Core provider
 - Cookie authentication with role-based authorization
-- Docker Compose for PostgreSQL, with RabbitMQ and MongoDB kept as optional future infrastructure
+- Docker Compose for PostgreSQL and RabbitMQ, with MongoDB kept as optional future infrastructure
 
 ## Architecture
 
@@ -40,7 +41,8 @@ ConShield.Application      Use cases, SIEM correlation, application services
 ConShield.Data             EF Core DbContext and domain entities
 ConShield.Contracts        Shared constants, enums, DTO models
 ConShield.SecurityEvents   Security event writer and outbox message creation
-ConShield.EventPipeline    Outbox dispatcher, JSONL sink, retry and DeadLetter handling
+ConShield.EventPipeline    Outbox dispatcher, JSONL/RabbitMQ sinks, retry and DeadLetter handling
+ConShield.EventConsumer    RabbitMQ consumer and PostgreSQL inbox receipt processing
 ConShield.ImageScanner     Trivy-based container image scanner CLI
 ConShield.ContainerPolicy  Pure policy validation and evaluation library
 infra/                     Future infrastructure for message/event pipeline
@@ -152,9 +154,10 @@ Implemented now:
 
 Not implemented yet:
 
-- RabbitMQ;
 - MongoDB;
 - distributed exactly-once delivery;
+- multi-destination fanout;
+- automatic DLQ replay;
 - automatic outbox retention cleanup;
 - long-term key rotation;
 - production machine identity;
@@ -227,7 +230,9 @@ Security events are written atomically with a PostgreSQL outbox message. A backg
 SecurityEventWriter -> SecurityEvents + SecurityEventOutbox -> dispatcher -> JSONL
 ```
 
-The JSONL line contains a stable `messageId`; duplicate lines are possible after a crash between append and `Delivered`, so downstream consumers must deduplicate by `messageId`. See [docs/SECURITY_EVENT_OUTBOX.md](docs/SECURITY_EVENT_OUTBOX.md).
+The JSONL line contains a stable `messageId`; duplicate lines are possible after a crash between append and `Delivered`, so downstream consumers must deduplicate by `messageId`.
+
+RabbitMQ mode publishes persistent messages with publisher confirms, mandatory routing, a durable quorum queue, DLQ, and an idempotent PostgreSQL inbox consumer. See [docs/SECURITY_EVENT_OUTBOX.md](docs/SECURITY_EVENT_OUTBOX.md) and [docs/RABBITMQ_SECURITY_EVENT_PIPELINE.md](docs/RABBITMQ_SECURITY_EVENT_PIPELINE.md).
 
 ## Demo Accounts
 
