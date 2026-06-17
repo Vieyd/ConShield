@@ -10,6 +10,7 @@
     <ProjectReference Include="..\ConShield.Contracts\ConShield.Contracts.csproj" />
     <ProjectReference Include="..\ConShield.Data\ConShield.Data.csproj" />
     <ProjectReference Include="..\ConShield.SecurityEvents\ConShield.SecurityEvents.csproj" />
+    <ProjectReference Include="..\ConShield.EventPipeline\ConShield.EventPipeline.csproj" />
   </ItemGroup>
 
   <ItemGroup>

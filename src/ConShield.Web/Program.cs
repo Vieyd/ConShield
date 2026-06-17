@@ -1,6 +1,7 @@
 using ConShield.Application;
 using System.Globalization;
 using ConShield.Data;
+using ConShield.EventPipeline;
 using ConShield.SecurityEvents;
 using ConShield.Web.Options;
 using ConShield.Web.Security;
@@ -14,6 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<List<DemoUserOptions>>(builder.Configuration.GetSection("DemoUsers"));
 builder.Services.Configure<ExternalEventIngestionOptions>(builder.Configuration.GetSection("ExternalEventIngestion"));
+builder.Services
+    .AddOptions<SecurityEventOutboxOptions>()
+    .Bind(builder.Configuration.GetSection("SecurityEventOutbox"))
+    .ValidateOnStart();
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<SecurityEventOutboxOptions>, SecurityEventOutboxOptionsValidator>();
 
 builder.Services.AddControllersWithViews()
     .ConfigureApiBehaviorOptions(options =>
@@ -65,13 +71,17 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddScoped<IUserExceptionService, UserExceptionService>();
 builder.Services.AddScoped<ISiemCorrelationService, SiemCorrelationService>();
 builder.Services.AddScoped<IExternalSecurityEventIngestionService, ExternalSecurityEventIngestionService>();
-
-builder.Services.AddScoped<ISecurityEventWriter>(serviceProvider =>
+builder.Services.AddScoped<ISecurityEventWriter, SecurityEventWriter>();
+builder.Services.AddSingleton<IOutboxClock, SystemOutboxClock>();
+builder.Services.AddScoped<SecurityEventOutboxDispatcher>();
+builder.Services.AddScoped<SecurityEventOutboxStatusService>();
+builder.Services.AddScoped<ISecurityEventOutboxSink>(serviceProvider =>
 {
-    var dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
     var env = serviceProvider.GetRequiredService<IWebHostEnvironment>();
-    return new SecurityEventWriter(dbContext, env.ContentRootPath);
+    var options = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SecurityEventOutboxOptions>>();
+    return new JsonlSecurityEventOutboxSink(env.ContentRootPath, options);
 });
+builder.Services.AddHostedService<SecurityEventOutboxBackgroundService>();
 
 var app = builder.Build();
 

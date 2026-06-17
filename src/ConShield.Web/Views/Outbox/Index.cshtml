@@ -1,0 +1,82 @@
+@model ConShield.EventPipeline.SecurityEventOutboxStatusSnapshot
+
+@{
+    ViewData["Title"] = "Outbox";
+}
+
+<h1 class="mb-3">Security Event Outbox</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted small">Pending</div>
+                <div class="fs-3">@Model.PendingCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted small">Processing</div>
+                <div class="fs-3">@Model.ProcessingCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted small">Delivered</div>
+                <div class="fs-3">@Model.DeliveredCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted small">DeadLetter</div>
+                <div class="fs-3">@Model.DeadLetterCount</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mb-3">
+    <span class="badge @(Model.IsDegraded ? "bg-warning text-dark" : "bg-success")">
+        @(Model.IsDegraded ? "Degraded" : "Healthy")
+    </span>
+    <span class="ms-3">Oldest pending age: @(Model.OldestPendingAge?.ToString(@"hh\:mm\:ss") ?? "-")</span>
+    <span class="ms-3">Last delivered UTC: @(Model.LastDeliveredAtUtc?.ToString("u") ?? "-")</span>
+</div>
+
+<table class="table table-sm table-striped align-middle">
+    <thead>
+        <tr>
+            <th>MessageId</th>
+            <th>SecurityEventId</th>
+            <th>MessageType</th>
+            <th>Status</th>
+            <th>Attempts</th>
+            <th>Created UTC</th>
+            <th>Available UTC</th>
+            <th>Delivered UTC</th>
+            <th>Error</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model.LatestMessages)
+    {
+        <tr>
+            <td><code>@item.MessageId</code></td>
+            <td>@item.SecurityEventId</td>
+            <td>@item.MessageType</td>
+            <td>@item.Status</td>
+            <td>@item.AttemptCount</td>
+            <td>@item.CreatedAtUtc.ToString("u")</td>
+            <td>@item.AvailableAtUtc.ToString("u")</td>
+            <td>@(item.DeliveredAtUtc?.ToString("u") ?? "-")</td>
+            <td>@(string.IsNullOrWhiteSpace(item.LastErrorCode) ? "-" : $"{item.LastErrorCode}: {item.LastErrorSummary}")</td>
+        </tr>
+    }
+    </tbody>
+</table>

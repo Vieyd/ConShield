@@ -119,3 +119,11 @@ For `ConShield.ImageScanner gate --execute`, the scan, policy, and launch-result
 Docker may run only when the policy event is created by the current command. If the policy event already exists, the operation is treated as already processed and Docker is not launched again.
 
 Reason: ingestion idempotency is keyed by `sourceSystem + externalEventId`. Using the policy event as an at-most-once reservation preserves retry safety without changing the database uniqueness model or generating a second operation id.
+
+## 019. Use PostgreSQL Transactional Outbox for Security Event Delivery
+
+`ISecurityEventWriter` writes `SecurityEvents` and `SecurityEventOutbox` rows in one PostgreSQL transaction. The HTTP/MVC request path no longer appends JSONL directly.
+
+Reason: a file sink failure must not roll back accepted security events, and a committed security event should not be left without a durable delivery message.
+
+The initial sink is local JSONL with at-least-once delivery. RabbitMQ can be added later as another outbox transport without changing the writer contract.

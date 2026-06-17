@@ -11,6 +11,7 @@ The project is intentionally practical. It demonstrates how a security team can 
 - User exception management with audit events for create, update, and delete operations.
 - Incident registry with severity, status, source event links, and lifecycle actions.
 - SIEM-style correlation rules for repeated login failures, suspicious exception changes, and repeated critical events from one source.
+- PostgreSQL transactional outbox for durable security event delivery to the local JSONL audit sink.
 - Protected external security event ingestion endpoint: `POST /api/v1/security-events`.
 - API-key authentication, request validation, request size limit, rate limiting, and idempotency for external events.
 - `ConShield.Collector`, a small console client for sending generated or JSON-file security events.
@@ -38,7 +39,8 @@ ConShield.Web              MVC UI, controllers, authentication, view models
 ConShield.Application      Use cases, SIEM correlation, application services
 ConShield.Data             EF Core DbContext and domain entities
 ConShield.Contracts        Shared constants, enums, DTO models
-ConShield.SecurityEvents   Security event writer and audit log model
+ConShield.SecurityEvents   Security event writer and outbox message creation
+ConShield.EventPipeline    Outbox dispatcher, JSONL sink, retry and DeadLetter handling
 ConShield.ImageScanner     Trivy-based container image scanner CLI
 ConShield.ContainerPolicy  Pure policy validation and evaluation library
 infra/                     Future infrastructure for message/event pipeline
@@ -55,7 +57,7 @@ Current security controls:
 - Role checks on administrative operations.
 - Anti-forgery tokens on mutating MVC actions.
 - Audit events for login attempts and key business operations.
-- Local runtime JSONL audit log under `src/ConShield.Web/logs/`.
+- Durable security event outbox with background JSONL delivery under `src/ConShield.Web/logs/`.
 
 Known limitations are tracked in [SECURITY.md](SECURITY.md).
 
@@ -152,6 +154,8 @@ Not implemented yet:
 
 - RabbitMQ;
 - MongoDB;
+- distributed exactly-once delivery;
+- automatic outbox retention cleanup;
 - long-term key rotation;
 - production machine identity;
 - mTLS;
@@ -214,6 +218,16 @@ dotnet run --project src/ConShield.ImageScanner -- gate --image alpine:3.20 --po
 `Block` decisions cannot be bypassed by CLI flag. `Warn` decisions launch only with `--execute --accept-warning`. See [docs/CONTAINER_POLICY_GATE.md](docs/CONTAINER_POLICY_GATE.md).
 
 The gate reserves three source systems for one operation: `conshield.image-scanner` for the scan event, `conshield.container-guard` for the policy event, and `conshield.container-runtime` for the launch result event. Records share one `externalEventId`; ingestion idempotency stays safe because `sourceSystem` values differ. For `--execute`, the policy event is the at-most-once launch reservation: a retry that finds an existing policy event does not run Docker again. `--source-system` remains supported only by the `scan` command.
+
+## Security Event Outbox
+
+Security events are written atomically with a PostgreSQL outbox message. A background dispatcher delivers those messages to the local JSONL sink with at-least-once semantics:
+
+```text
+SecurityEventWriter -> SecurityEvents + SecurityEventOutbox -> dispatcher -> JSONL
+```
+
+The JSONL line contains a stable `messageId`; duplicate lines are possible after a crash between append and `Delivered`, so downstream consumers must deduplicate by `messageId`. See [docs/SECURITY_EVENT_OUTBOX.md](docs/SECURITY_EVENT_OUTBOX.md).
 
 ## Demo Accounts
 
