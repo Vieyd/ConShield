@@ -9,7 +9,9 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - Role-based authorization for `AdminIB` and `Operator`.
 - User exception CRUD flow with administrative write operations.
 - Security event journal stored in PostgreSQL through Entity Framework Core and Npgsql.
-- Local JSONL event log written by `SecurityEventWriter`.
+- PostgreSQL transactional outbox for security event delivery.
+- Background dispatcher that delivers outbox messages to the local JSONL audit sink.
+- Admin-only outbox status page.
 - Incident registry with status changes.
 - SIEM alert list, details page, rule catalog, correlation trigger, and demo scenario generation.
 - PostgreSQL schema creation through EF Core migrations.
@@ -34,7 +36,7 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 
 - RabbitMQ event transport.
 - MongoDB event store.
-- Background event consumer.
+- RabbitMQ background event consumer.
 - ASP.NET Core Identity or production authentication.
 - Long-term API key rotation.
 - External event-type mapping to SIEM rules.

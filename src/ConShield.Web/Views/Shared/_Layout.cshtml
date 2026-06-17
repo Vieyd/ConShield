@@ -32,6 +32,12 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Siem" asp-action="Rules">SIEM-правила</a>
                             </li>
+                            @if (User.IsInRole("AdminIB"))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Outbox" asp-action="Index">Outbox</a>
+                                </li>
+                            }
                         </ul>
 
                         <span class="navbar-text me-3">

@@ -12,6 +12,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<UserException> UserExceptions => Set<UserException>();
     public DbSet<SecurityEventEntry> SecurityEvents => Set<SecurityEventEntry>();
+    public DbSet<SecurityEventOutboxMessage> SecurityEventOutboxMessages => Set<SecurityEventOutboxMessage>();
     public DbSet<IncidentRecord> Incidents => Set<IncidentRecord>();
     public DbSet<SiemAlertRecord> SiemAlerts => Set<SiemAlertRecord>();
 
@@ -44,6 +45,32 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(x => new { x.SourceSystem, x.ExternalEventId })
                 .IsUnique()
                 .HasFilter("\"SourceSystem\" IS NOT NULL AND \"ExternalEventId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<SecurityEventOutboxMessage>(entity =>
+        {
+            entity.ToTable("SecurityEventOutbox", table =>
+                table.HasCheckConstraint("CK_SecurityEventOutbox_AttemptCount_NonNegative", "\"AttemptCount\" >= 0"));
+            entity.Property(x => x.MessageType).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.PayloadJson).HasMaxLength(65536).IsRequired();
+            entity.Property(x => x.Status)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .IsRequired();
+            entity.Property(x => x.CreatedAtUtc).HasColumnType("timestamp with time zone").IsRequired();
+            entity.Property(x => x.AvailableAtUtc).HasColumnType("timestamp with time zone").IsRequired();
+            entity.Property(x => x.LastAttemptAtUtc).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.LockedUntilUtc).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.DeliveredAtUtc).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.LastErrorCode).HasMaxLength(64);
+            entity.Property(x => x.LastErrorSummary).HasMaxLength(512);
+            entity.HasIndex(x => x.MessageId).IsUnique();
+            entity.HasIndex(x => new { x.SecurityEventId, x.MessageType }).IsUnique();
+            entity.HasIndex(x => new { x.Status, x.AvailableAtUtc, x.LockedUntilUtc });
+            entity.HasOne(x => x.SecurityEvent)
+                .WithMany()
+                .HasForeignKey(x => x.SecurityEventId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<IncidentRecord>(entity =>

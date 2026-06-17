@@ -11,6 +11,8 @@ ConShield development rules:
 - PostgreSQL is the current relational database for the prototype.
 - Npgsql is the EF Core provider for PostgreSQL.
 - All security events are created through `ISecurityEventWriter` or a documented application service that preserves the same audit boundary.
+- `ISecurityEventWriter` must create `SecurityEvents` and `SecurityEventOutbox` rows atomically; do not write JSONL directly from HTTP/MVC requests.
+- `ConShield.EventPipeline` owns outbox dispatch, retry, DeadLetter transitions, and sink abstractions.
 - Controllers and API endpoints must stay thin.
 - Time is stored in UTC, and the interface displays GMT+3.
 - `Operator` has read-only access to critical functions.

@@ -20,8 +20,7 @@
 
 - Extend the current Container Policy Gate into a richer policy engine with explicit Allow/Warn/Block rules and reviewable policy test fixtures.
 - Add a demonstration policy gate flow that can explain why a container launch was blocked.
-- Add a durable background pipeline for security event dispatch and delivery retries.
-- Add a background event dispatcher.
+- Extend the PostgreSQL outbox with retention cleanup and operational DeadLetter handling.
 - Use RabbitMQ for security event transport.
 - Use MongoDB or another event store for raw events.
 - Convert correlation rules into independent rule classes.
