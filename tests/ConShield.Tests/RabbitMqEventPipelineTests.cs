@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using ConShield.Data;
@@ -179,29 +180,53 @@ public class RabbitMqEventPipelineTests
         await using var provider = ConnectionProvider(options);
         var connection = await provider.GetConnectionAsync("conshield-test", CancellationToken.None);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: CancellationToken.None);
+        await using var publishChannel = await connection.CreateChannelAsync(
+            new CreateChannelOptions(
+                publisherConfirmationsEnabled: true,
+                publisherConfirmationTrackingEnabled: true,
+                outstandingPublisherConfirmationsRateLimiter: null,
+                consumerDispatchConcurrency: null),
+            CancellationToken.None);
         await new RabbitMqTopology(Options.Create(options)).DeclareAsync(channel, CancellationToken.None);
 
         await using var db = await CreateMigratedDbContextAsync();
         var envelope = Envelope();
         var body = JsonSerializer.SerializeToUtf8Bytes(envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         var props = RabbitMqSecurityEventOutboxSink.CreateProperties(envelope);
-        await channel.BasicPublishAsync(options.ExchangeName, options.RoutingKey, true, props, body, CancellationToken.None);
-        await channel.BasicPublishAsync(options.ExchangeName, options.RoutingKey, true, props, body, CancellationToken.None);
-        await channel.BasicPublishAsync(options.ExchangeName, options.RoutingKey, true, props, Encoding.UTF8.GetBytes("{"), CancellationToken.None);
+        await PublishConfirmedAsync(publishChannel, options, props, body);
+        await PublishConfirmedAsync(publishChannel, options, props, body);
+        await PublishConfirmedAsync(publishChannel, options, props, Encoding.UTF8.GetBytes("{"));
 
-        for (var i = 0; i < 3; i++)
-            await ConsumeOneAsync(channel, db, options);
+        await WaitForQueueCountAtLeastAsync(channel, options.QueueName, expectedAtLeast: 3, CancellationToken.None);
+
+        for (var i = 1; i <= 3; i++)
+            await ConsumeOneAsync(channel, db, options, receiveNumber: i);
 
         Assert.Equal(1, await db.SecurityEventInboxReceipts.CountAsync(x => x.MessageId == envelope.MessageId));
-        Assert.True(await WaitForCountAsync(channel, options.DeadLetterQueueName, expectedAtLeast: 1));
+        await WaitForQueueCountAtLeastAsync(channel, options.DeadLetterQueueName, expectedAtLeast: 1, CancellationToken.None);
+        Assert.Equal(0u, await channel.MessageCountAsync(options.QueueName, CancellationToken.None));
     }
 
-    private static async Task ConsumeOneAsync(IChannel channel, ApplicationDbContext db, RabbitMqOptions options)
+    private static async Task PublishConfirmedAsync(
+        IChannel channel,
+        RabbitMqOptions options,
+        BasicProperties properties,
+        ReadOnlyMemory<byte> body)
     {
-        var message = await channel.BasicGetAsync(options.QueueName, autoAck: false, CancellationToken.None);
-        Assert.NotNull(message);
+        await channel.BasicPublishAsync(
+            options.ExchangeName,
+            options.RoutingKey,
+            mandatory: true,
+            basicProperties: properties,
+            body: body,
+            cancellationToken: CancellationToken.None);
+    }
+
+    private static async Task ConsumeOneAsync(IChannel channel, ApplicationDbContext db, RabbitMqOptions options, int receiveNumber)
+    {
+        var message = await GetMessageEventuallyAsync(channel, options.QueueName, receiveNumber, CancellationToken.None);
         var processor = Processor(db, options);
-        var body = message!.Body.ToArray();
+        var body = message.Body.ToArray();
         try
         {
             var result = await processor.ProcessAsync(body, message.BasicProperties, message.RoutingKey, message.Redelivered, CancellationToken.None);
@@ -217,16 +242,52 @@ public class RabbitMqEventPipelineTests
         }
     }
 
-    private static async Task<bool> WaitForCountAsync(IChannel channel, string queueName, uint expectedAtLeast)
+    private static async Task<BasicGetResult> GetMessageEventuallyAsync(
+        IChannel channel,
+        string queueName,
+        int receiveNumber,
+        CancellationToken cancellationToken)
     {
-        for (var i = 0; i < 20; i++)
+        var timeout = TimeSpan.FromSeconds(5);
+        var interval = TimeSpan.FromMilliseconds(75);
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.Elapsed < timeout)
         {
-            if (await channel.MessageCountAsync(queueName, CancellationToken.None) >= expectedAtLeast)
-                return true;
-            await Task.Delay(250);
+            cancellationToken.ThrowIfCancellationRequested();
+            var message = await channel.BasicGetAsync(queueName, autoAck: false, cancellationToken);
+            if (message is not null)
+                return message;
+
+            await Task.Delay(interval, cancellationToken);
         }
 
-        return false;
+        var count = await channel.MessageCountAsync(queueName, cancellationToken);
+        throw new Xunit.Sdk.XunitException(
+            $"Timed out waiting for RabbitMQ message #{receiveNumber} from queue '{queueName}'. MessageCount={count}, ElapsedMs={stopwatch.ElapsedMilliseconds}.");
+    }
+
+    private static async Task WaitForQueueCountAtLeastAsync(
+        IChannel channel,
+        string queueName,
+        uint expectedAtLeast,
+        CancellationToken cancellationToken)
+    {
+        var timeout = TimeSpan.FromSeconds(5);
+        var interval = TimeSpan.FromMilliseconds(75);
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.Elapsed < timeout)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var count = await channel.MessageCountAsync(queueName, cancellationToken);
+            if (count >= expectedAtLeast)
+                return;
+
+            await Task.Delay(interval, cancellationToken);
+        }
+
+        var finalCount = await channel.MessageCountAsync(queueName, cancellationToken);
+        throw new Xunit.Sdk.XunitException(
+            $"Timed out waiting for RabbitMQ queue '{queueName}' to contain at least {expectedAtLeast} ready messages. MessageCount={finalCount}, ElapsedMs={stopwatch.ElapsedMilliseconds}.");
     }
 
     private static SecurityEventInboxProcessor Processor(ApplicationDbContext db, RabbitMqOptions? options = null) =>
