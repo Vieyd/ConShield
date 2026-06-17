@@ -119,6 +119,7 @@ public class SecurityEventOutboxTests
         var result = await dispatcher.DispatchOnceAsync();
 
         Assert.Equal(1, result.Delivered);
+        db.ChangeTracker.Clear();
         var row = await db.SecurityEventOutboxMessages.SingleAsync();
         Assert.Equal(SecurityEventOutboxStatus.Delivered, row.Status);
         Assert.NotNull(row.DeliveredAtUtc);
@@ -159,6 +160,7 @@ public class SecurityEventOutboxTests
         var dispatcher = Dispatcher(db, sink, clock);
 
         await dispatcher.DispatchOnceAsync();
+        db.ChangeTracker.Clear();
         var pending = await db.SecurityEventOutboxMessages.SingleAsync();
         Assert.Equal(SecurityEventOutboxStatus.Pending, pending.Status);
         Assert.Equal(1, pending.AttemptCount);
@@ -166,6 +168,7 @@ public class SecurityEventOutboxTests
 
         clock.UtcNow = pending.AvailableAtUtc.AddMilliseconds(1);
         await dispatcher.DispatchOnceAsync();
+        db.ChangeTracker.Clear();
 
         var delivered = await db.SecurityEventOutboxMessages.SingleAsync();
         Assert.Equal(SecurityEventOutboxStatus.Delivered, delivered.Status);
@@ -179,6 +182,7 @@ public class SecurityEventOutboxTests
         var dispatcher = Dispatcher(db, new FakeSink(OutboxSinkResult.PermanentFailure("bad_payload", "permanent")));
 
         await dispatcher.DispatchOnceAsync();
+        db.ChangeTracker.Clear();
 
         var row = await db.SecurityEventOutboxMessages.SingleAsync();
         Assert.Equal(SecurityEventOutboxStatus.DeadLetter, row.Status);
@@ -196,6 +200,7 @@ public class SecurityEventOutboxTests
         var dispatcher = Dispatcher(db, new FakeSink(OutboxSinkResult.TransientFailure("io_error", "temporary")));
 
         await dispatcher.DispatchOnceAsync();
+        db.ChangeTracker.Clear();
 
         row = await db.SecurityEventOutboxMessages.SingleAsync();
         Assert.Equal(SecurityEventOutboxStatus.DeadLetter, row.Status);
@@ -261,6 +266,7 @@ public class SecurityEventOutboxTests
         };
 
         await Dispatcher(db, sink).DispatchOnceAsync();
+        db.ChangeTracker.Clear();
 
         var result = await db.SecurityEventOutboxMessages.SingleAsync();
         Assert.Equal(SecurityEventOutboxStatus.Processing, result.Status);
