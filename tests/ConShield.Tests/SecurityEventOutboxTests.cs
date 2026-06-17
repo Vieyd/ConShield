@@ -126,6 +126,28 @@ public class SecurityEventOutboxTests
     }
 
     [PostgreSqlFact]
+    public async Task ClaimBatch_CommitsAfterReaderIsDisposed()
+    {
+        await using var db = await CreateMigratedDbContextAsync();
+        var options = DbOptions();
+        await new SecurityEventWriter(db).WriteAsync(Request());
+        var sink = new FakeSink(OutboxSinkResult.Succeeded());
+        var dispatcher = Dispatcher(db, sink);
+
+        var result = await dispatcher.DispatchOnceAsync();
+
+        Assert.Equal(1, result.Claimed);
+        Assert.Equal(1, result.Delivered);
+        await using var verification = new ApplicationDbContext(options);
+        var row = await verification.SecurityEventOutboxMessages.SingleAsync();
+        Assert.Equal(SecurityEventOutboxStatus.Delivered, row.Status);
+        Assert.NotNull(row.DeliveredAtUtc);
+        Assert.Null(row.LockToken);
+        Assert.Null(row.LockedUntilUtc);
+        Assert.Single(sink.DeliveredMessageIds);
+    }
+
+    [PostgreSqlFact]
     public async Task Dispatcher_TransientFailureSchedulesRetryThenSucceeds()
     {
         await using var db = await CreateMigratedDbContextAsync();

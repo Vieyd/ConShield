@@ -106,9 +106,11 @@ public sealed class SecurityEventOutboxDispatcher
         AddParameter(command, "now", now);
         AddParameter(command, "batchSize", _options.BatchSize);
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-            messages.Add(ReadMessage(reader));
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+                messages.Add(ReadMessage(reader));
+        }
 
         await transaction.CommitAsync(cancellationToken);
         return messages;
