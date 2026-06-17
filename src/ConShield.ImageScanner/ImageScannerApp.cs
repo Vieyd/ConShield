@@ -11,16 +11,18 @@ public sealed class ImageScannerApp
     private readonly IContainerRuntime _containerRuntime;
     private readonly ContainerPolicyLoader _policyLoader;
     private readonly ContainerPolicyEvaluator _policyEvaluator;
+    private readonly IGateAuditEventFactory _gateAuditEventFactory;
     private readonly TextWriter _output;
     private readonly TextWriter _error;
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web) { WriteIndented = false };
 
-    public ImageScannerApp(
+    internal ImageScannerApp(
         ITrivyRunner trivyRunner,
         IIngestionClient ingestionClient,
         IContainerRuntime containerRuntime,
         ContainerPolicyLoader policyLoader,
         ContainerPolicyEvaluator policyEvaluator,
+        IGateAuditEventFactory gateAuditEventFactory,
         TextWriter output,
         TextWriter error)
     {
@@ -29,6 +31,7 @@ public sealed class ImageScannerApp
         _containerRuntime = containerRuntime;
         _policyLoader = policyLoader;
         _policyEvaluator = policyEvaluator;
+        _gateAuditEventFactory = gateAuditEventFactory;
         _output = output;
         _error = error;
     }
@@ -45,6 +48,7 @@ public sealed class ImageScannerApp
             new DockerContainerRuntime(new ProcessRunner()),
             new ContainerPolicyLoader(),
             new ContainerPolicyEvaluator(),
+            new GateAuditEventFactory(),
             output,
             error);
 
@@ -139,22 +143,42 @@ public sealed class ImageScannerApp
         }
 
         var evaluation = evaluationResult.Evaluation!;
-        var policyEvent = ImageScanEventBuilder.BuildPolicyEvaluation(options, scanExit.Summary!, policyResult.Policy!, evaluation);
+        var auditEvents = _gateAuditEventFactory.Build(
+            options,
+            scanExit.Summary!,
+            scanExit.ScanDurationMs,
+            policyResult.Policy!,
+            evaluation);
+
+        if (!GateAuditInvariantValidator.IsValid(auditEvents))
+        {
+            await _error.WriteLineAsync("Gate audit invariant failed; no events were submitted and launch is denied.");
+            return ExitCodes.PolicyEvaluationFailed;
+        }
 
         await _output.WriteLineAsync($"Policy decision: {evaluation.Decision}; reasons={string.Join(",", evaluation.ReasonCodes)}");
 
         if (options.NoSubmit)
         {
+            await _output.WriteLineAsync("No-submit mode: scan event was not sent.");
+            await _output.WriteLineAsync(JsonSerializer.Serialize(auditEvents.ScanEvent, SerializerOptions));
             await _output.WriteLineAsync("No-submit mode: policy evaluation event was not sent.");
-            await _output.WriteLineAsync(JsonSerializer.Serialize(policyEvent, SerializerOptions));
+            await _output.WriteLineAsync(JsonSerializer.Serialize(auditEvents.PolicyEvent, SerializerOptions));
         }
         else
         {
-            var submitExit = await SubmitEventAsync(options, policyEvent, "Policy event", cancellationToken);
-            if (submitExit != ExitCodes.Success)
+            var scanSubmitExit = await SubmitEventAsync(options, auditEvents.ScanEvent, "Scan event", cancellationToken);
+            if (scanSubmitExit != ExitCodes.Success)
+            {
+                await _error.WriteLineAsync("Container launch denied because scan audit submission failed.");
+                return scanSubmitExit;
+            }
+
+            var policySubmitExit = await SubmitEventAsync(options, auditEvents.PolicyEvent, "Policy event", cancellationToken);
+            if (policySubmitExit != ExitCodes.Success)
             {
                 await _error.WriteLineAsync("Container launch denied because audit submission failed.");
-                return submitExit;
+                return policySubmitExit;
             }
         }
 
@@ -239,18 +263,10 @@ public sealed class ImageScannerApp
         }
 
         stopwatch.Stop();
-        var scanEvent = ImageScanEventBuilder.Build(options, summary, stopwatch.ElapsedMilliseconds);
+        var durationMs = stopwatch.ElapsedMilliseconds;
         await _output.WriteLineAsync($"Image scan completed: image={Redaction.RedactImageReference(summary.ImageReference)}, critical={summary.CriticalCount}, high={summary.HighCount}, total={summary.TotalCount}");
 
-        if (options.NoSubmit)
-        {
-            await _output.WriteLineAsync("No-submit mode: scan event was not sent.");
-            await _output.WriteLineAsync(JsonSerializer.Serialize(scanEvent, SerializerOptions));
-            return new GateScanResult(ExitCodes.Success, summary);
-        }
-
-        var submitExit = await SubmitEventAsync(options, scanEvent, "Scan event", cancellationToken);
-        return new GateScanResult(submitExit, submitExit == ExitCodes.Success ? summary : null);
+        return new GateScanResult(ExitCodes.Success, summary, durationMs);
     }
 
     private static ContainerImageScanSummary ToPolicySummary(ImageScanSummary summary)
@@ -301,5 +317,5 @@ public sealed class ImageScannerApp
         }
     }
 
-    private sealed record GateScanResult(ExitCodes ExitCode, ImageScanSummary? Summary);
+    private sealed record GateScanResult(ExitCodes ExitCode, ImageScanSummary? Summary, long ScanDurationMs = 0);
 }

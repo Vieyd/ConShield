@@ -156,7 +156,10 @@ Not implemented yet:
 - production machine identity;
 - mTLS;
 - centralized secret manager;
-- policy engine;
+- full policy language;
+- policy signing;
+- waivers/exceptions;
+- remote policy distribution;
 - runtime monitoring;
 - Falco;
 - Kubernetes integration.
@@ -209,6 +212,8 @@ dotnet run --project src/ConShield.ImageScanner -- gate --image alpine:3.20 --po
 ```
 
 `Block` decisions cannot be bypassed by CLI flag. `Warn` decisions launch only with `--execute --accept-warning`. See [docs/CONTAINER_POLICY_GATE.md](docs/CONTAINER_POLICY_GATE.md).
+
+The gate reserves two source systems for one operation: `conshield.image-scanner` for the scan event and `conshield.container-guard` for the policy event. Both records share one `externalEventId`; ingestion idempotency stays safe because `sourceSystem` values differ. `--source-system` remains supported only by the `scan` command.
 
 ## Demo Accounts
 

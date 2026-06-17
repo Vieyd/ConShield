@@ -19,6 +19,7 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - `ConShield.ImageScanner` console client for local Trivy container image scans.
 - `ConShield.ContainerPolicy` pure class library for local container policy evaluation.
 - `ConShield.ImageScanner gate` command for scan, policy decision, audit, and optional hardened local Docker launch.
+- Container Policy Gate uses reserved `conshield.image-scanner` and `conshield.container-guard` source systems with one shared `externalEventId`.
 - Correlation rules:
   - `BF-001`: repeated login failures for one account.
   - `UE-001`: repeated user exception changes by one actor.
@@ -37,6 +38,7 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - External event-type mapping to SIEM rules.
 - Production machine identity, mTLS, and centralized secret management.
 - Full policy engine language, waivers, policy signing, runtime monitoring, Falco, and Kubernetes integration.
+- Separate audit events for actual Docker launch success or failure.
 - Full Dockerized application stack.
 - MITRE ATT&CK mapping.
 - UI screenshots and release assets.
