@@ -34,11 +34,11 @@ Reason: PostgreSQL is cross-platform, easy to run in containers, and aligns bett
 
 For deployment in a regulated Russian organization, a compatible domestic PostgreSQL edition may be considered. Do not claim certification for a specific product without current source verification.
 
-## 006. Treat MongoDB as Planned Infrastructure
+## 006. Use MongoDB as an Optional Raw-Event Projection
 
-`infra/docker-compose.yml` keeps MongoDB as future infrastructure. MongoDB is not part of the running application flow yet.
+MongoDB stores immutable normalized RabbitMQ security event envelopes only after validation and before PostgreSQL Inbox completion when `MongoProjection:Enabled` is true.
 
-Reason: public documentation must not overstate implemented capabilities.
+Reason: the projection preserves raw event context for future analytics without making MongoDB the source of truth for current SIEM state. PostgreSQL remains the completion checkpoint and application database.
 
 ## 007. Keep Demo Authentication Until Replaced Deliberately
 
@@ -139,3 +139,9 @@ Reason: if JSONL succeeded and RabbitMQ failed, a retry would duplicate JSONL ev
 `ConShield.EventConsumer` records one `SecurityEventInboxReceipts` row per RabbitMQ `MessageId` before acking the delivery.
 
 Reason: RabbitMQ redelivers after consumer crashes. A unique `MessageId` gives replay-safe consumer side effects without claiming distributed exactly-once.
+
+## 022. Project MongoDB Before PostgreSQL Inbox Completion
+
+When MongoDB projection is enabled, the consumer writes or confirms the immutable Mongo document before inserting the PostgreSQL Inbox receipt.
+
+Reason: if the Inbox receipt were committed first, a later Mongo failure could be hidden by redelivery duplicate detection and the Mongo document would never appear.

@@ -103,7 +103,7 @@ Delivery is at-least-once. If the process crashes after appending a JSONL line b
 
 Each line contains a stable `messageId`; future consumers must deduplicate by `messageId`. ConShield does not claim distributed exactly-once delivery.
 
-In RabbitMQ mode, `Delivered` means the broker confirmed and routed the persistent message. Consumer processing is tracked separately by PostgreSQL inbox receipts.
+In RabbitMQ mode, `Delivered` means the broker confirmed and routed the persistent message. Consumer processing is tracked separately by optional MongoDB projection and PostgreSQL inbox receipts.
 
 ## Background Service
 
@@ -146,7 +146,7 @@ Options are validated on startup. The path must be relative and contained inside
 
 ## Not Implemented
 
-- MongoDB raw event store.
+- Projection backfill for old messages.
 - Distributed exactly-once delivery.
 - Automatic retention cleanup.
 - Manual DeadLetter retry UI.

@@ -10,6 +10,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Audit logging for login attempts and security-relevant operations.
 - PostgreSQL transactional outbox for durable background security event delivery.
 - Optional RabbitMQ transport with publisher confirms, mandatory routing, quorum queue, DLQ, and idempotent PostgreSQL inbox receipts.
+- Optional MongoDB raw-event projection with immutable inserts, duplicate payload comparison, TTL retention, and Mongo-before-Inbox checkpoint ordering.
 - SIEM-style correlation for selected suspicious patterns.
 - PostgreSQL schema management through EF Core migrations.
 - External event ingestion protected by a local API key.
@@ -34,6 +35,8 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Runtime JSONL logs may contain usernames, IP addresses, and event metadata. They are written by the background outbox dispatcher and must not be committed.
 - JSONL delivery is at-least-once. Duplicate lines can occur after a crash between append and marking an outbox row `Delivered`; consumers must deduplicate by `messageId`.
 - RabbitMQ outbox `Delivered` means broker-confirmed and routed, not consumer-processed. Consumer processing is recorded separately in `SecurityEventInboxReceipts`.
+- MongoDB projection is not a distributed transaction. When enabled, the consumer writes or confirms Mongo projection before PostgreSQL Inbox completion and ACK.
+- MongoDB TTL deletion is approximate. Redelivery after Mongo TTL expiry with an existing PostgreSQL Inbox receipt is ACKed without automatic projection backfill.
 - Trivy reports, archives, vulnerability databases, and scanner local config must not be committed.
 - `ConShield.ImageScanner` summarizes scan results and does not store full CVE lists in PostgreSQL.
 - `ConShield.ImageScanner gate` can optionally launch Docker locally, but only after scan, policy evaluation, and audit submission.
@@ -55,6 +58,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Keep `CONSHIELD_TRIVY_PATH` local and do not commit Trivy binaries or archives.
 - Keep `CONSHIELD_DOCKER_PATH` local when used. Do not store registry credentials or Docker config exports in the repository.
 - Keep RabbitMQ credentials in local configuration or `RabbitMq__UserName` / `RabbitMq__Password`. Do not log passwords or broker URIs with credentials.
+- Keep MongoDB credentials in local configuration or `MongoProjection__ConnectionString`. Do not log connection strings.
 
 ## Recommended Hardening Roadmap
 

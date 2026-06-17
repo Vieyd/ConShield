@@ -84,7 +84,7 @@ public sealed class RabbitMqSecurityEventConsumerService : BackgroundService
         try
         {
             using var scope = _scopeFactory.CreateScope();
-            var processor = scope.ServiceProvider.GetRequiredService<SecurityEventInboxProcessor>();
+            var processor = scope.ServiceProvider.GetRequiredService<SecurityEventDeliveryProcessor>();
             var result = await processor.ProcessAsync(body, args.BasicProperties, args.RoutingKey, args.Redelivered, cancellationToken);
 
             if (result.Outcome is InboxProcessOutcome.Processed or InboxProcessOutcome.Duplicate)
@@ -93,7 +93,11 @@ public sealed class RabbitMqSecurityEventConsumerService : BackgroundService
                 return;
             }
 
-            await channel.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: false, cancellationToken);
+            await channel.BasicNackAsync(
+                args.DeliveryTag,
+                multiple: false,
+                requeue: result.Outcome == InboxProcessOutcome.TransientFailure,
+                cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

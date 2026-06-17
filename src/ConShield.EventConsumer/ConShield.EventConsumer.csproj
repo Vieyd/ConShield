@@ -15,5 +15,6 @@
   <ItemGroup>
     <ProjectReference Include="..\ConShield.EventPipeline\ConShield.EventPipeline.csproj" />
     <ProjectReference Include="..\ConShield.Data\ConShield.Data.csproj" />
+    <ProjectReference Include="..\ConShield.MongoProjection\ConShield.MongoProjection.csproj" />
   </ItemGroup>
 </Project>

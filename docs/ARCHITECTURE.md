@@ -66,4 +66,4 @@ The intended long-term direction is to split event collection from event analysi
 Web app -> Security event writer -> PostgreSQL outbox -> RabbitMQ -> EventConsumer -> PostgreSQL inbox -> projections
 ```
 
-The existing `infra/docker-compose.yml` runs PostgreSQL and RabbitMQ for the current event pipeline. MongoDB remains future infrastructure and is not connected to the application flow yet.
+The existing `infra/docker-compose.yml` runs PostgreSQL, RabbitMQ, and optional MongoDB raw-event projection infrastructure for the current event pipeline. PostgreSQL remains the system of record; MongoDB stores replay-safe normalized raw-event projections when enabled.

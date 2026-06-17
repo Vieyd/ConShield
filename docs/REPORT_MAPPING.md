@@ -29,6 +29,7 @@ ConShield demonstrates a small security monitoring workflow:
 | Container policy gate | Local Allow/Warn/Block policy decision with replay-safe optional hardened Docker launch audit | `ConShield.ContainerPolicy`, `ConShield.ImageScanner gate` |
 | Event pipeline | Transactional outbox, background dispatcher, retry, DeadLetter, JSONL and RabbitMQ transports | `ConShield.EventPipeline`, `SecurityEventOutbox` |
 | Consumer idempotency | RabbitMQ consumer records one PostgreSQL inbox receipt per `MessageId` before ack | `ConShield.EventConsumer`, `SecurityEventInboxReceipts` |
+| Raw event projection | Optional MongoDB immutable projection stores normalized envelopes before Inbox completion | `ConShield.MongoProjection`, `docs/MONGODB_RAW_EVENT_PROJECTION.md` |
 | Local demo | Scenario generation for repeatable walkthroughs | `SiemController.GenerateScenario` |
 
 ## Detection Rule Mapping
@@ -61,4 +62,4 @@ External events ingested through `POST /api/v1/security-events` are stored as `S
 - Incident lifecycle.
 - Audit event taxonomy.
 - Role model and access boundaries.
-- Planned MongoDB raw-event projection. MongoDB is not active in the current runtime flow.
+- MongoDB raw-event projection and retention semantics.
