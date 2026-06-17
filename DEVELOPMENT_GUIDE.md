@@ -4,6 +4,8 @@ ConShield development rules:
 
 - `ConShield.Web` contains only the MVC interface, API endpoints, controllers, view models, and configuration.
 - `ConShield.ImageScanner` is the only current component that starts Trivy; Web/MVC must not start local scanner processes.
+- `ConShield.ImageScanner gate` is the only current component that may start Docker, and only after policy evaluation.
+- `ConShield.ContainerPolicy` must stay a pure class library: no ASP.NET, EF Core, PostgreSQL, Trivy, Docker, or HTTP dependencies.
 - Business logic must live in `ConShield.Application`.
 - Data access and persistent entities live in `ConShield.Data`.
 - PostgreSQL is the current relational database for the prototype.
@@ -16,4 +18,6 @@ ConShield development rules:
 - Do not treat RabbitMQ and MongoDB as implemented components until they are actually connected.
 - Do not reintroduce SQL Server or LocalDB as working dependencies.
 - Do not commit Trivy binaries, archives, vulnerability databases, full reports, scanner local config, registry credentials, or API keys.
+- Do not add a CLI bypass for Container Policy `Block` decisions.
+- Do not add arbitrary Docker arguments, host networking, host volumes, privileged mode, or Docker socket mounts to the gate command.
 - After changes, run restore, build, and tests.

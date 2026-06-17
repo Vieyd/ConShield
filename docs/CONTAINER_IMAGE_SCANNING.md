@@ -15,7 +15,7 @@ container image reference
 -> SIEM alert and incident
 ```
 
-The scanner is designed for local portfolio and CI demonstrations. It reports scan results into ConShield; it does not block image execution.
+The scanner is designed for local portfolio and CI demonstrations. The `scan` command reports scan results into ConShield; the separate `gate` command evaluates a local policy and can optionally launch Docker after an Allow or acknowledged Warn decision.
 
 ## Architecture
 
@@ -164,7 +164,7 @@ Malformed or incomplete scan events are ignored by `IMG-001` and do not break th
 ## Limits
 
 - No RabbitMQ/MongoDB event pipeline yet.
-- No policy engine.
+- No full policy language or remote policy distribution.
 - No admission controller.
 - No runtime monitoring.
 - No Kubernetes/Falco integration.

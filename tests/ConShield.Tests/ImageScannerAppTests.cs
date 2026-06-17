@@ -1,4 +1,5 @@
 using ConShield.ImageScanner;
+using ConShield.ContainerPolicy;
 
 namespace ConShield.Tests;
 
@@ -99,6 +100,9 @@ public class ImageScannerAppTests
         var app = new ImageScannerApp(
             trivy ?? new FakeTrivyRunner(),
             ingestion ?? new FakeIngestionClient(),
+            new FakeContainerRuntime(),
+            new ContainerPolicyLoader(),
+            new ContainerPolicyEvaluator(),
             output,
             error);
 
@@ -148,6 +152,14 @@ public class ImageScannerAppTests
             return Task.FromResult(_success
                 ? IngestionSubmitResult.Accepted(201, "1", true)
                 : IngestionSubmitResult.Rejected(400, "validation_failed"));
+        }
+    }
+
+    private sealed class FakeContainerRuntime : IContainerRuntime
+    {
+        public Task<ContainerRuntimeResult> LaunchAsync(ScannerOptions options, ImageScanSummary summary, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(ContainerRuntimeResult.Started());
         }
     }
 

@@ -130,6 +130,28 @@ public class SiemCorrelationService : ISiemCorrelationService
             cancellationToken: cancellationToken);
 
         Merge(result, created4);
+
+        var recentPolicyEvents = await _dbContext.SecurityEvents
+            .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                        && x.ExternalEventType == "container.image.policy.evaluated"
+                        && x.OccurredAtUtc >= now.AddHours(-24))
+            .ToListAsync(cancellationToken);
+
+        var created5 = await ProcessRuleAsync(
+            ruleCode: "POL-001",
+            ruleName: "Блокировка контейнерного образа политикой",
+            severity: EventSeverity.Critical,
+            descriptionFactory: group => group.Description,
+            eventIdsFactory: group => group.EventIds,
+            groups: recentPolicyEvents
+                .Select(TryCreatePolicyGateCandidate)
+                .Where(x => x is not null)
+                .Select(x => x!)
+                .ToList(),
+            createIncident: true,
+            cancellationToken: cancellationToken);
+
+        Merge(result, created5);
         return result;
     }
 
@@ -279,6 +301,63 @@ public class SiemCorrelationService : ISiemCorrelationService
         }
     }
 
+    private static RuleCandidate? TryCreatePolicyGateCandidate(SecurityEventEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.AdditionalDataJson))
+            return null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(entry.AdditionalDataJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return null;
+
+            if (ReadNonNegativeInt(root, "schemaVersion") != 1)
+                return null;
+
+            var decision = ReadString(root, "decision", 32);
+            if (!string.Equals(decision, "Block", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            var policyId = ReadString(root, "policyId", 128);
+            var policyVersion = ReadString(root, "policyVersion", 128);
+            var policySha256 = ReadString(root, "policySha256", 64);
+            var imageReference = ReadString(root, "imageReference", 512);
+            if (string.IsNullOrWhiteSpace(policyId)
+                || string.IsNullOrWhiteSpace(policyVersion)
+                || string.IsNullOrWhiteSpace(imageReference)
+                || !IsLowercaseSha256(policySha256))
+            {
+                return null;
+            }
+
+            var imageDigest = ReadString(root, "imageDigest", 512);
+            var imageIdentity = !string.IsNullOrWhiteSpace(imageDigest)
+                ? imageDigest
+                : NormalizeTriggerValue(imageReference);
+            if (string.IsNullOrWhiteSpace(imageIdentity))
+                return null;
+
+            var criticalCount = ReadNonNegativeInt(root, "criticalCount");
+            var highCount = ReadNonNegativeInt(root, "highCount");
+            var totalCount = ReadNonNegativeInt(root, "totalCount");
+            var key = $"{policyId}:{policyVersion}:{imageIdentity}";
+
+            return new RuleCandidate
+            {
+                Key = key,
+                Count = 1,
+                Description = $"Container policy {policyId}/{policyVersion} blocked image {imageReference}: critical={criticalCount}, high={highCount}, total={totalCount}. Source event #{entry.Id}.",
+                EventIds = [entry.Id]
+            };
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private static int ReadNonNegativeInt(JsonElement root, string propertyName)
     {
         if (!root.TryGetProperty(propertyName, out var value))
@@ -308,5 +387,11 @@ public class SiemCorrelationService : ISiemCorrelationService
         var normalized = value.Trim().ToLowerInvariant();
         normalized = new string(normalized.Where(x => !char.IsControl(x)).ToArray());
         return normalized.Length <= 512 ? normalized : normalized[..512];
+    }
+
+    private static bool IsLowercaseSha256(string? value)
+    {
+        return value is { Length: 64 }
+            && value.All(x => x is >= '0' and <= '9' or >= 'a' and <= 'f');
     }
 }

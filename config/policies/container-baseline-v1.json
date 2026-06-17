@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "policyId": "container-baseline",
+  "version": "1.0.0",
+  "thresholds": {
+    "criticalBlock": 1,
+    "highBlock": 10,
+    "totalBlock": 100,
+    "highWarn": 1,
+    "mediumWarn": 10,
+    "unknownWarn": 1
+  },
+  "deniedImages": []
+}

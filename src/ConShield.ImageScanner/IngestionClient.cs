@@ -13,6 +13,8 @@ public interface IIngestionClient
 
 public sealed class IngestionClient : IIngestionClient
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+
     public async Task<IngestionSubmitResult> SubmitAsync(
         ScannerOptions options,
         ImageScanIngestRequest request,
@@ -26,7 +28,7 @@ public sealed class IngestionClient : IIngestionClient
 
         httpClient.DefaultRequestHeaders.Add("X-ConShield-Api-Key", options.ApiKey);
 
-        using var content = JsonContent.Create(request, ImageScannerJsonContext.Default.ImageScanIngestRequest);
+        using var content = JsonContent.Create(request, options: SerializerOptions);
         using var response = await httpClient.PostAsync("/api/v1/security-events", content, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
