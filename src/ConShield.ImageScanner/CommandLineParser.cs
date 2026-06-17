@@ -69,6 +69,9 @@ public static class CommandLineParser
         if (command == "gate" && acceptWarning && !execute)
             return ParseResult.Invalid("--accept-warning requires --execute.");
 
+        if (command == "gate" && execute && noSubmit)
+            return ParseResult.Invalid("gate --execute cannot be combined with --no-submit because launch audit must be submitted before Docker can run.");
+
         var baseUrl = GetValue(values, "base-url") ?? Environment.GetEnvironmentVariable("CONSHIELD_BASE_URL");
         if (!noSubmit)
         {

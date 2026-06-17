@@ -26,7 +26,7 @@ ConShield demonstrates a small security monitoring workflow:
 | SIEM correlation | Rules generate alerts and incidents from event windows | `SiemCorrelationService` |
 | Detection catalog | Human-readable rule definitions | `SiemRuleCatalog` |
 | Container image scanning | Trivy scan summaries are ingested as external security events | `ConShield.ImageScanner` |
-| Container policy gate | Local Allow/Warn/Block policy decision with optional hardened Docker launch | `ConShield.ContainerPolicy`, `ConShield.ImageScanner gate` |
+| Container policy gate | Local Allow/Warn/Block policy decision with replay-safe optional hardened Docker launch audit | `ConShield.ContainerPolicy`, `ConShield.ImageScanner gate` |
 | Local demo | Scenario generation for repeatable walkthroughs | `SiemController.GenerateScenario` |
 
 ## Detection Rule Mapping
@@ -48,6 +48,7 @@ External events ingested through `POST /api/v1/security-events` are stored as `S
 - It contains testable detection logic.
 - It includes a working container image scanning vertical.
 - It includes a local policy gate that turns vulnerability summaries into enforceable decisions.
+- It audits guarded Docker launch outcomes without replaying the Docker side effect for duplicate operations.
 - It has a roadmap toward event-driven SIEM architecture.
 
 ## Future Report Sections

@@ -194,7 +194,7 @@ See [docs/CONTAINER_IMAGE_SCANNING.md](docs/CONTAINER_IMAGE_SCANNING.md).
 ConShield includes a local policy gate on top of Trivy scan summaries:
 
 ```text
-Trivy -> ConShield.ImageScanner gate -> ConShield.ContainerPolicy -> ingestion API -> PostgreSQL -> POL-001 -> alert and incident
+Trivy -> ConShield.ImageScanner gate -> ConShield.ContainerPolicy -> ingestion API -> PostgreSQL -> optional Docker launch -> launch result audit
 ```
 
 Dry run without submitting:
@@ -213,7 +213,7 @@ dotnet run --project src/ConShield.ImageScanner -- gate --image alpine:3.20 --po
 
 `Block` decisions cannot be bypassed by CLI flag. `Warn` decisions launch only with `--execute --accept-warning`. See [docs/CONTAINER_POLICY_GATE.md](docs/CONTAINER_POLICY_GATE.md).
 
-The gate reserves two source systems for one operation: `conshield.image-scanner` for the scan event and `conshield.container-guard` for the policy event. Both records share one `externalEventId`; ingestion idempotency stays safe because `sourceSystem` values differ. `--source-system` remains supported only by the `scan` command.
+The gate reserves three source systems for one operation: `conshield.image-scanner` for the scan event, `conshield.container-guard` for the policy event, and `conshield.container-runtime` for the launch result event. Records share one `externalEventId`; ingestion idempotency stays safe because `sourceSystem` values differ. For `--execute`, the policy event is the at-most-once launch reservation: a retry that finds an existing policy event does not run Docker again. `--source-system` remains supported only by the `scan` command.
 
 ## Demo Accounts
 

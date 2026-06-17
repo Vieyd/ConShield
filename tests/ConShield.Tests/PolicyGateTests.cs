@@ -103,37 +103,66 @@ public class PolicyGateTests
     [Fact]
     public async Task Gate_ExecuteBlock_NeverLaunches()
     {
+        var ingestion = new FakeIngestionClient();
         var runtime = new FakeContainerRuntime();
-        var result = await RunAsync(["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--no-submit", "--execute"], runtime: runtime);
+        var result = await RunAsync(
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--execute"],
+            ingestion: ingestion,
+            runtime: runtime);
 
         Assert.Equal(ExitCodes.PolicyBlocked, result.ExitCode);
+        Assert.Equal(2, ingestion.Requests.Count);
         Assert.Equal(0, runtime.Calls);
     }
 
     [Fact]
     public async Task Gate_ExecuteWarnWithoutAcceptance_DoesNotLaunch()
     {
+        var ingestion = new FakeIngestionClient();
         var runtime = new FakeContainerRuntime();
         var result = await RunAsync(
-            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--no-submit", "--execute"],
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--execute"],
             trivy: new FakeTrivyRunner(high: 1, total: 1),
+            ingestion: ingestion,
             runtime: runtime);
 
         Assert.Equal(ExitCodes.WarningNotAccepted, result.ExitCode);
+        Assert.Equal(2, ingestion.Requests.Count);
         Assert.Equal(0, runtime.Calls);
     }
 
     [Fact]
     public async Task Gate_ExecuteWarnWithAcceptance_Launches()
     {
+        var ingestion = new FakeIngestionClient();
         var runtime = new FakeContainerRuntime();
         var result = await RunAsync(
-            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--no-submit", "--execute", "--accept-warning"],
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--execute", "--accept-warning"],
             trivy: new FakeTrivyRunner(high: 1, total: 1),
+            ingestion: ingestion,
             runtime: runtime);
 
         Assert.Equal(ExitCodes.Success, result.ExitCode);
         Assert.Equal(1, runtime.Calls);
+        Assert.Equal(3, ingestion.Requests.Count);
+        Assert.Contains(ingestion.Requests, x =>
+            x.SourceSystem == ScannerConstants.RuntimeSourceSystem
+            && x.EventType == ScannerConstants.LaunchResultExternalEventType);
+    }
+
+    [Fact]
+    public async Task Gate_ExecuteNoSubmit_ReturnsInvalidArgumentsBeforeScan()
+    {
+        var trivy = new FakeTrivyRunner();
+        var runtime = new FakeContainerRuntime();
+        var result = await RunAsync(
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--no-submit", "--execute"],
+            trivy: trivy,
+            runtime: runtime);
+
+        Assert.Equal(ExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Equal(0, trivy.Calls);
+        Assert.Equal(0, runtime.Calls);
     }
 
     [Fact]
@@ -166,6 +195,143 @@ public class PolicyGateTests
         Assert.Contains(ingestion.Requests, x => x.SourceSystem == ScannerConstants.SourceSystem);
         Assert.Contains(ingestion.Requests, x => x.SourceSystem == ScannerConstants.PolicySourceSystem);
         Assert.NotEqual(ingestion.Requests[0].SourceSystem, ingestion.Requests[1].SourceSystem);
+    }
+
+    [Fact]
+    public async Task Gate_ExecuteUsesPolicyEventAsLaunchReservation()
+    {
+        var ingestion = new FakeIngestionClient(
+            new Dictionary<string, Queue<IngestionSubmitResult>>
+            {
+                [ScannerConstants.SourceSystem] = new([IngestionSubmitResult.Accepted(200, "scan-existing", false)]),
+                [ScannerConstants.PolicySourceSystem] = new([IngestionSubmitResult.Accepted(201, "policy-created", true)]),
+                [ScannerConstants.RuntimeSourceSystem] = new([IngestionSubmitResult.Accepted(201, "launch-created", true)])
+            });
+        var runtime = new FakeContainerRuntime();
+
+        var result = await RunAsync(
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--execute"],
+            trivy: new FakeTrivyRunner(low: 1, total: 1),
+            ingestion: ingestion,
+            runtime: runtime);
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.Equal(1, runtime.Calls);
+        Assert.Equal(3, ingestion.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Gate_ExistingScanAndExistingPolicy_DoesNotReplayDocker()
+    {
+        var ingestion = new FakeIngestionClient(
+            new Dictionary<string, Queue<IngestionSubmitResult>>
+            {
+                [ScannerConstants.SourceSystem] = new([IngestionSubmitResult.Accepted(200, "scan-existing", false)]),
+                [ScannerConstants.PolicySourceSystem] = new([IngestionSubmitResult.Accepted(200, "policy-existing", false)])
+            });
+        var runtime = new FakeContainerRuntime();
+
+        var result = await RunAsync(
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--execute"],
+            trivy: new FakeTrivyRunner(low: 1, total: 1),
+            ingestion: ingestion,
+            runtime: runtime);
+
+        Assert.Equal(ExitCodes.OperationAlreadyProcessed, result.ExitCode);
+        Assert.Equal(0, runtime.Calls);
+        Assert.Equal(2, ingestion.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Gate_CreatedScanAndExistingPolicy_ReturnsInconsistentAuditState()
+    {
+        var ingestion = new FakeIngestionClient(
+            new Dictionary<string, Queue<IngestionSubmitResult>>
+            {
+                [ScannerConstants.SourceSystem] = new([IngestionSubmitResult.Accepted(201, "scan-created", true)]),
+                [ScannerConstants.PolicySourceSystem] = new([IngestionSubmitResult.Accepted(200, "policy-existing", false)])
+            });
+        var runtime = new FakeContainerRuntime();
+
+        var result = await RunAsync(
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--execute"],
+            trivy: new FakeTrivyRunner(low: 1, total: 1),
+            ingestion: ingestion,
+            runtime: runtime);
+
+        Assert.Equal(ExitCodes.InconsistentAuditState, result.ExitCode);
+        Assert.Equal(0, runtime.Calls);
+        Assert.Equal(2, ingestion.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Gate_LaunchResultAuditRetriesTransientFailureWithoutRerunningDocker()
+    {
+        var ingestion = new FakeIngestionClient(
+            new Dictionary<string, Queue<IngestionSubmitResult>>
+            {
+                [ScannerConstants.RuntimeSourceSystem] = new([
+                    IngestionSubmitResult.Rejected(503, "temporary"),
+                    IngestionSubmitResult.Accepted(201, "launch-created", true)
+                ])
+            });
+        var runtime = new FakeContainerRuntime();
+
+        var result = await RunAsync(
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--execute"],
+            trivy: new FakeTrivyRunner(low: 1, total: 1),
+            ingestion: ingestion,
+            runtime: runtime);
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.Equal(1, runtime.Calls);
+        Assert.Equal(4, ingestion.Requests.Count);
+        Assert.Equal(2, ingestion.Requests.Count(x => x.SourceSystem == ScannerConstants.RuntimeSourceSystem));
+    }
+
+    [Fact]
+    public async Task Gate_LaunchSucceededButAuditFails_ReturnsLaunchSucceededAuditFailed()
+    {
+        var ingestion = new FakeIngestionClient(
+            new Dictionary<string, Queue<IngestionSubmitResult>>
+            {
+                [ScannerConstants.RuntimeSourceSystem] = new([
+                    IngestionSubmitResult.Rejected(503, "temporary"),
+                    IngestionSubmitResult.Rejected(503, "temporary"),
+                    IngestionSubmitResult.Rejected(503, "temporary")
+                ])
+            });
+        var runtime = new FakeContainerRuntime();
+
+        var result = await RunAsync(
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--execute"],
+            trivy: new FakeTrivyRunner(low: 1, total: 1),
+            ingestion: ingestion,
+            runtime: runtime);
+
+        Assert.Equal(ExitCodes.LaunchSucceededAuditFailed, result.ExitCode);
+        Assert.Equal(1, runtime.Calls);
+        Assert.Equal(3, ingestion.Requests.Count(x => x.SourceSystem == ScannerConstants.RuntimeSourceSystem));
+    }
+
+    [Fact]
+    public async Task Gate_LaunchFailureStillSubmitsOutcomeAudit()
+    {
+        var ingestion = new FakeIngestionClient();
+        var runtime = new FakeContainerRuntime(ContainerRuntimeResult.Failed("safe failure", processExitCode: 125, dockerRunInvoked: true));
+
+        var result = await RunAsync(
+            ["gate", "--image", "repo/app:1", "--policy", WritePolicy(), "--base-url", "http://127.0.0.1:5000", "--api-key", "local-test-key", "--execute"],
+            trivy: new FakeTrivyRunner(low: 1, total: 1),
+            ingestion: ingestion,
+            runtime: runtime);
+
+        Assert.Equal(ExitCodes.LaunchFailed, result.ExitCode);
+        Assert.Equal(3, ingestion.Requests.Count);
+        var launch = Assert.IsType<LaunchResultAdditionalData>(ingestion.Requests.Last().AdditionalData);
+        Assert.Equal(nameof(ContainerLaunchOutcome.Failed), launch.Outcome);
+        Assert.True(launch.DockerRunInvoked);
+        Assert.Equal(125, launch.ProcessExitCode);
     }
 
     [Fact]
@@ -310,16 +476,26 @@ public class PolicyGateTests
     private sealed class FakeIngestionClient : IIngestionClient
     {
         private readonly bool _success;
+        private readonly Dictionary<string, Queue<IngestionSubmitResult>> _resultsBySourceSystem;
         public List<ImageScanIngestRequest> Requests { get; } = new();
 
-        public FakeIngestionClient(bool success = true)
+        public FakeIngestionClient(bool success = true, Dictionary<string, Queue<IngestionSubmitResult>>? resultsBySourceSystem = null)
         {
             _success = success;
+            _resultsBySourceSystem = resultsBySourceSystem ?? new Dictionary<string, Queue<IngestionSubmitResult>>();
+        }
+
+        public FakeIngestionClient(Dictionary<string, Queue<IngestionSubmitResult>> resultsBySourceSystem)
+            : this(success: true, resultsBySourceSystem)
+        {
         }
 
         public Task<IngestionSubmitResult> SubmitAsync(ScannerOptions options, ImageScanIngestRequest request, CancellationToken cancellationToken)
         {
             Requests.Add(request);
+            if (_resultsBySourceSystem.TryGetValue(request.SourceSystem, out var queue) && queue.Count > 0)
+                return Task.FromResult(queue.Dequeue());
+
             return Task.FromResult(_success
                 ? IngestionSubmitResult.Accepted(201, Requests.Count.ToString(), true)
                 : IngestionSubmitResult.Rejected(500, "failed"));
@@ -328,12 +504,19 @@ public class PolicyGateTests
 
     private sealed class FakeContainerRuntime : IContainerRuntime
     {
+        private readonly ContainerRuntimeResult _result;
+
+        public FakeContainerRuntime(ContainerRuntimeResult? result = null)
+        {
+            _result = result ?? ContainerRuntimeResult.Started(runtimeVersion: "Docker 26.0.0", launchReference: "repo/app:latest", durationMs: 10);
+        }
+
         public int Calls { get; private set; }
 
         public Task<ContainerRuntimeResult> LaunchAsync(ScannerOptions options, ImageScanSummary summary, CancellationToken cancellationToken)
         {
             Calls++;
-            return Task.FromResult(ContainerRuntimeResult.Started());
+            return Task.FromResult(_result);
         }
     }
 

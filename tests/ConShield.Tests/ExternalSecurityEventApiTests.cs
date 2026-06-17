@@ -348,7 +348,7 @@ public class ExternalSecurityEventApiTests
     }
 
     [PostgreSqlFact]
-    public async Task PolicyGateEvents_IngestAndTriggerImg001AndPol001WithoutDuplicates()
+    public async Task PolicyGateEventsAndLaunchResult_IngestWithoutCollisionAndTriggerImg001AndPol001()
     {
         await using var factory = await CreateFactoryAsync();
         using var client = factory.CreateClient();
@@ -357,17 +357,21 @@ public class ExternalSecurityEventApiTests
 
         var scanFirst = await client.PostAsJsonAsync("/api/v1/security-events", ImageScanPayload(externalEventId));
         var policyFirst = await client.PostAsJsonAsync("/api/v1/security-events", PolicyGatePayload(externalEventId));
+        var launchFirst = await client.PostAsJsonAsync("/api/v1/security-events", LaunchResultPayload(externalEventId));
         var scanSecond = await client.PostAsJsonAsync("/api/v1/security-events", ImageScanPayload(externalEventId));
         var policySecond = await client.PostAsJsonAsync("/api/v1/security-events", PolicyGatePayload(externalEventId));
+        var launchSecond = await client.PostAsJsonAsync("/api/v1/security-events", LaunchResultPayload(externalEventId));
 
         Assert.Equal(HttpStatusCode.Created, scanFirst.StatusCode);
         Assert.Equal(HttpStatusCode.Created, policyFirst.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, launchFirst.StatusCode);
         Assert.Equal(HttpStatusCode.OK, scanSecond.StatusCode);
         Assert.Equal(HttpStatusCode.OK, policySecond.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, launchSecond.StatusCode);
 
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        Assert.Equal(2, await db.SecurityEvents.CountAsync(x => x.ExternalEventId == externalEventId));
+        Assert.Equal(3, await db.SecurityEvents.CountAsync(x => x.ExternalEventId == externalEventId));
         Assert.Equal(1, await db.SecurityEvents.CountAsync(x =>
             x.ExternalEventId == externalEventId
             && x.SourceSystem == "conshield.image-scanner"
@@ -376,12 +380,16 @@ public class ExternalSecurityEventApiTests
             x.ExternalEventId == externalEventId
             && x.SourceSystem == "conshield.container-guard"
             && x.ExternalEventType == "container.image.policy.evaluated"));
-        Assert.Equal(2, await db.SecurityEvents
+        Assert.Equal(1, await db.SecurityEvents.CountAsync(x =>
+            x.ExternalEventId == externalEventId
+            && x.SourceSystem == "conshield.container-runtime"
+            && x.ExternalEventType == "container.image.launch.result"));
+        Assert.Equal(3, await db.SecurityEvents
             .Where(x => x.ExternalEventId == externalEventId)
             .Select(x => x.SourceSystem)
             .Distinct()
             .CountAsync());
-        Assert.Equal(2, await db.SecurityEvents
+        Assert.Equal(3, await db.SecurityEvents
             .Where(x => x.ExternalEventId == externalEventId)
             .Select(x => x.ExternalEventType)
             .Distinct()
@@ -519,6 +527,37 @@ public class ExternalSecurityEventApiTests
                 reasonCodes = new[] { "CRITICAL_THRESHOLD_REACHED" },
                 executionRequested = false,
                 warningAccepted = false
+            }
+        };
+    }
+
+    private static object LaunchResultPayload(Guid externalEventId)
+    {
+        return new
+        {
+            externalEventId,
+            occurredAtUtc = DateTime.UtcNow,
+            sourceSystem = "conshield.container-runtime",
+            eventType = "container.image.launch.result",
+            severity = "Info",
+            userName = (string?)null,
+            sourceHost = "test-host",
+            description = "Container launch outcome Succeeded for repo/app:latest.",
+            additionalData = new
+            {
+                schemaVersion = 1,
+                runtime = "docker",
+                runtimeProfile = "docker-hardened-v1",
+                outcome = "Succeeded",
+                dockerRunInvoked = true,
+                processExitCode = 0,
+                durationMs = 25,
+                runtimeVersion = "26.0.0",
+                launchReference = "repo/app@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                imageReference = "repo/app:latest",
+                imageDigest = "repo/app@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                reportSha256 = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                safeErrorCategory = (string?)null
             }
         };
     }

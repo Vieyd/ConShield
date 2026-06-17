@@ -108,15 +108,15 @@ public class ImageScannerRunnerTests
             _callIndex++;
 
             if (_timeout)
-                return Task.FromResult(ProcessRunResult.TimedOut());
+                return Task.FromResult(ProcessRunResult.TimedOutResult());
 
             if (_callIndex == 1)
-                return Task.FromResult(new ProcessRunResult(true, 0, "Version: 0.0.0", "", false, false, null));
+                return Task.FromResult(new ProcessRunResult(true, 0, "Version: 0.0.0", "", null));
 
             if (_outputTooLarge)
                 return Task.FromResult(ProcessRunResult.OversizedOutput("", ""));
 
-            return Task.FromResult(new ProcessRunResult(true, _scanExitCode, """{"Results":[]}""", _stderr, false, false, null));
+            return Task.FromResult(new ProcessRunResult(true, _scanExitCode, """{"Results":[]}""", _stderr, null));
         }
     }
 }
