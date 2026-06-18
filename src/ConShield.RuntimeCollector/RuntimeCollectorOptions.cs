@@ -1,0 +1,27 @@
+namespace ConShield.RuntimeCollector;
+
+public sealed class RuntimeCollectorOptions
+{
+    public bool Stdin { get; init; }
+    public string? FilePath { get; init; }
+    public bool Follow { get; init; }
+    public string? Endpoint { get; init; }
+    public string ApiKeyEnv { get; init; } = "CONSHIELD_EXTERNAL_EVENT_API_KEY";
+    public string MappingPath { get; init; } = string.Empty;
+    public bool NoSubmit { get; init; }
+    public int MaxLineBytes { get; init; } = 262144;
+    public int ReadTimeoutSeconds { get; init; } = 30;
+    public int SubmitTimeoutSeconds { get; init; } = 30;
+    public int MaxRetries { get; init; } = 3;
+}
+
+public enum RuntimeCollectorExitCode
+{
+    Success = 0,
+    InvalidArgs = 2,
+    InvalidMapping = 3,
+    InputFailure = 4,
+    PartialFailure = 5,
+    AuthFailure = 6,
+    Cancelled = 7
+}

@@ -31,6 +31,7 @@ ConShield demonstrates a small security monitoring workflow:
 | Consumer idempotency | RabbitMQ consumer records one PostgreSQL inbox receipt per `MessageId` before ack | `ConShield.EventConsumer`, `SecurityEventInboxReceipts` |
 | Raw event projection | Optional MongoDB immutable projection stores normalized envelopes before Inbox completion | `ConShield.MongoProjection`, `docs/MONGODB_RAW_EVENT_PROJECTION.md` |
 | DLQ inspection/replay | AdminIB reviews PostgreSQL quarantine rows and requests bounded background replay without raw payload exposure | `DeadLettersController`, `DeadLetterReplayDispatcher`, `docs/DLQ_INSPECTION_AND_REPLAY.md` |
+| Runtime detection ingestion | Falco-compatible JSON alerts are normalized, deduplicated, minimized, and correlated by RTE-001 | `ConShield.RuntimeDetection`, `ConShield.RuntimeCollector`, `docs/FALCO_RUNTIME_EVENT_INGESTION.md` |
 | Local demo | Scenario generation for repeatable walkthroughs | `SiemController.GenerateScenario` |
 
 ## Detection Rule Mapping
@@ -42,6 +43,7 @@ ConShield demonstrates a small security monitoring workflow:
 | `CR-001` | Repeated critical events from one source | 2 or more critical events from one source IP in 5 minutes |
 | `IMG-001` | Critical vulnerabilities in container image | Trivy scan summary with `criticalCount >= 1` |
 | `POL-001` | Container image blocked by policy | Policy evaluation event with `decision == Block` |
+| `RTE-001` | Container runtime threat detected | Approved mapped Falco-compatible runtime event with `correlate == true` |
 
 External events ingested through `POST /api/v1/security-events` are stored as `SecurityEventType.ExternalEvent` with the source-specific type preserved separately as `ExternalEventType`. `CR-001` can trigger for an external critical event when another critical event shares the same `SourceIp`; `BF-001` and `UE-001` do not yet map arbitrary external event types into their built-in rule semantics.
 

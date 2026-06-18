@@ -1,0 +1,106 @@
+# Falco-Compatible Runtime Event Ingestion
+
+ConShield can ingest Falco-compatible JSON alerts without installing Falco or Kubernetes in this stage:
+
+```text
+Falco-compatible JSON line
+-> ConShield.RuntimeCollector
+-> POST /api/v1/security-events
+-> PostgreSQL SecurityEvents + Outbox
+-> RabbitMQ/Mongo pipeline when enabled
+-> RTE-001 SIEM correlation
+-> Alert + Incident
+```
+
+Falco itself is not bundled or executed by ConShield. The collector accepts official-style JSON objects from stdin, JSONL file, or file follow mode. Real Linux Falco sensor deployment remains a later stage.
+
+## Contract
+
+Supported normalized schema: `falco-compatible-v1`.
+
+Required top-level fields are `time`, `rule`, and `priority`. Optional fields are `output`, `hostname`, `source`, `tags`, and `output_fields`. Unknown top-level properties are tolerated but not copied automatically. `output_fields` accepts only bounded scalar values from an allowlist; arrays and objects are ignored with validation warnings.
+
+Falco priorities accepted case-insensitively:
+
+```text
+Emergency, Alert, Critical, Error, Warning, Notice, Informational, Debug
+```
+
+Mapping severity is authoritative for mapped rules, but Critical/Emergency/Alert inputs cannot be lowered below `High`.
+
+## Mapping
+
+Baseline mapping is stored in `config/runtime/falco-mapping-v1.json`. It uses `schemaVersion: 1`, exact case-sensitive rule-name matching, optional required tags, `container.runtime.*` event types, and deterministic policy SHA-256.
+
+Mapped baseline rules:
+
+- `Terminal shell in container` -> `container.runtime.shell_spawned`
+- `Write below binary dir` -> `container.runtime.binary_path_write`
+- `Set Setuid or Setgid bit` / compatible casing -> `container.runtime.setuid_change`
+- `Launch Suspicious Network Tool in Container` -> `container.runtime.suspicious_network_tool`
+- `Privileged Container Started` -> `container.runtime.privileged_container_started`
+
+Unknown rules become `container.runtime.unmapped` with `correlate = false`.
+
+## Minimization
+
+ConShield does not store raw Falco alerts, raw `output`, raw command line, environment variables, arbitrary output fields, API keys, or registry credentials. It stores bounded identifiers, selected container/process/network fields, `rawOutputSha256`, and `commandLineSha256`. `proc.cmdline` contributes only command name, argument count, and hash.
+
+## Identity
+
+Falco alerts normally have no UUID. ConShield derives:
+
+- `eventFingerprintSha256` from length-prefixed canonical fields;
+- `externalEventId` as a deterministic UUID from the fingerprint.
+
+Inputs include schema marker, UTC time, rule, source, hostname, container id, event type, process name, thread/process id, and raw output hash. Same event produces the same UUID; changed identity produces a different UUID.
+
+## RTE-001
+
+`RTE-001 Container runtime threat detected` triggers on mapped runtime external events from `conshield.falco-runtime-collector` when:
+
+- `ExternalEventType` is one of the approved mapped runtime event types;
+- severity is `High` or `Critical`;
+- additionalData has schema version 1, provider `falco-compatible`, `correlate = true`, valid mapping metadata, non-empty container identity fallback, and non-empty Falco rule.
+
+`container.runtime.unmapped` never triggers. Active alert dedup uses container identity, mapping key, and process name within the normal 10-minute alert window.
+
+## Demo
+
+Dry run:
+
+```powershell
+Get-Content .\samples\falco\runtime-demo.jsonl |
+  dotnet run --project .\src\ConShield.RuntimeCollector -- `
+  collect `
+  --stdin `
+  --mapping .\config\runtime\falco-mapping-v1.json `
+  --no-submit
+```
+
+Submit to a running local Web app:
+
+```powershell
+Get-Content .\samples\falco\runtime-demo.jsonl |
+  dotnet run --project .\src\ConShield.RuntimeCollector -- `
+  collect `
+  --stdin `
+  --mapping .\config\runtime\falco-mapping-v1.json `
+  --endpoint http://127.0.0.1:<port>/api/v1/security-events `
+  --api-key-env CONSHIELD_EXTERNAL_EVENT_API_KEY
+```
+
+Implemented:
+
+- Falco-compatible JSON ingestion;
+- runtime mapping baseline;
+- RTE-001 alert/incident correlation;
+- deterministic runtime event identity.
+
+Not implemented:
+
+- Falco kernel/eBPF deployment;
+- Kubernetes DaemonSet/Operator;
+- automatic container response;
+- Falcosidekick;
+- runtime rule management UI.

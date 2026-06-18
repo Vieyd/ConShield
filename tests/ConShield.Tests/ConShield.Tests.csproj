@@ -28,6 +28,8 @@
     <ProjectReference Include="..\..\src\ConShield.ContainerPolicy\ConShield.ContainerPolicy.csproj" />
     <ProjectReference Include="..\..\src\ConShield.EventPipeline\ConShield.EventPipeline.csproj" />
     <ProjectReference Include="..\..\src\ConShield.MongoProjection\ConShield.MongoProjection.csproj" />
+    <ProjectReference Include="..\..\src\ConShield.RuntimeDetection\ConShield.RuntimeDetection.csproj" />
+    <ProjectReference Include="..\..\src\ConShield.RuntimeCollector\ConShield.RuntimeCollector.csproj" />
   </ItemGroup>
 
   <ItemGroup>
