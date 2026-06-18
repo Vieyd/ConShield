@@ -24,8 +24,13 @@ builder.Services
     .AddOptions<RabbitMqOptions>()
     .Bind(builder.Configuration.GetSection("RabbitMq"))
     .ValidateOnStart();
+builder.Services
+    .AddOptions<DeadLetterReplayOptions>()
+    .Bind(builder.Configuration.GetSection("DeadLetterReplay"))
+    .ValidateOnStart();
 builder.Services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<SecurityEventOutboxOptions>, SecurityEventOutboxOptionsValidator>();
 builder.Services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<RabbitMqOptions>, RabbitMqOptionsValidator>();
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<DeadLetterReplayOptions>, DeadLetterReplayOptionsValidator>();
 
 builder.Services.AddControllersWithViews()
     .ConfigureApiBehaviorOptions(options =>
@@ -85,6 +90,10 @@ builder.Services.AddMongoProjection(builder.Configuration);
 builder.Services.AddScoped<SecurityEventOutboxDispatcher>();
 builder.Services.AddScoped<SecurityEventOutboxStatusService>();
 builder.Services.AddScoped<RabbitMqStatusService>();
+builder.Services.AddScoped<DeadLetterStatusService>();
+builder.Services.AddScoped<DeadLetterReplayRequestService>();
+builder.Services.AddScoped<DeadLetterReplayPublisher>();
+builder.Services.AddScoped<DeadLetterReplayDispatcher>();
 builder.Services.AddScoped<ISecurityEventOutboxSink>(serviceProvider =>
 {
     var outboxOptions = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SecurityEventOutboxOptions>>().Value;
@@ -102,6 +111,7 @@ builder.Services.AddScoped<ISecurityEventOutboxSink>(serviceProvider =>
     return new JsonlSecurityEventOutboxSink(env.ContentRootPath, options);
 });
 builder.Services.AddHostedService<SecurityEventOutboxBackgroundService>();
+builder.Services.AddHostedService<DeadLetterReplayBackgroundService>();
 
 var app = builder.Build();
 

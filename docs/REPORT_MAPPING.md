@@ -30,6 +30,7 @@ ConShield demonstrates a small security monitoring workflow:
 | Event pipeline | Transactional outbox, background dispatcher, retry, DeadLetter, JSONL and RabbitMQ transports | `ConShield.EventPipeline`, `SecurityEventOutbox` |
 | Consumer idempotency | RabbitMQ consumer records one PostgreSQL inbox receipt per `MessageId` before ack | `ConShield.EventConsumer`, `SecurityEventInboxReceipts` |
 | Raw event projection | Optional MongoDB immutable projection stores normalized envelopes before Inbox completion | `ConShield.MongoProjection`, `docs/MONGODB_RAW_EVENT_PROJECTION.md` |
+| DLQ inspection/replay | AdminIB reviews PostgreSQL quarantine rows and requests bounded background replay without raw payload exposure | `DeadLettersController`, `DeadLetterReplayDispatcher`, `docs/DLQ_INSPECTION_AND_REPLAY.md` |
 | Local demo | Scenario generation for repeatable walkthroughs | `SiemController.GenerateScenario` |
 
 ## Detection Rule Mapping
@@ -54,6 +55,7 @@ External events ingested through `POST /api/v1/security-events` are stored as `S
 - It audits guarded Docker launch outcomes without replaying the Docker side effect for duplicate operations.
 - It includes durable PostgreSQL outbox delivery through JSONL or RabbitMQ, plus inbox deduplication.
 - It has a roadmap toward event-driven SIEM architecture.
+- It demonstrates controlled DLQ quarantine/replay with auditability, CSRF/role controls, and at-least-once delivery semantics.
 
 ## Future Report Sections
 

@@ -31,6 +31,8 @@ MongoDB uses immutable `InsertOneAsync`; no replace or upsert is used.
 
 This is a replay-safe idempotent Mongo projection with PostgreSQL completion checkpoint. It is not a distributed transaction and not distributed exactly-once.
 
+DLQ replay preserves the original `MessageId`, so replay after a transient failure is deduplicated by the same Mongo and PostgreSQL Inbox identity checks. A duplicate replay publish after a dispatcher crash can redeliver the same message, but payload mismatch remains a permanent DLQ condition.
+
 ## Indexes and TTL
 
 The consumer initializes:
@@ -78,4 +80,4 @@ The init script creates `conshield_projection` with `readWrite` only on `conshie
 
 ## Limits
 
-There is no projection backfill, automatic DLQ replay, MongoDB cluster automation, production TLS certificate provisioning, or cross-store distributed transaction.
+There is no projection backfill, automatic DLQ replay, payload editing, MongoDB cluster automation, production TLS certificate provisioning, or cross-store distributed transaction.

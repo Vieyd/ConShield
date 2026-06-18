@@ -145,3 +145,15 @@ Reason: RabbitMQ redelivers after consumer crashes. A unique `MessageId` gives r
 When MongoDB projection is enabled, the consumer writes or confirms the immutable Mongo document before inserting the PostgreSQL Inbox receipt.
 
 Reason: if the Inbox receipt were committed first, a later Mongo failure could be hidden by redelivery duplicate detection and the Mongo document would never appear.
+
+## 023. Keep DLQ Replay Outside MVC Requests
+
+AdminIB can inspect DLQ quarantine rows and request replay from MVC, but MVC does not publish RabbitMQ messages. Replay requests are persisted with audit in PostgreSQL and a background dispatcher performs broker-confirmed publish.
+
+Reason: request/response code should not hold broker I/O privileges or create unbounded replay loops. Durable requests, locks, cooldowns, and publisher confirms keep replay auditable and restart-safe.
+
+## 024. Preserve Original MessageId During DLQ Replay
+
+DLQ replay republishes the captured body with the original RabbitMQ `MessageId` and only bounded ConShield replay headers.
+
+Reason: the existing Inbox and Mongo projection use message identity plus payload hash to deduplicate redelivery and detect payload mismatch. Preserving identity makes at-least-once replay safe without claiming distributed exactly-once.

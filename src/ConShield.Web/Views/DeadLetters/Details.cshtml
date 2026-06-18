@@ -1,0 +1,91 @@
+@model ConShield.Web.ViewModels.DeadLetterDetailsViewModel
+
+@{
+    ViewData["Title"] = "Dead Letter Details";
+    var canReplay = Model.ReplayEligibility != ConShield.Data.Entities.DeadLetterReplayEligibility.NotEligible;
+}
+
+<h1 class="mb-3">Dead Letter Details</h1>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert alert-success">@statusMessage</div>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-warning">@errorMessage</div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <table class="table table-sm">
+            <tbody>
+                <tr><th>QuarantineId</th><td><code>@Model.QuarantineId</code></td></tr>
+                <tr><th>MessageId</th><td><code>@(Model.OriginalMessageId?.ToString() ?? "-")</code></td></tr>
+                <tr><th>Payload SHA-256</th><td><code>@Model.PayloadSha256</code></td></tr>
+                <tr><th>Message type</th><td>@(Model.MessageType ?? "-")</td></tr>
+                <tr><th>Schema</th><td>@(Model.SchemaVersion?.ToString() ?? "-")</td></tr>
+                <tr><th>SecurityEventId</th><td>@(Model.SecurityEventId?.ToString() ?? "-")</td></tr>
+                <tr><th>Payload length</th><td>@Model.PayloadLength</td></tr>
+                <tr><th>Capture count</th><td>@Model.CaptureCount</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-6">
+        <table class="table table-sm">
+            <tbody>
+                <tr><th>Original route</th><td>@Model.OriginalExchange / @Model.OriginalRoutingKey</td></tr>
+                <tr><th>Dead-letter route</th><td>@Model.DeadLetterExchange / @Model.DeadLetterQueue</td></tr>
+                <tr><th>Content type</th><td>@(Model.ContentType ?? "-")</td></tr>
+                <tr><th>Dead-letter reason</th><td>@Model.DeadLetterReason</td></tr>
+                <tr><th>Validation</th><td>@Model.ValidationCategory</td></tr>
+                <tr><th>Eligibility</th><td>@Model.ReplayEligibility</td></tr>
+                <tr><th>Explanation</th><td>@Model.EligibilityExplanation</td></tr>
+                <tr><th>Captured UTC</th><td>@Model.CapturedAtUtc.ToString("u")</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<h2 class="h5">x-death summary</h2>
+<pre class="border rounded p-2 bg-light">@Model.HeaderSummaryJson</pre>
+
+<h2 class="h5 mt-4">Replay request</h2>
+<form asp-action="Replay" asp-route-id="@Model.QuarantineId" method="post" class="mb-4">
+    @Html.AntiForgeryToken()
+    <div class="mb-2">
+        <textarea name="reason" class="form-control" maxlength="500" rows="3" required disabled="@(!canReplay)" placeholder="AdminIB reason"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary" disabled="@(!canReplay)">Request replay</button>
+</form>
+
+<h2 class="h5">Replay history</h2>
+<table class="table table-sm table-striped align-middle">
+    <thead>
+        <tr>
+            <th>RequestId</th>
+            <th>Status</th>
+            <th>Sequence</th>
+            <th>RequestedBy</th>
+            <th>Requested UTC</th>
+            <th>Published UTC</th>
+            <th>Attempts</th>
+            <th>Error</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model.ReplayHistory)
+    {
+        <tr>
+            <td><code>@item.ReplayRequestId</code></td>
+            <td>@item.Status</td>
+            <td>@item.ReplaySequence</td>
+            <td>@item.RequestedBy</td>
+            <td>@item.RequestedAtUtc.ToString("u")</td>
+            <td>@(item.PublishedAtUtc?.ToString("u") ?? "-")</td>
+            <td>@item.AttemptCount</td>
+            <td>@(string.IsNullOrWhiteSpace(item.LastErrorCode) ? "-" : $"{item.LastErrorCode}: {item.LastErrorSummary}")</td>
+        </tr>
+    }
+    </tbody>
+</table>

@@ -14,8 +14,13 @@ builder.Services
     .AddOptions<SecurityEventOutboxOptions>()
     .Bind(builder.Configuration.GetSection("SecurityEventOutbox"))
     .ValidateOnStart();
+builder.Services
+    .AddOptions<DeadLetterReplayOptions>()
+    .Bind(builder.Configuration.GetSection("DeadLetterReplay"))
+    .ValidateOnStart();
 builder.Services.AddSingleton<IValidateOptions<SecurityEventOutboxOptions>, SecurityEventOutboxOptionsValidator>();
 builder.Services.AddSingleton<IValidateOptions<RabbitMqOptions>, RabbitMqOptionsValidator>();
+builder.Services.AddSingleton<IValidateOptions<DeadLetterReplayOptions>, DeadLetterReplayOptionsValidator>();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddSingleton<IOutboxClock, SystemOutboxClock>();
@@ -24,6 +29,7 @@ builder.Services.AddSingleton<RabbitMqTopology>();
 builder.Services.AddMongoProjection(builder.Configuration);
 builder.Services.AddScoped<SecurityEventInboxProcessor>();
 builder.Services.AddScoped<SecurityEventDeliveryProcessor>();
+builder.Services.AddScoped<DeadLetterCaptureProcessor>();
 builder.Services.AddHostedService<RabbitMqSecurityEventConsumerService>();
 
 var host = builder.Build();

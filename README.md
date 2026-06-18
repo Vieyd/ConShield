@@ -13,6 +13,7 @@ The project is intentionally practical. It demonstrates how a security team can 
 - SIEM-style correlation rules for repeated login failures, suspicious exception changes, and repeated critical events from one source.
 - PostgreSQL transactional outbox for durable security event delivery to JSONL or RabbitMQ.
 - `ConShield.EventConsumer`, an idempotent RabbitMQ consumer with PostgreSQL inbox receipts and optional MongoDB raw-event projection.
+- Controlled AdminIB DLQ inspection and replay through PostgreSQL quarantine records and a background RabbitMQ replay dispatcher.
 - Protected external security event ingestion endpoint: `POST /api/v1/security-events`.
 - API-key authentication, request validation, request size limit, rate limiting, and idempotency for external events.
 - `ConShield.Collector`, a small console client for sending generated or JSON-file security events.
@@ -243,6 +244,8 @@ RabbitMQ -> MongoDB raw-event projection -> PostgreSQL Inbox checkpoint -> ACK
 ```
 
 It stores normalized envelopes immutably with `_id = MessageId`, TTL retention, and duplicate payload mismatch protection. See [docs/MONGODB_RAW_EVENT_PROJECTION.md](docs/MONGODB_RAW_EVENT_PROJECTION.md).
+
+RabbitMQ DLQ messages can be captured into immutable PostgreSQL quarantine rows, inspected by `AdminIB`, and replayed only through a bounded background dispatcher. MVC requests never publish RabbitMQ messages directly, raw payload is not shown in the list UI, and replay preserves the original `MessageId` for Inbox/Mongo deduplication. See [docs/DLQ_INSPECTION_AND_REPLAY.md](docs/DLQ_INSPECTION_AND_REPLAY.md).
 
 ## Demo Accounts
 

@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\ConShield.Contracts\ConShield.Contracts.csproj" />
     <ProjectReference Include="..\ConShield.Data\ConShield.Data.csproj" />
+    <ProjectReference Include="..\ConShield.SecurityEvents\ConShield.SecurityEvents.csproj" />
   </ItemGroup>
 
   <ItemGroup>

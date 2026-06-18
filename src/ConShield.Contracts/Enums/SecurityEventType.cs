@@ -11,5 +11,9 @@ public enum SecurityEventType
     CorrelationAlert = 6,
     IncidentCreated = 7,
     IncidentUpdated = 8,
-    ExternalEvent = 9
+    ExternalEvent = 9,
+    DeadLetterReplayRequested = 10,
+    DeadLetterReplayPublished = 11,
+    DeadLetterReplayRejected = 12,
+    DeadLetterReplayFailed = 13
 }
