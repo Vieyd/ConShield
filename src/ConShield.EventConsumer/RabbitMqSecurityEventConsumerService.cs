@@ -53,6 +53,8 @@ public sealed class RabbitMqSecurityEventConsumerService : BackgroundService
 
                 var consumer = new AsyncEventingBasicConsumer(channel);
                 consumer.ReceivedAsync += async (_, args) => await HandleDeliveryAsync(channel, args, stoppingToken);
+                var deadLetterConsumer = new AsyncEventingBasicConsumer(channel);
+                deadLetterConsumer.ReceivedAsync += async (_, args) => await HandleDeadLetterDeliveryAsync(channel, args, stoppingToken);
 
                 await channel.BasicConsumeAsync(
                     _options.QueueName,
@@ -62,6 +64,15 @@ public sealed class RabbitMqSecurityEventConsumerService : BackgroundService
                     exclusive: false,
                     arguments: null,
                     consumer: consumer,
+                    cancellationToken: stoppingToken);
+                await channel.BasicConsumeAsync(
+                    _options.DeadLetterQueueName,
+                    autoAck: false,
+                    consumerTag: "conshield-dead-letter-capture-consumer",
+                    noLocal: false,
+                    exclusive: false,
+                    arguments: null,
+                    consumer: deadLetterConsumer,
                     cancellationToken: stoppingToken);
 
                 await Task.Delay(Timeout.InfiniteTimeSpan, stoppingToken);
@@ -98,6 +109,32 @@ public sealed class RabbitMqSecurityEventConsumerService : BackgroundService
                 multiple: false,
                 requeue: result.Outcome == InboxProcessOutcome.TransientFailure,
                 cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            await channel.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: true, CancellationToken.None);
+        }
+    }
+
+    private async Task HandleDeadLetterDeliveryAsync(IChannel channel, BasicDeliverEventArgs args, CancellationToken cancellationToken)
+    {
+        var body = args.Body.ToArray();
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var processor = scope.ServiceProvider.GetRequiredService<DeadLetterCaptureProcessor>();
+            var result = await processor.CaptureAsync(body, args.BasicProperties, args.RoutingKey, cancellationToken);
+            if (result.Outcome == DeadLetterCaptureOutcome.Captured)
+            {
+                await channel.BasicAckAsync(args.DeliveryTag, multiple: false, cancellationToken);
+                return;
+            }
+
+            await channel.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: true, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -14,6 +14,8 @@ ConShield development rules:
 - `ISecurityEventWriter` must create `SecurityEvents` and `SecurityEventOutbox` rows atomically; do not write JSONL directly from HTTP/MVC requests.
 - `ConShield.EventPipeline` owns outbox dispatch, retry, DeadLetter transitions, JSONL/RabbitMQ sink abstractions, topology declaration, and inbox processing.
 - `ConShield.EventConsumer` is the standalone RabbitMQ consumer process and must remain independent from MVC/Razor.
+- DLQ inspection/replay must keep MVC thin: controllers may create durable replay requests, but RabbitMQ replay publish must run in a background dispatcher or worker.
+- DLQ capture must store only bounded allowlisted metadata and must not render raw payload in list UI.
 - Controllers and API endpoints must stay thin.
 - Time is stored in UTC, and the interface displays GMT+3.
 - `Operator` has read-only access to critical functions.

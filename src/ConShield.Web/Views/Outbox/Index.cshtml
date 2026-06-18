@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Outbox";
     var mongo = ViewBag.MongoProjection as ConShield.MongoProjection.MongoProjectionStatusSnapshot;
+    var deadLetters = ViewBag.DeadLetters as ConShield.EventPipeline.DeadLetterStatusSnapshot;
 }
 
 <h1 class="mb-3">Security Event Outbox</h1>
@@ -50,6 +51,60 @@
     <span class="ms-3">Oldest pending age: @(Model.OldestPendingAge?.ToString(@"hh\:mm\:ss") ?? "-")</span>
     <span class="ms-3">Last delivered UTC: @(Model.LastDeliveredAtUtc?.ToString("u") ?? "-")</span>
 </div>
+
+@if (deadLetters is not null)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">DLQ quarantined</div>
+                    <div class="fs-5">@deadLetters.QuarantinedCount</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Eligible</div>
+                    <div class="fs-5">@deadLetters.EligibleCount</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">NotEligible</div>
+                    <div class="fs-5">@deadLetters.NotEligibleCount</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Replay pending</div>
+                    <div class="fs-5">@deadLetters.PendingReplayRequests</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Replay failed</div>
+                    <div class="fs-5">@deadLetters.FailedReplayRequests</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Last replay UTC</div>
+                    <div class="fs-6">@(deadLetters.LastReplayPublishedAtUtc?.ToString("u") ?? "-")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @if (Model.RabbitMq is not null)
 {

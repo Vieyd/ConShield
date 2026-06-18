@@ -1,0 +1,79 @@
+@model ConShield.Web.ViewModels.DeadLetterIndexViewModel
+
+@{
+    ViewData["Title"] = "Dead Letters";
+}
+
+<h1 class="mb-3">Dead Letters</h1>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-2">
+        <select name="eligibility" class="form-select">
+            <option value="">Eligibility</option>
+            <option selected="@(Model.Eligibility == "Eligible")">Eligible</option>
+            <option selected="@(Model.Eligibility == "RequiresReview")">RequiresReview</option>
+            <option selected="@(Model.Eligibility == "NotEligible")">NotEligible</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input name="reason" value="@Model.Reason" class="form-control" placeholder="Reason" />
+    </div>
+    <div class="col-md-2">
+        <input name="replayStatus" value="@Model.ReplayStatus" class="form-control" placeholder="Replay status" />
+    </div>
+    <div class="col-md-2">
+        <input name="capturedFromUtc" value="@(Model.CapturedFromUtc?.ToString("yyyy-MM-ddTHH:mm"))" class="form-control" type="datetime-local" />
+    </div>
+    <div class="col-md-2">
+        <input name="capturedToUtc" value="@(Model.CapturedToUtc?.ToString("yyyy-MM-ddTHH:mm"))" class="form-control" type="datetime-local" />
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-primary w-100" type="submit">Filter</button>
+    </div>
+</form>
+
+<table class="table table-sm table-striped align-middle">
+    <thead>
+        <tr>
+            <th>QuarantineId</th>
+            <th>MessageId</th>
+            <th>Payload SHA-256</th>
+            <th>Type</th>
+            <th>Reason</th>
+            <th>Eligibility</th>
+            <th>Captured UTC</th>
+            <th>Captures</th>
+            <th>Replay</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td><code>@item.QuarantineId</code></td>
+            <td><code>@(item.OriginalMessageId?.ToString() ?? "-")</code></td>
+            <td><code>@item.PayloadSha256</code></td>
+            <td>@(item.MessageType ?? "-")</td>
+            <td>@item.DeadLetterReason</td>
+            <td>@item.ReplayEligibility</td>
+            <td>@item.CapturedAtUtc.ToString("u")</td>
+            <td>@item.CaptureCount</td>
+            <td>@(item.LatestReplayStatus ?? "-")</td>
+            <td><a asp-action="Details" asp-route-id="@item.QuarantineId">Details</a></td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<nav>
+    <span>Page @Model.Page of @Model.TotalPages</span>
+    @if (Model.Page > 1)
+    {
+        <a class="ms-3" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-eligibility="@Model.Eligibility" asp-route-reason="@Model.Reason" asp-route-replayStatus="@Model.ReplayStatus">Previous</a>
+    }
+    @if (Model.Page < Model.TotalPages)
+    {
+        <a class="ms-3" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-eligibility="@Model.Eligibility" asp-route-reason="@Model.Reason" asp-route-replayStatus="@Model.ReplayStatus">Next</a>
+    }
+</nav>

@@ -11,6 +11,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - PostgreSQL transactional outbox for durable background security event delivery.
 - Optional RabbitMQ transport with publisher confirms, mandatory routing, quorum queue, DLQ, and idempotent PostgreSQL inbox receipts.
 - Optional MongoDB raw-event projection with immutable inserts, duplicate payload comparison, TTL retention, and Mongo-before-Inbox checkpoint ordering.
+- Controlled RabbitMQ DLQ quarantine and AdminIB replay request workflow with no direct MVC publish, bounded replay limits, CSRF protection, and immutable replay audit events.
 - SIEM-style correlation for selected suspicious patterns.
 - PostgreSQL schema management through EF Core migrations.
 - External event ingestion protected by a local API key.
@@ -36,6 +37,8 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - JSONL delivery is at-least-once. Duplicate lines can occur after a crash between append and marking an outbox row `Delivered`; consumers must deduplicate by `messageId`.
 - RabbitMQ outbox `Delivered` means broker-confirmed and routed, not consumer-processed. Consumer processing is recorded separately in `SecurityEventInboxReceipts`.
 - MongoDB projection is not a distributed transaction. When enabled, the consumer writes or confirms Mongo projection before PostgreSQL Inbox completion and ACK.
+- DLQ replay publishing is at-least-once. A crash after confirmed replay publish but before request status update can republish the same original `MessageId`; Inbox and Mongo deduplication make this safe for the current pipeline.
+- DLQ quarantine and replay history are not automatically deleted in this stage. Table growth must be monitored until a retention policy is implemented.
 - MongoDB TTL deletion is approximate. Redelivery after Mongo TTL expiry with an existing PostgreSQL Inbox receipt is ACKed without automatic projection backfill.
 - Trivy reports, archives, vulnerability databases, and scanner local config must not be committed.
 - `ConShield.ImageScanner` summarizes scan results and does not store full CVE lists in PostgreSQL.
@@ -59,6 +62,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Keep `CONSHIELD_DOCKER_PATH` local when used. Do not store registry credentials or Docker config exports in the repository.
 - Keep RabbitMQ credentials in local configuration or `RabbitMq__UserName` / `RabbitMq__Password`. Do not log passwords or broker URIs with credentials.
 - Keep MongoDB credentials in local configuration or `MongoProjection__ConnectionString`. Do not log connection strings.
+- Do not paste raw DLQ payloads, credentials, broker data directories, database dumps, or replay demo logs into tracked files.
 
 ## Recommended Hardening Roadmap
 

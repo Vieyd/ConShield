@@ -39,13 +39,13 @@ Audit event writer that stores security events in the database and appends runti
 src/ConShield.EventPipeline
 ```
 
-Outbox dispatcher, JSONL and RabbitMQ transports, RabbitMQ topology, retry/DeadLetter handling, and inbox receipt processing.
+Outbox dispatcher, JSONL and RabbitMQ transports, RabbitMQ topology, retry/DeadLetter handling, inbox receipt processing, DLQ quarantine classification, and bounded replay dispatch.
 
 ```text
 src/ConShield.EventConsumer
 ```
 
-Standalone RabbitMQ consumer that records idempotent PostgreSQL inbox receipts and manually acknowledges deliveries.
+Standalone RabbitMQ consumer that records idempotent PostgreSQL inbox receipts, optionally projects to MongoDB, captures DLQ messages into PostgreSQL quarantine, and manually acknowledges deliveries.
 
 ## Current Flow
 
@@ -55,8 +55,9 @@ Standalone RabbitMQ consumer that records idempotent PostgreSQL inbox receipts a
 4. Security events are stored in PostgreSQL with a durable outbox row.
 5. The outbox dispatcher delivers through JSONL by default or RabbitMQ when configured.
 6. RabbitMQ deliveries are consumed by `ConShield.EventConsumer` and deduplicated by inbox `MessageId`.
-7. The SIEM correlation service scans recent events and creates alerts.
-8. Alerts can create linked incidents for investigation.
+7. RabbitMQ DLQ deliveries are captured into immutable quarantine rows; `AdminIB` can request bounded replay, and a background dispatcher republishes to the original route.
+8. The SIEM correlation service scans recent events and creates alerts.
+9. Alerts can create linked incidents for investigation.
 
 ## Future Direction
 

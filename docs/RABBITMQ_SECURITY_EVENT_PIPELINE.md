@@ -53,6 +53,12 @@ When MongoDB projection is enabled, MongoDB is written before PostgreSQL Inbox c
 
 Permanent invalid messages are `BasicNackAsync(requeue:false)` and reach the DLQ. Transient processing failures are `BasicNackAsync(requeue:true)` and are bounded by the quorum delivery limit.
 
+## DLQ Quarantine And Replay
+
+The consumer also runs a second manual-ack consumer for `conshield.security-events.dead.v1`. It stores a bounded immutable `DeadLetterQuarantineMessages` row before ACK. AdminIB can inspect the row at `/DeadLetters` and create a replay request. The replay dispatcher runs in the Web background-hosting layer, claims pending rows with database locks, republishes outside the MVC request, waits for mandatory publisher confirms, and records replay audit events.
+
+Replay uses the configured main exchange/routing key, preserves the original `MessageId`, publishes the captured body byte-for-byte, adds only bounded ConShield replay headers, and never copies `x-death`.
+
 ## Configuration
 
 Tracked settings contain no secrets. Set credentials through environment variables:
@@ -99,6 +105,7 @@ Not implemented:
 - Projection backfill.
 - Multi-destination fanout.
 - Automatic DLQ replay.
+- Payload editing, bulk replay, and quarantine retention cleanup.
 - Distributed exactly-once.
 - RabbitMQ cluster automation.
 - Production TLS provisioning.
