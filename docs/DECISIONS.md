@@ -157,3 +157,9 @@ Reason: request/response code should not hold broker I/O privileges or create un
 DLQ replay republishes the captured body with the original RabbitMQ `MessageId` and only bounded ConShield replay headers.
 
 Reason: the existing Inbox and Mongo projection use message identity plus payload hash to deduplicate redelivery and detect payload mismatch. Preserving identity makes at-least-once replay safe without claiming distributed exactly-once.
+
+## 025. Treat Falco Runtime Input As Untrusted JSON
+
+ConShield ingests Falco-compatible JSON through a standalone collector and pure parser library. It does not execute Falco from Web, does not import Falco rule YAML, and does not copy raw output or command lines into PostgreSQL.
+
+Reason: runtime alert text and output fields can contain secrets, forged metadata, or malformed JSON. A bounded mapping policy and deterministic fingerprinting provide useful detection while keeping ingestion safe and replayable.

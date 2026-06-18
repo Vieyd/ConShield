@@ -25,6 +25,7 @@
 - Add projection backfill. Controlled DLQ review/replay for raw event pipelines is implemented; future work should add retention cleanup and richer operations.
 - Convert correlation rules into independent rule classes.
 - Add MITRE ATT&CK mapping for detection scenarios.
+- Deploy a real Falco sensor on a dedicated Linux test host and feed JSON output into `ConShield.RuntimeCollector`.
 
 ## v0.4 Portfolio Release
 

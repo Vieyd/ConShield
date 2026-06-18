@@ -30,6 +30,18 @@ src/ConShield.Contracts
 Shared constants, enums, and DTO models used across the solution.
 
 ```text
+src/ConShield.RuntimeDetection
+```
+
+Pure library for Falco-compatible JSON parsing, runtime mapping policy validation, safe field minimization, normalization, and deterministic event identity.
+
+```text
+src/ConShield.RuntimeCollector
+```
+
+Console collector that reads Falco-compatible alerts from stdin or JSONL files and submits normalized external events to the existing ingestion API.
+
+```text
 src/ConShield.SecurityEvents
 ```
 
@@ -56,8 +68,9 @@ Standalone RabbitMQ consumer that records idempotent PostgreSQL inbox receipts, 
 5. The outbox dispatcher delivers through JSONL by default or RabbitMQ when configured.
 6. RabbitMQ deliveries are consumed by `ConShield.EventConsumer` and deduplicated by inbox `MessageId`.
 7. RabbitMQ DLQ deliveries are captured into immutable quarantine rows; `AdminIB` can request bounded replay, and a background dispatcher republishes to the original route.
-8. The SIEM correlation service scans recent events and creates alerts.
-9. Alerts can create linked incidents for investigation.
+8. Falco-compatible runtime alerts can be normalized by `ConShield.RuntimeCollector` and ingested as external security events.
+9. The SIEM correlation service scans recent events and creates alerts, including `RTE-001` for approved runtime mappings.
+10. Alerts can create linked incidents for investigation.
 
 ## Future Direction
 

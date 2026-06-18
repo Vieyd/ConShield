@@ -18,9 +18,11 @@ The project is intentionally practical. It demonstrates how a security team can 
 - API-key authentication, request validation, request size limit, rate limiting, and idempotency for external events.
 - `ConShield.Collector`, a small console client for sending generated or JSON-file security events.
 - `ConShield.ImageScanner`, a Trivy-based console scanner for container image vulnerability summaries.
+- `ConShield.RuntimeCollector`, a Falco-compatible JSON alert collector for safe runtime-event ingestion from stdin or JSONL fixtures.
 - `IMG-001` SIEM correlation for critical vulnerabilities in container images.
 - `ConShield.ContainerPolicy`, a pure local evaluator for container policy decisions.
 - `POL-001` SIEM correlation for Block decisions from Container Policy Gate.
+- `RTE-001` SIEM correlation for mapped high-risk Falco-compatible runtime container events.
 - Demo scenario generation for portfolio walkthroughs.
 - UTC storage with GMT+3 display for the current Russian-language UI.
 
@@ -47,6 +49,8 @@ ConShield.EventConsumer    RabbitMQ consumer, MongoDB projection, and PostgreSQL
 ConShield.MongoProjection  Immutable MongoDB raw-event projection and TTL indexes
 ConShield.ImageScanner     Trivy-based container image scanner CLI
 ConShield.ContainerPolicy  Pure policy validation and evaluation library
+ConShield.RuntimeDetection Falco-compatible parser, mapping, normalization, and deterministic identity
+ConShield.RuntimeCollector CLI for stdin/file/follow runtime alert ingestion
 infra/                     Future infrastructure for message/event pipeline
 docs/                      Architecture, roadmap, security notes
 ```
@@ -246,6 +250,8 @@ RabbitMQ -> MongoDB raw-event projection -> PostgreSQL Inbox checkpoint -> ACK
 It stores normalized envelopes immutably with `_id = MessageId`, TTL retention, and duplicate payload mismatch protection. See [docs/MONGODB_RAW_EVENT_PROJECTION.md](docs/MONGODB_RAW_EVENT_PROJECTION.md).
 
 RabbitMQ DLQ messages can be captured into immutable PostgreSQL quarantine rows, inspected by `AdminIB`, and replayed only through a bounded background dispatcher. MVC requests never publish RabbitMQ messages directly, raw payload is not shown in the list UI, and replay preserves the original `MessageId` for Inbox/Mongo deduplication. See [docs/DLQ_INSPECTION_AND_REPLAY.md](docs/DLQ_INSPECTION_AND_REPLAY.md).
+
+Falco-compatible runtime JSON alerts can be normalized by `ConShield.RuntimeCollector` and submitted to the existing external ingestion API. This stage uses safe JSONL fixtures and does not install Falco, Falco Operator, or Kubernetes components. See [docs/FALCO_RUNTIME_EVENT_INGESTION.md](docs/FALCO_RUNTIME_EVENT_INGESTION.md).
 
 ## Demo Accounts
 

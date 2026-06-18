@@ -152,6 +152,29 @@ public class SiemCorrelationService : ISiemCorrelationService
             cancellationToken: cancellationToken);
 
         Merge(result, created5);
+
+        var recentRuntimeEvents = await _dbContext.SecurityEvents
+            .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                        && x.SourceSystem == "conshield.falco-runtime-collector"
+                        && (x.Severity == EventSeverity.High || x.Severity == EventSeverity.Critical)
+                        && x.OccurredAtUtc >= now.AddMinutes(-10))
+            .ToListAsync(cancellationToken);
+
+        var created6 = await ProcessRuleAsync(
+            ruleCode: "RTE-001",
+            ruleName: "Container runtime threat detected",
+            severity: EventSeverity.High,
+            descriptionFactory: group => group.Description,
+            eventIdsFactory: group => group.EventIds,
+            groups: recentRuntimeEvents
+                .Select(TryCreateRuntimeCandidate)
+                .Where(x => x is not null)
+                .Select(x => x!)
+                .ToList(),
+            createIncident: true,
+            cancellationToken: cancellationToken);
+
+        Merge(result, created6);
         return result;
     }
 
@@ -358,6 +381,76 @@ public class SiemCorrelationService : ISiemCorrelationService
         }
     }
 
+    private static RuleCandidate? TryCreateRuntimeCandidate(SecurityEventEntry entry)
+    {
+        var approved = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "container.runtime.shell_spawned",
+            "container.runtime.binary_path_write",
+            "container.runtime.setuid_change",
+            "container.runtime.suspicious_network_tool",
+            "container.runtime.privileged_container_started"
+        };
+        if (entry.ExternalEventType is null || !approved.Contains(entry.ExternalEventType))
+            return null;
+        if (string.IsNullOrWhiteSpace(entry.AdditionalDataJson))
+            return null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(entry.AdditionalDataJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return null;
+            if (ReadNonNegativeInt(root, "schemaVersion") != 1)
+                return null;
+            if (!string.Equals(ReadString(root, "provider", 64), "falco-compatible", StringComparison.Ordinal))
+                return null;
+            if (!ReadBool(root, "correlate"))
+                return null;
+            var mappingId = ReadString(root, "mappingId", 128);
+            var mappingVersion = ReadString(root, "mappingVersion", 64);
+            var mappingSha = ReadString(root, "mappingSha256", 64);
+            var mappingKey = ReadString(root, "mappingKey", 128);
+            var falcoRule = ReadString(root, "falcoRule", 256);
+            if (string.IsNullOrWhiteSpace(mappingId)
+                || string.IsNullOrWhiteSpace(mappingVersion)
+                || !IsLowercaseSha256(mappingSha)
+                || string.IsNullOrWhiteSpace(mappingKey)
+                || string.IsNullOrWhiteSpace(falcoRule))
+            {
+                return null;
+            }
+
+            var containerId = ReadString(root, "containerId", 512);
+            var containerName = ReadString(root, "containerName", 512);
+            var imageDigest = ReadString(root, "imageDigest", 512);
+            var imageReference = ReadString(root, "imageReference", 512);
+            var processName = ReadString(root, "processName", 128);
+            var host = entry.SourceHost;
+            var identity = !string.IsNullOrWhiteSpace(containerId)
+                ? containerId
+                : !string.IsNullOrWhiteSpace(containerName) && !string.IsNullOrWhiteSpace(imageDigest ?? imageReference)
+                    ? $"{containerName}:{imageDigest ?? imageReference}"
+                    : host;
+            if (string.IsNullOrWhiteSpace(identity))
+                return null;
+
+            var key = $"{NormalizeTriggerValue(identity)}:{mappingKey}:{NormalizeTriggerValue(processName ?? "unknown-process")}";
+            return new RuleCandidate
+            {
+                Key = key,
+                Count = 1,
+                Description = $"Runtime threat {mappingKey} detected for {identity}: rule={falcoRule}, process={processName ?? "unknown"}. Source event #{entry.Id}.",
+                EventIds = [entry.Id]
+            };
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private static int ReadNonNegativeInt(JsonElement root, string propertyName)
     {
         if (!root.TryGetProperty(propertyName, out var value))
@@ -380,6 +473,11 @@ public class SiemCorrelationService : ISiemCorrelationService
 
         text = new string(text.Where(x => !char.IsControl(x)).ToArray());
         return text.Length <= maxLength ? text : text[..maxLength];
+    }
+
+    private static bool ReadBool(JsonElement root, string propertyName)
+    {
+        return root.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.True;
     }
 
     private static string NormalizeTriggerValue(string value)

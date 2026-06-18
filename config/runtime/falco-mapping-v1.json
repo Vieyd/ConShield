@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "mappingId": "falco-container-runtime-baseline",
+  "version": "1.0.0",
+  "unmappedAction": "IngestWithoutCorrelation",
+  "rules": [
+    {
+      "mappingKey": "shell-in-container",
+      "matchRuleNames": [ "Terminal shell in container" ],
+      "requiredTags": [ "container" ],
+      "eventType": "container.runtime.shell_spawned",
+      "severity": "High",
+      "correlate": true
+    },
+    {
+      "mappingKey": "binary-path-write",
+      "matchRuleNames": [ "Write below binary dir" ],
+      "requiredTags": [ "container" ],
+      "eventType": "container.runtime.binary_path_write",
+      "severity": "High",
+      "correlate": true
+    },
+    {
+      "mappingKey": "setuid-change",
+      "matchRuleNames": [ "Set Setuid or Setgid bit", "Set setuid or setgid bit" ],
+      "requiredTags": [ "container" ],
+      "eventType": "container.runtime.setuid_change",
+      "severity": "High",
+      "correlate": true
+    },
+    {
+      "mappingKey": "suspicious-network-tool",
+      "matchRuleNames": [ "Launch Suspicious Network Tool in Container" ],
+      "requiredTags": [ "container" ],
+      "eventType": "container.runtime.suspicious_network_tool",
+      "severity": "High",
+      "correlate": true
+    },
+    {
+      "mappingKey": "privileged-container-started",
+      "matchRuleNames": [ "Privileged Container Started" ],
+      "requiredTags": [ "container" ],
+      "eventType": "container.runtime.privileged_container_started",
+      "severity": "Critical",
+      "correlate": true
+    }
+  ]
+}

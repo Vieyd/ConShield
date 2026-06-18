@@ -21,6 +21,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - `IMG-001` correlation for critical vulnerabilities in container image scan summaries.
 - Local Container Policy Gate with deterministic Allow/Warn/Block decisions.
 - `POL-001` correlation for policy Block decisions.
+- Falco-compatible runtime alert parser/collector with bounded mapping, deterministic event identity, redaction/minimization, and `RTE-001` SIEM correlation.
 - Replay-safe launch audit for guarded Docker execution outcomes.
 - Local development configuration is excluded from Git.
 
@@ -46,6 +47,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Container Policy Gate reserves `conshield.image-scanner`, `conshield.container-guard`, and `conshield.container-runtime` as distinct source systems for one shared `externalEventId`.
 - For `gate --execute`, the policy audit event is treated as the at-most-once launch reservation. If the same operation is replayed and the policy event already exists, Docker is not launched again.
 - Container Policy Gate is not a Kubernetes admission controller and does not provide remote policy distribution, waivers, or policy signing.
+- Runtime ingestion is Falco-compatible only in this stage. It does not install Falco, load kernel/eBPF drivers, deploy Kubernetes, or run automatic container response.
 - Policy evaluation events record requested execution and warning acknowledgement. Actual Docker launch outcomes are recorded separately as `container.image.launch.result`.
 - The app is designed for local portfolio demonstration, not internet exposure.
 
@@ -63,6 +65,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Keep RabbitMQ credentials in local configuration or `RabbitMq__UserName` / `RabbitMq__Password`. Do not log passwords or broker URIs with credentials.
 - Keep MongoDB credentials in local configuration or `MongoProjection__ConnectionString`. Do not log connection strings.
 - Do not paste raw DLQ payloads, credentials, broker data directories, database dumps, or replay demo logs into tracked files.
+- Do not commit Falco production logs, command-line secrets, environment dumps, registry credentials, driver artifacts, or scap captures.
 
 ## Recommended Hardening Roadmap
 

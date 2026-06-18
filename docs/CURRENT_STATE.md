@@ -26,6 +26,7 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - `ConShield.ContainerPolicy` pure class library for local container policy evaluation.
 - `ConShield.ImageScanner gate` command for scan, policy decision, audit, and optional hardened local Docker launch.
 - Container Policy Gate uses reserved `conshield.image-scanner`, `conshield.container-guard`, and `conshield.container-runtime` source systems with one shared `externalEventId`.
+- Falco-compatible runtime ingestion uses reserved `conshield.falco-runtime-collector`, local JSONL fixtures, versioned mapping, and deterministic external event IDs.
 - Guarded Docker launch outcomes are audited as `container.image.launch.result`.
 - For `gate --execute`, the created policy event is the launch reservation. Replaying an operation with an existing policy event does not launch Docker again.
 - Correlation rules:
@@ -34,6 +35,7 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - `CR-001`: repeated critical source events from one real source IP. SIEM-generated audit events are not inputs for this rule.
 - `IMG-001`: critical vulnerabilities in a container image scan summary.
 - `POL-001`: blocked container image policy decisions.
+- `RTE-001`: mapped high-risk Falco-compatible runtime events for containers.
 - External ingested events are stored as `SecurityEventType.ExternalEvent`. `CR-001` can trigger for external critical events when the source-IP conditions match. `BF-001` and `UE-001` do not yet interpret arbitrary external event types.
 
 ## Not Implemented Yet
@@ -45,6 +47,7 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - External event-type mapping to SIEM rules.
 - Production machine identity, mTLS, and centralized secret management.
 - Full policy engine language, waivers, policy signing, runtime monitoring, Falco, and Kubernetes integration.
+- Real Falco kernel/eBPF deployment, Kubernetes DaemonSet/Operator, Falcosidekick, automatic container response, and runtime mapping UI.
 - Full Dockerized application stack.
 - MITRE ATT&CK mapping.
 - UI screenshots and release assets.

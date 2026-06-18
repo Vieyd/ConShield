@@ -403,6 +403,90 @@ public class SiemCorrelationServiceTests
         Assert.Equal(1, await db.SiemAlerts.CountAsync(x => x.RuleCode == "POL-001"));
     }
 
+    [Fact]
+    public async Task RTE001_MappedRuntimeEvent_CreatesAlertAndIncident()
+    {
+        await using var db = CreateDbContext();
+        AddRuntimeEvent(db, "container.runtime.shell_spawned", "shell-in-container", "runtime-container-1");
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RunAsync();
+
+        Assert.Equal(1, result.CreatedAlerts);
+        Assert.Equal(1, result.CreatedIncidents);
+        var alert = await db.SiemAlerts.SingleAsync();
+        Assert.Equal("RTE-001", alert.RuleCode);
+        Assert.Contains("shell-in-container", alert.TriggerKey);
+        Assert.Contains("runtime-container-1", alert.TriggerKey);
+        Assert.DoesNotContain("raw output", alert.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RTE001_RepeatedRun_DoesNotDuplicateActiveAlert()
+    {
+        await using var db = CreateDbContext();
+        AddRuntimeEvent(db, "container.runtime.shell_spawned", "shell-in-container", "runtime-container-1");
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var first = await service.RunAsync();
+        var second = await service.RunAsync();
+
+        Assert.Equal(1, first.CreatedAlerts);
+        Assert.Equal(0, second.CreatedAlerts);
+        Assert.Equal(1, await db.SiemAlerts.CountAsync(x => x.RuleCode == "RTE-001"));
+    }
+
+    [Fact]
+    public async Task RTE001_UnmappedEvent_DoesNotCreateAlert()
+    {
+        await using var db = CreateDbContext();
+        AddRuntimeEvent(db, "container.runtime.unmapped", "unmapped", "runtime-container-1", correlate: false);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RunAsync();
+
+        Assert.Equal(0, result.CreatedAlerts);
+        Assert.Empty(db.SiemAlerts);
+    }
+
+    [Fact]
+    public async Task RTE001_SeparateContainerCreatesSeparateAlert()
+    {
+        await using var db = CreateDbContext();
+        AddRuntimeEvent(db, "container.runtime.shell_spawned", "shell-in-container", "runtime-container-1");
+        AddRuntimeEvent(db, "container.runtime.shell_spawned", "shell-in-container", "runtime-container-2");
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RunAsync();
+
+        Assert.Equal(2, result.CreatedAlerts);
+        Assert.Equal(2, await db.SiemAlerts.CountAsync(x => x.RuleCode == "RTE-001"));
+    }
+
+    [Fact]
+    public async Task RTE001_MalformedAdditionalData_DoesNotBreakCorrelation()
+    {
+        await using var db = CreateDbContext();
+        db.SecurityEvents.Add(new SecurityEventEntry
+        {
+            OccurredAtUtc = DateTime.UtcNow,
+            EventType = SecurityEventType.ExternalEvent,
+            ExternalEventType = "container.runtime.shell_spawned",
+            Severity = EventSeverity.High,
+            SourceSystem = "conshield.falco-runtime-collector",
+            Description = "Malformed runtime event",
+            AdditionalDataJson = "{"
+        });
+        AddLoginFailures(db, "operator", 3);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RunAsync();
+
+        Assert.Equal(1, result.CreatedAlerts);
+        Assert.Contains(await db.SiemAlerts.ToListAsync(), x => x.RuleCode == "BF-001");
+    }
+
     private static ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -524,6 +608,48 @@ public class SiemCorrelationServiceTests
                 highCount = 0,
                 totalCount = 1,
                 reasonCodes = new[] { "CRITICAL_THRESHOLD_REACHED" }
+            })
+        });
+    }
+
+    private static void AddRuntimeEvent(
+        ApplicationDbContext dbContext,
+        string externalEventType,
+        string mappingKey,
+        string containerId,
+        bool correlate = true)
+    {
+        dbContext.SecurityEvents.Add(new SecurityEventEntry
+        {
+            OccurredAtUtc = DateTime.UtcNow.AddSeconds(-10),
+            EventType = SecurityEventType.ExternalEvent,
+            ExternalEventType = externalEventType,
+            Severity = EventSeverity.High,
+            SourceSystem = "conshield.falco-runtime-collector",
+            SourceHost = "runtime-node",
+            Description = "Falco-compatible runtime event.",
+            AdditionalDataJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                schemaVersion = 1,
+                provider = "falco-compatible",
+                mappingId = "falco-container-runtime-baseline",
+                mappingVersion = "1.0.0",
+                mappingSha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                mappingKey,
+                correlate,
+                falcoRule = "Terminal shell in container",
+                falcoPriority = "Critical",
+                falcoSource = "syscall",
+                falcoTags = new[] { "container" },
+                eventFingerprintSha256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                containerId,
+                containerName = "runtime-demo",
+                imageReference = "alpine:3.20",
+                imageDigest = (string?)null,
+                processName = "sh",
+                eventType = "execve",
+                rawOutputSha256 = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                commandLineSha256 = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
             })
         });
     }

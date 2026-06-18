@@ -56,6 +56,16 @@ public static class SiemRuleCatalog
             ConditionText = "decision == Block",
             WindowText = "24 часа",
             TriggerEntityText = "Policy + digest или reference контейнерного образа"
+        },
+        new SiemRuleDefinition
+        {
+            RuleCode = "RTE-001",
+            RuleName = "Container runtime threat detected",
+            Severity = EventSeverity.High,
+            Description = "Правило выявляет подтвержденные Falco-compatible runtime события для контейнеров.",
+            ConditionText = "mapped runtime event, correlate == true, severity High/Critical",
+            WindowText = "10 минут",
+            TriggerEntityText = "Container identity + mapping + process"
         }
     ];
 }
