@@ -45,3 +45,16 @@
 - Add richer filtering and pagination.
 - Add localization resources for UI text.
 - Add deployment notes for a non-production demo environment.
+
+## Completed Real Sensor Stage
+
+- Real Falco 0.44.1 sensor validated on a single Fedora 44 VM.
+- BTF `modern_ebpf`, protected JSONL, hardened non-root collector, and safe Podman demo implemented.
+- End-to-end runtime detection verified through RTE-001 alert and incident creation.
+
+## Recommended Next Stage
+
+- Add multi-host sensor enrollment and source inventory.
+- Issue per-source credentials and heartbeat events.
+- Introduce mTLS-ready sensor identity and rotation workflows.
+- Preserve Windows as the central workstation/server while expanding protected Linux nodes.

@@ -1,0 +1,14 @@
+# Applied as targeted key updates to the package-owned /etc/falco/falco.yaml.
+# install-fedora.sh creates a timestamped backup before changing these values.
+engine:
+  kind: modern_ebpf
+
+json_output: true
+
+file_output:
+  enabled: true
+  keep_alive: true
+  filename: /var/log/conshield/falco-events.jsonl
+
+webserver:
+  enabled: false

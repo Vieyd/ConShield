@@ -81,3 +81,18 @@ Web app -> Security event writer -> PostgreSQL outbox -> RabbitMQ -> EventConsum
 ```
 
 The existing `infra/docker-compose.yml` runs PostgreSQL, RabbitMQ, and optional MongoDB raw-event projection infrastructure for the current event pipeline. PostgreSQL remains the system of record; MongoDB stores replay-safe normalized raw-event projections when enabled.
+
+## Fedora Runtime Sensor Boundary
+
+```text
+Fedora 44 protected node
+  Falco modern_ebpf + BTF
+  -> /var/log/conshield/falco-events.jsonl
+  -> non-root ConShield.RuntimeCollector
+  -> HTTP over isolated VMware host-only network
+Windows central ConShield
+  -> ingestion API -> PostgreSQL + Outbox -> RabbitMQ
+  -> Mongo projection + Inbox -> RTE-001 -> Alert/Incident
+```
+
+The collector, not MVC, owns file following and transport. Falco remains privileged only where kernel capture requires it; the collector has no capabilities. Kubernetes, automatic response, and remote shell execution are outside this boundary.

@@ -58,11 +58,13 @@ public static class CommandLineParser
         if (string.IsNullOrWhiteSpace(mapping))
             return ParseResult.Invalid("--mapping is required.");
         var noSubmit = values.ContainsKey("no-submit");
-        var endpoint = Get(values, "endpoint") ?? Environment.GetEnvironmentVariable("CONSHIELD_BASE_URL");
+        var endpoint = Get(values, "endpoint")
+            ?? Environment.GetEnvironmentVariable("CONSHIELD_ENDPOINT")
+            ?? Environment.GetEnvironmentVariable("CONSHIELD_BASE_URL");
         if (!noSubmit)
         {
             if (string.IsNullOrWhiteSpace(endpoint))
-                return ParseResult.Invalid("--endpoint or CONSHIELD_BASE_URL is required unless --no-submit is used.");
+                return ParseResult.Invalid("--endpoint, CONSHIELD_ENDPOINT, or CONSHIELD_BASE_URL is required unless --no-submit is used.");
             if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
                 return ParseResult.Invalid("--endpoint must be an absolute http/https URL.");
         }

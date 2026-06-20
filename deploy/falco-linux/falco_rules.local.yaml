@@ -1,0 +1,9 @@
+- rule: ConShield Safe Demo Shell in Container
+  desc: Detect the explicit harmless ConShield demonstration command inside a container
+  condition: spawned_process and container and proc.name = sh and proc.cmdline contains "conshield-falco-demo"
+  output: >
+    ConShield safe runtime demonstration command
+    (user=%user.name proc=%proc.name command=%proc.cmdline container_id=%container.id
+    container_name=%container.name image=%container.image.repository evt_type=%evt.type)
+  priority: WARNING
+  tags: [conshield, container]

@@ -6,7 +6,7 @@
   "rules": [
     {
       "mappingKey": "shell-in-container",
-      "matchRuleNames": [ "Terminal shell in container" ],
+      "matchRuleNames": [ "Terminal shell in container", "ConShield Safe Demo Shell in Container" ],
       "requiredTags": [ "container" ],
       "eventType": "container.runtime.shell_spawned",
       "severity": "High",

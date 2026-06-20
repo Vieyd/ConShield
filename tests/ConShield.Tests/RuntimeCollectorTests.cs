@@ -5,6 +5,24 @@ namespace ConShield.Tests;
 public class RuntimeCollectorTests
 {
     [Fact]
+    public void RuntimeCollector_UsesDedicatedEndpointEnvironmentVariable()
+    {
+        var previous = Environment.GetEnvironmentVariable("CONSHIELD_ENDPOINT");
+        try
+        {
+            Environment.SetEnvironmentVariable("CONSHIELD_ENDPOINT", "http://192.168.54.1:5080/api/v1/security-events");
+            var result = CommandLineParser.Parse(["collect", "--stdin", "--mapping", MappingPath()]);
+
+            Assert.True(result.IsValid);
+            Assert.Equal("http://192.168.54.1:5080/api/v1/security-events", result.Options!.Endpoint);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CONSHIELD_ENDPOINT", previous);
+        }
+    }
+
+    [Fact]
     public void RuntimeCollector_InvalidArgs_AreRejected()
     {
         Assert.False(CommandLineParser.Parse(["collect", "--stdin", "--file", "x", "--mapping", "config/runtime/falco-mapping-v1.json", "--no-submit"]).IsValid);

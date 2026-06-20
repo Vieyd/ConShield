@@ -67,3 +67,16 @@ External events ingested through `POST /api/v1/security-events` are stored as `S
 - Audit event taxonomy.
 - Role model and access boundaries.
 - MongoDB raw-event projection and retention semantics.
+
+## Real Falco Evidence
+
+| Area | Validated evidence |
+| --- | --- |
+| Linux sensor | Fedora 44, x86_64, kernel BTF, SELinux Enforcing |
+| Runtime capture | Falco 0.44.1 using `modern_ebpf` |
+| Isolation | Protected JSONL and non-login `conshield-runtime` systemd service |
+| Safe demonstration | Non-privileged `alpine:3.20` command with a narrow container-only rule |
+| Durable pipeline | PostgreSQL Outbox Delivered, RabbitMQ drained, Mongo document, Inbox receipt |
+| Detection result | One RTE-001 alert linked to one incident for the real demo event |
+
+The result demonstrates a real protected Linux node feeding central ConShield on Windows without Kubernetes or automatic response.
