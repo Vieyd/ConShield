@@ -60,3 +60,13 @@ ConShield is a lightweight SOC/SIEM-style ASP.NET Core MVC application for a cyb
 - Store timestamps in UTC and convert for the UI at the presentation boundary.
 - Treat demo authentication as a local development mechanism.
 - Document MongoDB only as the optional raw-event projection; PostgreSQL remains the system of record.
+
+## Validated Real Sensor
+
+- Fedora 44 Workstation, kernel 6.19.x, x86_64, BTF available.
+- SELinux Enforcing with no custom policy and no recent AVC denial during verification.
+- Podman 5.8.1 reused as the only container runtime.
+- Falco 0.44.1 from the official RPM repository using `modern_ebpf`.
+- Protected JSONL and non-root systemd RuntimeCollector are active.
+- Fixture ingestion and a safe real container event reached Outbox, RabbitMQ, MongoDB, Inbox, RTE-001, Alert, and Incident.
+- Rootless Podman supplied container ID and process/event/user fields; container name and image repository were not populated in the observed Falco event.

@@ -163,3 +163,21 @@ Reason: the existing Inbox and Mongo projection use message identity plus payloa
 ConShield ingests Falco-compatible JSON through a standalone collector and pure parser library. It does not execute Falco from Web, does not import Falco rule YAML, and does not copy raw output or command lines into PostgreSQL.
 
 Reason: runtime alert text and output fields can contain secrets, forged metadata, or malformed JSON. A bounded mapping policy and deterministic fingerprinting provide useful detection while keeping ingestion safe and replayable.
+
+## 026. Use Fedora As A Protected Falco Sensor Node
+
+Windows remains the primary developer workstation and central ConShield server. Fedora runs Falco and the standalone collector only; clients do not need to replace Windows desktops.
+
+Reason: this separates kernel-facing telemetry from the central application while preserving the established Windows development workflow.
+
+## 027. Prefer BTF modern_ebpf And Preserve SELinux Enforcement
+
+The Fedora deployment requires readable kernel BTF, selects `modern_ebpf`, keeps SELinux Enforcing, and does not change Secure Boot. Configuration problems are fixed through ownership, labels, service isolation, and narrow configuration changes rather than broad custom policy.
+
+Reason: this avoids legacy probe management and prevents a demo deployment from weakening the host security baseline.
+
+## 028. Transfer Sensor Credentials Through Protected Environment Files
+
+The API key is transferred by SCP in a temporary ignored file, installed as `0600 root:root`, consumed through systemd `EnvironmentFile`, and removed from staging. It is never placed in `ExecStart` or a process argument.
+
+Reason: command lines and logs are inappropriate secret boundaries; the current host-only HTTP prototype still needs confidential authentication material.

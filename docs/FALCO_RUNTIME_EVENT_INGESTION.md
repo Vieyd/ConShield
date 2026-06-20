@@ -99,8 +99,17 @@ Implemented:
 
 Not implemented:
 
-- Falco kernel/eBPF deployment;
 - Kubernetes DaemonSet/Operator;
 - automatic container response;
 - Falcosidekick;
 - runtime rule management UI.
+
+## Real Fedora Deployment
+
+The repository now includes `deploy/falco-linux` and a validated Fedora 44 deployment. Falco 0.44.1 uses the BTF `modern_ebpf` engine, writes one JSON object per line to a protected log, and is followed by a non-root RuntimeCollector systemd service.
+
+RuntimeCollector accepts `CONSHIELD_ENDPOINT` for the dedicated sensor environment file and retains `CONSHIELD_BASE_URL` compatibility. The API key remains in `CONSHIELD_EXTERNAL_EVENT_API_KEY` and never appears in `ExecStart`.
+
+The safe demo rule `ConShield Safe Demo Shell in Container` is container-scoped and matches only the explicit harmless marker `conshield-falco-demo`. It maps to the existing `shell-in-container` baseline and RTE-001. The observed rootless Podman event included container ID, process name, event type, and user name; container name and image repository were unavailable.
+
+See [REAL_FALCO_FEDORA_DEPLOYMENT.md](REAL_FALCO_FEDORA_DEPLOYMENT.md) for installation, rollback, verification, and limitations.

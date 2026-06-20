@@ -31,3 +31,9 @@ ConShield development rules:
 - Keep runtime ingestion source system reserved as `conshield.falco-runtime-collector`.
 - Do not add arbitrary Docker arguments, host networking, host volumes, privileged mode, or Docker socket mounts to the gate command.
 - After changes, run restore, build, and tests.
+- Keep Windows as the primary development workstation and central ConShield server; Fedora is a protected sensor node.
+- Keep real Falco deployment in `deploy/falco-linux`; Web must never start Falco or read its JSONL directly.
+- Falco deployments must keep SELinux enforcing, prefer BTF `modern_ebpf`, and must not weaken Secure Boot.
+- RuntimeCollector must run non-root and receive API keys only through a protected environment file.
+- Do not commit sensor environment files, Falco JSONL, artifacts, host IDs, container IDs, or generated verification output.
+- Safe Falco demonstrations must be container-scoped, non-privileged, deterministic, and bounded.

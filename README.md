@@ -324,3 +324,17 @@ dotnet run --project src/ConShield.Web/ConShield.Web.csproj
 ### Важно
 
 Текущая авторизация является демонстрационной. Для production-подхода нужно заменить ее на полноценную систему учетных записей, хеширование паролей, rate limiting и безопасное управление секретами.
+
+## Real Falco Fedora Sensor
+
+ConShield has a deployment kit for a protected Fedora 44 sensor node in [`deploy/falco-linux`](deploy/falco-linux). Windows remains the primary developer workstation and central ConShield server. The Fedora VM represents a protected Linux node; clients do not need to replace Windows desktops.
+
+The validated path is:
+
+```text
+Falco 0.44.1 modern_ebpf -> protected JSONL -> RuntimeCollector
+-> Windows ingestion API -> PostgreSQL Outbox -> RabbitMQ
+-> MongoDB + PostgreSQL Inbox -> RTE-001 -> Alert + Incident
+```
+
+The deployment keeps SELinux enforcing, reuses Podman, runs RuntimeCollector as a non-login user, and does not install Kubernetes. See [`docs/REAL_FALCO_FEDORA_DEPLOYMENT.md`](docs/REAL_FALCO_FEDORA_DEPLOYMENT.md).

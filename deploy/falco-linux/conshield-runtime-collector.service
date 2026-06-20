@@ -1,0 +1,31 @@
+[Unit]
+Description=ConShield Falco Runtime Event Collector
+Wants=network-online.target
+After=network-online.target falco-modern-bpf.service falco.service
+
+[Service]
+Type=simple
+User=conshield-runtime
+Group=conshield-runtime
+EnvironmentFile=/etc/conshield/runtime-collector.env
+ExecStart=/opt/conshield/runtime-collector/ConShield.RuntimeCollector collect --file /var/log/conshield/falco-events.jsonl --follow --mapping /opt/conshield/runtime-collector/config/falco-mapping-v1.json
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadOnlyPaths=/var/log/conshield /opt/conshield/runtime-collector /etc/conshield/runtime-collector.env
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+/var/log/conshield/falco-events.jsonl {
+    daily
+    rotate 7
+    maxsize 25M
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    create 0640 root conshield-runtime
+    su root conshield-runtime
+}

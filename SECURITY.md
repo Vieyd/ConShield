@@ -78,3 +78,14 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Add API key rotation, mTLS, centralized secret management, and per-source credentials before production exposure.
 - Add retention policy and operator procedures for `DeadLetter` outbox rows.
 - Add operational DLQ review and replay procedures.
+
+## Fedora Falco Sensor Boundary
+
+- Fedora keeps SELinux `Enforcing`; the deployment does not change Secure Boot.
+- Falco uses the BTF-based `modern_ebpf` engine and writes `0640 root:conshield-runtime` JSONL.
+- RuntimeCollector runs as the non-login `conshield-runtime` user with systemd hardening and no capabilities.
+- The ingestion key is stored only in `/etc/conshield/runtime-collector.env` as `0600 root:root`; it is never an argument.
+- Falco's embedded health webserver is disabled and no webhook or gRPC output is enabled.
+- Windows accepts sensor traffic only from the Fedora VM over the isolated VMnet1 firewall scope.
+
+This remains a development deployment: HTTP on host-only networking is not a replacement for per-sensor identity, key rotation, mTLS, enrollment, or a centralized secret manager.
