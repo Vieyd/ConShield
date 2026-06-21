@@ -37,6 +37,8 @@ The installer rejects symlinks and weak ownership/modes for secret staging, crea
 
 Create the staging file from `conshield-runtime-collector.env.example` only after the corresponding sensor credential has been provisioned in the central database. It must contain exactly the endpoint, sensor ID, credential ID, credential, and heartbeat interval entries shown by the example. Do not pass the credential through command-line arguments.
 
+Use the local operator tool and follow the complete staged rollout, verification, fallback-disablement, and rollback procedure in [`docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md`](../../docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md). `verify-pipeline.sh` submits through the running systemd collector and never extracts the credential from its protected environment file.
+
 ## Rollback
 
 ```bash

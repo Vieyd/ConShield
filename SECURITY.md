@@ -61,6 +61,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Keep `ExternalEventIngestion:ApiKey` in local configuration or environment variables only.
 - Keep `ExternalEventIngestion:RuntimeCollectorApiKey` and `CONSHIELD_RUNTIME_COLLECTOR_API_KEY` local; the general key must not authorize `conshield.falco-runtime-collector`.
 - Keep sensor credentials high-entropy and provision them only through a local operator-controlled path. Public sensor and credential IDs are selectors, not authentication secrets.
+- `ConShield.SensorProvisioning` reads its PostgreSQL connection only from `CONSHIELD_SENSOR_PROVISIONING_CONNECTION`, generates credentials internally, prints each credential once for protected transfer, and stores only the SHA-256 verifier.
 - Prefer `CONSHIELD_API_KEY` for the Collector instead of command-line `--api-key`, because command-line arguments may be visible in shell history or process listings.
 - Prefer `CONSHIELD_API_KEY` for `ConShield.ImageScanner` for the same reason.
 - Keep `CONSHIELD_TRIVY_PATH` local and do not commit Trivy binaries or archives.

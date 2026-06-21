@@ -51,6 +51,7 @@ ConShield.ImageScanner     Trivy-based container image scanner CLI
 ConShield.ContainerPolicy  Pure policy validation and evaluation library
 ConShield.RuntimeDetection Falco-compatible parser, mapping, normalization, and deterministic identity
 ConShield.RuntimeCollector CLI for stdin/file/follow runtime alert ingestion
+ConShield.SensorProvisioning Local operator-only enrolled sensor credential provisioning
 infra/                     Future infrastructure for message/event pipeline
 docs/                      Architecture, roadmap, security notes
 ```
@@ -339,3 +340,5 @@ Falco 0.44.1 modern_ebpf -> protected JSONL -> RuntimeCollector
 ```
 
 The deployment keeps SELinux enforcing, reuses Podman, runs RuntimeCollector as a non-login user, and does not install Kubernetes. See [`docs/REAL_FALCO_FEDORA_DEPLOYMENT.md`](docs/REAL_FALCO_FEDORA_DEPLOYMENT.md).
+
+Enrolled sensor credentials are created with the local operator-only `ConShield.SensorProvisioning` tool. Follow [`docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md`](docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md) for protected credential transfer, heartbeat and event verification, legacy fallback disablement, and rollback.

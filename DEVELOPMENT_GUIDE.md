@@ -5,6 +5,7 @@ ConShield development rules:
 - `ConShield.Web` contains only the MVC interface, API endpoints, controllers, view models, and configuration.
 - `ConShield.ImageScanner` is the only current component that starts Trivy; Web/MVC must not start local scanner processes.
 - `ConShield.RuntimeCollector` is the runtime-alert ingestion CLI; Web/MVC must not execute Falco or read runtime log files directly.
+- `ConShield.SensorProvisioning` is a local operator-only database tool; it must not expose enrollment over HTTP or accept credentials through argv.
 - `ConShield.ImageScanner gate` is the only current component that may start Docker, and only after policy evaluation.
 - `ConShield.ContainerPolicy` must stay a pure class library: no ASP.NET, EF Core, PostgreSQL, Trivy, Docker, or HTTP dependencies.
 - Business logic must live in `ConShield.Application`.
