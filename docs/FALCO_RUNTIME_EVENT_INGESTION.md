@@ -44,7 +44,7 @@ Unknown rules become `container.runtime.unmapped` with `correlate = false`.
 
 ## Minimization
 
-ConShield does not store raw Falco alerts, raw `output`, raw command line, environment variables, arbitrary output fields, API keys, or registry credentials. It stores bounded identifiers, selected container/process/network fields, `rawOutputSha256`, and `commandLineSha256`. `proc.cmdline` contributes only command name, argument count, and hash.
+ConShield does not store raw Falco alerts, raw `output`, raw command line, environment variables, arbitrary output fields, API keys, or registry credentials. It stores bounded identifiers, selected container/process/network fields, `rawOutputSha256`, and `commandLineSha256`. `proc.cmdline` contributes only a sanitized command name, argument count, and hash. Selected string fields remove URL userinfo/query strings and redact common password, token, authorization, API-key, secret, and bearer forms before persistence.
 
 ## Identity
 
@@ -87,7 +87,7 @@ Get-Content .\samples\falco\runtime-demo.jsonl |
   --stdin `
   --mapping .\config\runtime\falco-mapping-v1.json `
   --endpoint http://127.0.0.1:<port>/api/v1/security-events `
-  --api-key-env CONSHIELD_EXTERNAL_EVENT_API_KEY
+  --api-key-env CONSHIELD_RUNTIME_COLLECTOR_API_KEY
 ```
 
 Implemented:
@@ -108,7 +108,9 @@ Not implemented:
 
 The repository now includes `deploy/falco-linux` and a validated Fedora 44 deployment. Falco 0.44.1 uses the BTF `modern_ebpf` engine, writes one JSON object per line to a protected log, and is followed by a non-root RuntimeCollector systemd service.
 
-RuntimeCollector accepts `CONSHIELD_ENDPOINT` for the dedicated sensor environment file and retains `CONSHIELD_BASE_URL` compatibility. The API key remains in `CONSHIELD_EXTERNAL_EVENT_API_KEY` and never appears in `ExecStart`.
+RuntimeCollector accepts `CONSHIELD_ENDPOINT` for the dedicated sensor environment file and retains `CONSHIELD_BASE_URL` compatibility. Its stopgap source-specific credential is stored in `CONSHIELD_RUNTIME_COLLECTOR_API_KEY` and never appears in `ExecStart`. The general ingestion key cannot authorize the reserved runtime source.
+
+File input is read with a bounded line reader. Follow mode keeps its current offset, reads appended data once, and resets only after the configured `copytruncate` log rotation shrinks or rewrites the current file.
 
 The safe demo rule `ConShield Safe Demo Shell in Container` is container-scoped and matches only the explicit harmless marker `conshield-falco-demo`. It maps to the existing `shell-in-container` baseline and RTE-001. The observed rootless Podman event included container ID, process name, event type, and user name; container name and image repository were unavailable.
 

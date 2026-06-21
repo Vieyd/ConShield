@@ -75,7 +75,7 @@ public static class CommandLineParser
             FilePath = file,
             Follow = values.ContainsKey("follow"),
             Endpoint = endpoint?.TrimEnd('/'),
-            ApiKeyEnv = Get(values, "api-key-env") ?? "CONSHIELD_EXTERNAL_EVENT_API_KEY",
+            ApiKeyEnv = Get(values, "api-key-env") ?? "CONSHIELD_RUNTIME_COLLECTOR_API_KEY",
             MappingPath = mapping!,
             NoSubmit = noSubmit,
             MaxLineBytes = ReadInt(values, "max-line-bytes", 4096, 1048576, 262144),

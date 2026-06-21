@@ -72,6 +72,7 @@ public sealed class RuntimeEventNormalizer
         var rawOutputSha = alert.Output is null ? null : SafeRuntimeText.Sha256Hex(alert.Output);
         var commandSha = cmdline is null ? null : SafeRuntimeText.Sha256Hex(cmdline);
         var fingerprint = RuntimeFingerprint.Create(alert, rawOutputSha);
+        var safeRule = SafeRuntimeText.RedactCredentialLike(alert.Rule, RuntimeDetectionConstants.MaxRuleLength)!;
         var additionalData = new RuntimeAdditionalData(
             RuntimeDetectionConstants.AdditionalDataSchemaVersion,
             RuntimeDetectionConstants.Provider,
@@ -80,10 +81,15 @@ public sealed class RuntimeEventNormalizer
             policy.Sha256,
             mappingKey,
             correlate,
-            alert.Rule,
+            safeRule,
             alert.Priority,
-            alert.Source,
-            alert.Tags.Take(RuntimeDetectionConstants.MaxTags).ToArray(),
+            SafeRuntimeText.RedactCredentialLike(alert.Source, 128),
+            alert.Tags
+                .Take(RuntimeDetectionConstants.MaxTags)
+                .Select(tag => SafeRuntimeText.RedactCredentialLike(tag, 64))
+                .Where(tag => tag is not null)
+                .Select(tag => tag!)
+                .ToArray(),
             fingerprint.Sha256,
             containerId,
             containerName,
@@ -101,14 +107,14 @@ public sealed class RuntimeEventNormalizer
             new RuntimeNetworkData(Field(fields, "fd.sip"), Field(fields, "fd.sport"), Field(fields, "fd.dip"), Field(fields, "fd.dport")),
             rawOutputSha,
             commandSha);
-        var description = BuildDescription(eventType, alert.Rule, containerId, containerName, imageReference, procName);
+        var description = BuildDescription(eventType, safeRule, containerId, containerName, imageReference, procName);
         return new RuntimeSecurityEvent(
             fingerprint.EventId,
             alert.OccurredAtUtc,
             RuntimeDetectionConstants.SourceSystem,
             eventType,
             severity,
-            alert.Hostname,
+            SafeRuntimeText.RedactCredentialLike(alert.Hostname, RuntimeDetectionConstants.MaxHostnameLength),
             description,
             additionalData);
     }

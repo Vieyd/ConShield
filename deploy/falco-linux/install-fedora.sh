@@ -8,11 +8,19 @@ fi
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 collector_source=${CONSHIELD_COLLECTOR_SOURCE:-/tmp/runtime-collector-linux-x64}
-secret_source=${CONSHIELD_SECRET_SOURCE:-/tmp/fedora-runtime-collector.env}
+secret_source=${CONSHIELD_SECRET_SOURCE:-/tmp/conshield-falco-secret/runtime-collector.env}
 falco_repo_url=https://falco.org/repo/falcosecurity-rpm.repo
 falco_key_url=https://falco.org/repo/falcosecurity-packages.asc
 tmp_dir=$(mktemp -d /tmp/conshield-falco-install.XXXXXX)
-trap 'rm -rf -- "$tmp_dir"' EXIT
+chmod 0700 "$tmp_dir"
+umask 077
+cleanup() {
+  rm -rf -- "$tmp_dir"
+  if [[ -f $secret_source && ! -L $secret_source ]]; then
+    rm -f -- "$secret_source"
+  fi
+}
+trap cleanup EXIT
 
 grep -q '^VERSION_ID=44' /etc/os-release || {
   echo "This deployment kit is validated for Fedora 44." >&2
@@ -30,8 +38,22 @@ grep -q '^VERSION_ID=44' /etc/os-release || {
   echo "RuntimeCollector artifact is missing from $collector_source." >&2
   exit 1
 }
-[[ -f $secret_source ]] || {
+[[ -f $secret_source && ! -L $secret_source ]] || {
   echo "RuntimeCollector environment file is missing from $secret_source." >&2
+  exit 1
+}
+secret_dir=$(dirname -- "$secret_source")
+[[ -d $secret_dir && ! -L $secret_dir ]] || {
+  echo "RuntimeCollector secret directory must be a real directory." >&2
+  exit 1
+}
+expected_uid=${SUDO_UID:-0}
+[[ $(stat -c '%u' "$secret_dir") == "$expected_uid" && $(stat -c '%a' "$secret_dir") == 700 ]] || {
+  echo "RuntimeCollector secret directory must be owned by the invoking user with mode 0700." >&2
+  exit 1
+}
+[[ $(stat -c '%u' "$secret_source") == "$expected_uid" && $(stat -c '%a' "$secret_source") == 600 ]] || {
+  echo "RuntimeCollector environment file must be owned by the invoking user with mode 0600." >&2
   exit 1
 }
 
@@ -71,13 +93,12 @@ grep -Eq '^CONSHIELD_ENDPOINT=http://192\.168\.54\.1:5080/api/v1/security-events
   echo "RuntimeCollector endpoint is invalid." >&2
   exit 1
 }
-grep -Eq '^CONSHIELD_EXTERNAL_EVENT_API_KEY=[[:graph:]]+$' "$tmp_dir/runtime-collector.env" || {
+grep -Eq '^CONSHIELD_RUNTIME_COLLECTOR_API_KEY=[[:graph:]]+$' "$tmp_dir/runtime-collector.env" || {
   echo "RuntimeCollector API key line is invalid." >&2
   exit 1
 }
 install -d -o root -g root -m 0755 /etc/conshield
 install -o root -g root -m 0600 "$tmp_dir/runtime-collector.env" /etc/conshield/runtime-collector.env
-rm -f -- "$secret_source"
 
 install -d -o root -g conshield-runtime -m 0750 /var/log/conshield
 touch /var/log/conshield/falco-events.jsonl

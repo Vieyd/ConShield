@@ -84,6 +84,49 @@ public class FalcoRuntimeDetectionTests
         Assert.NotNull(normalized.AdditionalData.CommandLineSha256);
     }
 
+    [Theory]
+    [InlineData("https://user:pass@example.test/path?access_token=secret-value", "secret-value")]
+    [InlineData("Host=db;User=app;Password=secret-value;Database=events", "secret-value")]
+    [InlineData("authorization=Bearer secret-value", "secret-value")]
+    [InlineData("api_key=secret-value", "secret-value")]
+    public void SafeRuntimeText_RedactsCredentialLikeValues(string input, string forbidden)
+    {
+        var safe = SafeRuntimeText.RedactCredentialLike(input, 512);
+
+        Assert.NotNull(safe);
+        Assert.DoesNotContain(forbidden, safe, StringComparison.Ordinal);
+        Assert.DoesNotContain("user:pass", safe, StringComparison.Ordinal);
+        Assert.DoesNotContain("?", safe, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FalcoNormalizer_MinimizesRiskyFieldsAndKeepsBenignMetadata()
+    {
+        var json = """
+        {"time":"2026-06-18T10:00:00Z","rule":"Terminal shell in container","priority":"Critical","output":"raw secret=do-not-store","hostname":"runtime-node","source":"syscall","tags":["container"],"output_fields":{"container.id":"demo-container","container.name":"demo","container.image.repository":"https://user:pass@registry.test/repo?token=do-not-store","proc.name":"sh","proc.exepath":"/bin/sh?api_key=do-not-store","proc.cmdline":"sh --password=do-not-store --token=also-secret","user.name":"root","evt.type":"execve","fd.name":"https://example.test/path?access_token=do-not-store"}}
+        """;
+        var alert = new FalcoAlertParser().Parse(Encoding.UTF8.GetBytes(json), Now, TimeSpan.FromMinutes(5), TimeSpan.FromDays(30)).Alert!;
+
+        var normalized = new RuntimeEventNormalizer().Normalize(alert, BaselinePolicy());
+        var serialized = JsonSerializer.Serialize(normalized.AdditionalData, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.DoesNotContain("do-not-store", serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain("also-secret", serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain("user:pass", serialized, StringComparison.Ordinal);
+        Assert.Equal("demo-container", normalized.AdditionalData.ContainerId);
+        Assert.Equal("sh", normalized.AdditionalData.ProcessName);
+        Assert.NotNull(normalized.AdditionalData.CommandLineSha256);
+    }
+
+    [Fact]
+    public void SafeRuntimeText_TruncatesLongBenignField()
+    {
+        var safe = SafeRuntimeText.RedactCredentialLike(new string('x', 1000), 128);
+
+        Assert.Equal(128, safe!.Length);
+        Assert.All(safe, value => Assert.Equal('x', value));
+    }
+
     [Fact]
     public void FalcoMapping_ValidBaselineLoadsWithDeterministicSha()
     {

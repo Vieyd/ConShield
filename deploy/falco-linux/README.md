@@ -9,7 +9,7 @@ This kit deploys a real Falco sensor on a Fedora 44 VM while Windows remains the
 - Existing Podman is reused. Kubernetes is not installed.
 - Falco writes bounded JSONL to `/var/log/conshield/falco-events.jsonl`.
 - `conshield-runtime` is a non-login account and runs only the collector.
-- The API key exists only in `/etc/conshield/runtime-collector.env` (`0600 root:root`).
+- The source-specific runtime API key exists only in `/etc/conshield/runtime-collector.env` (`0600 root:root`).
 - The endpoint is HTTP only on the isolated VMware host-only network.
 
 ## Staging expected by the installer
@@ -17,7 +17,8 @@ This kit deploys a real Falco sensor on a Fedora 44 VM while Windows remains the
 ```text
 /tmp/conshield-falco-deploy/       this deployment kit
 /tmp/runtime-collector-linux-x64/  self-contained collector artifact
-/tmp/fedora-runtime-collector.env  temporary secret environment
+/tmp/conshield-falco-secret/       invoking-user owned directory, mode 0700
+  runtime-collector.env            temporary secret environment, mode 0600
 ```
 
 Install:
@@ -30,7 +31,7 @@ sudo ./verify-pipeline.sh
 ./demo-safe.sh
 ```
 
-The installer creates a timestamped backup of `/etc/falco/falco.yaml`, applies only the required engine/output keys, validates Falco and systemd configuration, and deletes the temporary secret copy.
+The installer rejects symlinks and weak ownership/modes for secret staging, creates a timestamped backup of `/etc/falco/falco.yaml`, applies only the required engine/output keys, validates Falco and systemd configuration, and deletes the temporary secret copy on exit.
 
 ## Rollback
 

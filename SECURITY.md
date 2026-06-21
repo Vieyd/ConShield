@@ -14,7 +14,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Controlled RabbitMQ DLQ quarantine and AdminIB replay request workflow with no direct MVC publish, bounded replay limits, CSRF protection, and immutable replay audit events.
 - SIEM-style correlation for selected suspicious patterns.
 - PostgreSQL schema management through EF Core migrations.
-- External event ingestion protected by a local API key.
+- External event ingestion protected by a local general API key plus a separate stopgap key bound to the reserved Falco runtime source.
 - Validation, request size limit, rate limiting, and idempotency for external events.
 - The ingestion rate limiter is scoped only to `POST /api/v1/security-events` and partitions by transport `RemoteIpAddress`.
 - Trivy-based container image scanning through a separate console scanner.
@@ -58,6 +58,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Do not commit real credentials, tokens, database files, or runtime logs.
 - Keep PostgreSQL passwords in local environment variables, user secrets, or ignored development settings.
 - Keep `ExternalEventIngestion:ApiKey` in local configuration or environment variables only.
+- Keep `ExternalEventIngestion:RuntimeCollectorApiKey` and `CONSHIELD_RUNTIME_COLLECTOR_API_KEY` local; the general key must not authorize `conshield.falco-runtime-collector`.
 - Prefer `CONSHIELD_API_KEY` for the Collector instead of command-line `--api-key`, because command-line arguments may be visible in shell history or process listings.
 - Prefer `CONSHIELD_API_KEY` for `ConShield.ImageScanner` for the same reason.
 - Keep `CONSHIELD_TRIVY_PATH` local and do not commit Trivy binaries or archives.

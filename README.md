@@ -96,6 +96,7 @@ docker compose -f infra/docker-compose.yml up -d postgres
 5. Open `ConShield.sln`.
 6. Set `ConShield.Web` as the startup project.
 7. Set a local ingestion API key in `src/ConShield.Web/appsettings.Development.json` under `ExternalEventIngestion:ApiKey`.
+8. Set a distinct runtime collector key under `ExternalEventIngestion:RuntimeCollectorApiKey`; do not reuse the general key.
 8. Run the application from Visual Studio or with:
 
 ```powershell
@@ -108,7 +109,7 @@ The development configuration is intentionally ignored by Git. Keep real local c
 
 ## External Event Ingestion
 
-The current prototype includes a protected HTTP ingestion endpoint:
+The current prototype includes a protected HTTP ingestion endpoint. General collectors use `ExternalEventIngestion:ApiKey`; the reserved `conshield.falco-runtime-collector` source requires the distinct `ExternalEventIngestion:RuntimeCollectorApiKey`.
 
 ```http
 POST /api/v1/security-events

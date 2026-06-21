@@ -7,6 +7,7 @@ using ConShield.Data.Entities;
 using ConShield.SecurityEvents;
 using ConShield.SecurityEvents.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ConShield.Application;
 
@@ -170,6 +171,20 @@ public class SiemCorrelationService : ISiemCorrelationService
                 .Select(TryCreateRuntimeCandidate)
                 .Where(x => x is not null)
                 .Select(x => x!)
+                .GroupBy(x => x.Key, StringComparer.Ordinal)
+                .Select(group =>
+                {
+                    var candidates = group.ToList();
+                    var mostSevere = candidates.MaxBy(x => x.Severity) ?? candidates[0];
+                    return new RuleCandidate
+                    {
+                        Key = group.Key,
+                        Count = candidates.Count,
+                        Description = mostSevere.Description,
+                        EventIds = candidates.SelectMany(x => x.EventIds).Distinct().Order().ToList(),
+                        Severity = candidates.Max(x => x.Severity)
+                    };
+                })
                 .ToList(),
             createIncident: true,
             cancellationToken: cancellationToken);
@@ -193,13 +208,20 @@ public class SiemCorrelationService : ISiemCorrelationService
         foreach (var group in groups)
         {
             var triggerKey = $"{ruleCode}:{group.Key}";
+            await using var transaction = await BeginCorrelationTransactionAsync(triggerKey, cancellationToken);
             var exists = await _dbContext.SiemAlerts.AnyAsync(x => x.RuleCode == ruleCode
                 && x.TriggerKey == triggerKey
                 && x.CreatedAtUtc >= DateTime.UtcNow.AddMinutes(-10)
                 && x.Status != AlertStatuses.Closed, cancellationToken);
 
             if (exists)
+            {
+                if (transaction is not null)
+                    await transaction.CommitAsync(cancellationToken);
                 continue;
+            }
+
+            var effectiveSeverity = group.Severity ?? severity;
 
             var alert = new SiemAlertRecord
             {
@@ -207,7 +229,7 @@ public class SiemCorrelationService : ISiemCorrelationService
                 RuleCode = ruleCode,
                 RuleName = ruleName,
                 TriggerKey = triggerKey,
-                Severity = severity,
+                Severity = effectiveSeverity,
                 Status = AlertStatuses.New,
                 Description = descriptionFactory(group),
                 SourceEventIdsJson = JsonSerializer.Serialize(eventIdsFactory(group))
@@ -221,7 +243,7 @@ public class SiemCorrelationService : ISiemCorrelationService
             await _eventWriter.WriteAsync(new SecurityEventWriteRequest
             {
                 EventType = SecurityEventType.CorrelationAlert,
-                Severity = severity,
+                Severity = effectiveSeverity,
                 UserName = "siem-engine",
                 Description = $"Сработало правило корреляции {ruleCode}: {ruleName}.",
                 AdditionalData = new { alert.Id, alert.RuleCode, alert.TriggerKey }
@@ -233,7 +255,7 @@ public class SiemCorrelationService : ISiemCorrelationService
                 {
                     CreatedAtUtc = DateTime.UtcNow,
                     Name = $"[{ruleCode}] {ruleName}",
-                    Severity = severity,
+                    Severity = effectiveSeverity,
                     Status = IncidentStatuses.New,
                     SourceEventId = group.EventIds.FirstOrDefault(),
                     Notes = alert.Description
@@ -248,7 +270,7 @@ public class SiemCorrelationService : ISiemCorrelationService
                 await _eventWriter.WriteAsync(new SecurityEventWriteRequest
                 {
                     EventType = SecurityEventType.IncidentCreated,
-                    Severity = severity,
+                    Severity = effectiveSeverity,
                     UserName = "siem-engine",
                     Description = $"По правилу {ruleCode} автоматически создан инцидент #{incident.Id}.",
                     AdditionalData = new
@@ -259,9 +281,35 @@ public class SiemCorrelationService : ISiemCorrelationService
                     }
                 });
             }
+
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
         }
 
         return result;
+    }
+
+    private async Task<IDbContextTransaction?> BeginCorrelationTransactionAsync(
+        string triggerKey,
+        CancellationToken cancellationToken)
+    {
+        if (!_dbContext.Database.IsRelational())
+            return null;
+
+        var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        if (_dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.Ordinal) == true)
+        {
+            await using var command = _dbContext.Database.GetDbConnection().CreateCommand();
+            command.Transaction = transaction.GetDbTransaction();
+            command.CommandText = "SELECT pg_advisory_xact_lock(hashtextextended(@key, 0));";
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "key";
+            parameter.Value = triggerKey;
+            command.Parameters.Add(parameter);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        return transaction;
     }
 
     private static void Merge(CorrelationRunResult target, CorrelationRunResult source)
@@ -277,6 +325,7 @@ public class SiemCorrelationService : ISiemCorrelationService
         public int Count { get; set; }
         public string Description { get; set; } = string.Empty;
         public List<long> EventIds { get; set; } = new();
+        public EventSeverity? Severity { get; set; }
     }
 
     private static RuleCandidate? TryCreateImageScanCandidate(SecurityEventEntry entry)
@@ -442,7 +491,8 @@ public class SiemCorrelationService : ISiemCorrelationService
                 Key = key,
                 Count = 1,
                 Description = $"Runtime threat {mappingKey} detected for {identity}: rule={falcoRule}, process={processName ?? "unknown"}. Source event #{entry.Id}.",
-                EventIds = [entry.Id]
+                EventIds = [entry.Id],
+                Severity = entry.Severity
             };
         }
         catch (JsonException)
