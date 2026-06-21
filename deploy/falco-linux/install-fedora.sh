@@ -85,16 +85,42 @@ fi
 mv -- /opt/conshield/runtime-collector.new /opt/conshield/runtime-collector
 
 tr -d '\r' < "$secret_source" > "$tmp_dir/runtime-collector.env"
-[[ $(wc -l < "$tmp_dir/runtime-collector.env") -eq 2 ]] || {
-  echo "RuntimeCollector environment must contain exactly two lines." >&2
+[[ $(wc -l < "$tmp_dir/runtime-collector.env") -eq 5 ]] || {
+  echo "RuntimeCollector environment must contain exactly five lines." >&2
   exit 1
 }
 grep -Eq '^CONSHIELD_ENDPOINT=http://192\.168\.54\.1:5080/api/v1/security-events$' "$tmp_dir/runtime-collector.env" || {
   echo "RuntimeCollector endpoint is invalid." >&2
   exit 1
 }
+uuid_pattern='[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+grep -Eq "^CONSHIELD_SENSOR_ID=${uuid_pattern}$" "$tmp_dir/runtime-collector.env" || {
+  echo "RuntimeCollector sensor ID is invalid." >&2
+  exit 1
+}
+! grep -Eq '^CONSHIELD_SENSOR_ID=00000000-0000-0000-0000-000000000000$' "$tmp_dir/runtime-collector.env" || {
+  echo "RuntimeCollector sensor ID must be provisioned." >&2
+  exit 1
+}
+grep -Eq "^CONSHIELD_SENSOR_CREDENTIAL_ID=${uuid_pattern}$" "$tmp_dir/runtime-collector.env" || {
+  echo "RuntimeCollector sensor credential ID is invalid." >&2
+  exit 1
+}
+! grep -Eq '^CONSHIELD_SENSOR_CREDENTIAL_ID=00000000-0000-0000-0000-000000000000$' "$tmp_dir/runtime-collector.env" || {
+  echo "RuntimeCollector sensor credential ID must be provisioned." >&2
+  exit 1
+}
 grep -Eq '^CONSHIELD_RUNTIME_COLLECTOR_API_KEY=[[:graph:]]+$' "$tmp_dir/runtime-collector.env" || {
   echo "RuntimeCollector API key line is invalid." >&2
+  exit 1
+}
+! grep -Eq '^CONSHIELD_RUNTIME_COLLECTOR_API_KEY=CHANGE_ME$' "$tmp_dir/runtime-collector.env" || {
+  echo "RuntimeCollector API key must be provisioned." >&2
+  exit 1
+}
+heartbeat_interval=$(sed -n 's/^CONSHIELD_HEARTBEAT_INTERVAL_SECONDS=//p' "$tmp_dir/runtime-collector.env")
+[[ $heartbeat_interval =~ ^[1-9][0-9]*$ && $heartbeat_interval -ge 15 && $heartbeat_interval -le 3600 ]] || {
+  echo "RuntimeCollector heartbeat interval is invalid." >&2
   exit 1
 }
 install -d -o root -g root -m 0755 /etc/conshield

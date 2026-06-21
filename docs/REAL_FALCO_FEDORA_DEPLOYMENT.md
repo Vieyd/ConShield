@@ -88,7 +88,13 @@ The real rootless Podman event exposed container ID, process name, event type, a
 - No automatic response.
 - One Fedora sensor.
 - HTTP over an isolated host-only network.
-- No mTLS or sensor enrollment yet.
+- No mTLS, public enrollment endpoint, or fleet-management UI.
+
+## Sensor credential transition
+
+Sensor inventory v1 adds public sensor and credential identifiers to the protected collector environment file and keeps the credential itself in `CONSHIELD_RUNTIME_COLLECTOR_API_KEY`. The central database stores only its SHA-256 verifier. Provision the sensor through a local operator-controlled path, update the Fedora environment file, reinstall or restart the collector, and verify both event ingestion and heartbeat before disabling `ExternalEventIngestion:AllowLegacyRuntimeCollectorCredential`.
+
+If sensor identity headers are present but invalid, revoked, or mismatched, ConShield returns `401` and does not try the legacy key. Heartbeats update `LastSeenAtUtc` only; they do not enter the SIEM event pipeline. Certificate fingerprint storage is reserved for a future mTLS stage; this deployment still uses HTTP on the isolated host-only network.
 
 ## Next Stage
 

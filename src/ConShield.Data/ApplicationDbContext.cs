@@ -18,6 +18,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<DeadLetterReplayRequest> DeadLetterReplayRequests => Set<DeadLetterReplayRequest>();
     public DbSet<IncidentRecord> Incidents => Set<IncidentRecord>();
     public DbSet<SiemAlertRecord> SiemAlerts => Set<SiemAlertRecord>();
+    public DbSet<Sensor> Sensors => Set<Sensor>();
+    public DbSet<SensorCredential> SensorCredentials => Set<SensorCredential>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +50,44 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(x => new { x.SourceSystem, x.ExternalEventId })
                 .IsUnique()
                 .HasFilter("\"SourceSystem\" IS NOT NULL AND \"ExternalEventId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<Sensor>(entity =>
+        {
+            entity.ToTable("Sensors", table =>
+                table.HasCheckConstraint("CK_Sensors_SensorId_NotEmpty", "\"SensorId\" <> '00000000-0000-0000-0000-000000000000'"));
+            entity.Property(x => x.DisplayName).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.SourceSystem).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.CertificateFingerprintSha256).HasMaxLength(64).IsFixedLength();
+            entity.Property(x => x.LastSeenAtUtc).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.RevokedAtUtc).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.CreatedAtUtc).HasColumnType("timestamp with time zone").IsRequired();
+            entity.Property(x => x.UpdatedAtUtc).HasColumnType("timestamp with time zone").IsRequired();
+            entity.HasIndex(x => x.SensorId).IsUnique();
+            entity.HasIndex(x => x.LastSeenAtUtc);
+            entity.HasIndex(x => x.RevokedAtUtc);
+            entity.HasIndex(x => x.CertificateFingerprintSha256)
+                .IsUnique()
+                .HasFilter("\"CertificateFingerprintSha256\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<SensorCredential>(entity =>
+        {
+            entity.ToTable("SensorCredentials", table =>
+            {
+                table.HasCheckConstraint("CK_SensorCredentials_CredentialId_NotEmpty", "\"CredentialId\" <> '00000000-0000-0000-0000-000000000000'");
+                table.HasCheckConstraint("CK_SensorCredentials_VerifierSha256_Length", "octet_length(\"VerifierSha256\") = 32");
+            });
+            entity.Property(x => x.VerifierSha256).HasColumnType("bytea").IsRequired();
+            entity.Property(x => x.CreatedAtUtc).HasColumnType("timestamp with time zone").IsRequired();
+            entity.Property(x => x.RotatedAtUtc).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.RevokedAtUtc).HasColumnType("timestamp with time zone");
+            entity.HasIndex(x => x.CredentialId).IsUnique();
+            entity.HasIndex(x => x.SensorId);
+            entity.HasOne(x => x.Sensor)
+                .WithMany(x => x.Credentials)
+                .HasForeignKey(x => x.SensorId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<SecurityEventOutboxMessage>(entity =>

@@ -17,13 +17,16 @@ public sealed class ApiV1SecurityEventsController : ControllerBase
 {
     private readonly IExternalSecurityEventIngestionService _ingestionService;
     private readonly IOptions<ExternalEventIngestionOptions> _options;
+    private readonly ISensorIdentityService _sensorIdentityService;
 
     public ApiV1SecurityEventsController(
         IExternalSecurityEventIngestionService ingestionService,
-        IOptions<ExternalEventIngestionOptions> options)
+        IOptions<ExternalEventIngestionOptions> options,
+        ISensorIdentityService sensorIdentityService)
     {
         _ingestionService = ingestionService;
         _options = options;
+        _sensorIdentityService = sensorIdentityService;
     }
 
     [HttpPost]
@@ -34,15 +37,34 @@ public sealed class ApiV1SecurityEventsController : ControllerBase
         if (request is null)
             return BadRequest(new { error = "invalid_request" });
 
-        var providedApiKey = Request.Headers["X-ConShield-Api-Key"].FirstOrDefault();
-        var expectedApiKey = string.Equals(
-            request.SourceSystem?.Trim(),
-            SecuritySourceSystems.FalcoRuntimeCollector,
-            StringComparison.Ordinal)
-            ? _options.Value.RuntimeCollectorApiKey
-            : _options.Value.ApiKey;
-        if (!ExternalEventApiKeyValidator.IsValid(providedApiKey, expectedApiKey))
-            return Unauthorized(new { error = "unauthorized" });
+        var providedApiKey = Request.Headers[SensorRequestIdentity.ApiKeyHeader].FirstOrDefault();
+        if (SensorRequestIdentity.HasAnySensorHeader(Request))
+        {
+            if (!SensorRequestIdentity.TryRead(Request, out var sensorId, out var credentialId, out var credential)
+                || await _sensorIdentityService.AuthenticateAsync(
+                    sensorId,
+                    credentialId,
+                    credential,
+                    request.SourceSystem,
+                    cancellationToken) is null)
+            {
+                return Unauthorized(new { error = "unauthorized" });
+            }
+        }
+        else
+        {
+            var isRuntimeSource = string.Equals(
+                request.SourceSystem?.Trim(),
+                SecuritySourceSystems.FalcoRuntimeCollector,
+                StringComparison.Ordinal);
+            var expectedApiKey = isRuntimeSource
+                ? _options.Value.AllowLegacyRuntimeCollectorCredential
+                    ? _options.Value.RuntimeCollectorApiKey
+                    : string.Empty
+                : _options.Value.ApiKey;
+            if (!ExternalEventApiKeyValidator.IsValid(providedApiKey, expectedApiKey))
+                return Unauthorized(new { error = "unauthorized" });
+        }
 
         var validation = _ingestionService.Validate(
             request,

@@ -77,11 +77,23 @@ builder.Services.AddRateLimiter(options =>
             AutoReplenishment = true
         });
     });
+    options.AddPolicy("SensorHeartbeat", httpContext =>
+    {
+        var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
+        return RateLimitPartition.GetFixedWindowLimiter(remoteIp, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
 });
 
 builder.Services.AddScoped<IUserExceptionService, UserExceptionService>();
 builder.Services.AddScoped<ISiemCorrelationService, SiemCorrelationService>();
 builder.Services.AddScoped<IExternalSecurityEventIngestionService, ExternalSecurityEventIngestionService>();
+builder.Services.AddScoped<ISensorIdentityService, SensorIdentityService>();
 builder.Services.AddScoped<ISecurityEventWriter, SecurityEventWriter>();
 builder.Services.AddSingleton<IOutboxClock, SystemOutboxClock>();
 builder.Services.AddSingleton<IRabbitMqConnectionProvider, RabbitMqConnectionProvider>();
@@ -183,10 +195,13 @@ app.Use(async (context, next) =>
     }
 
     var providedApiKey = context.Request.Headers["X-ConShield-Api-Key"].FirstOrDefault();
-    if (!ExternalEventApiKeyValidator.IsValidForAny(
+    var sensorAuthenticationRequested = SensorRequestIdentity.HasAnySensorHeader(context.Request);
+    if (sensorAuthenticationRequested
+        ? string.IsNullOrWhiteSpace(providedApiKey)
+        : !ExternalEventApiKeyValidator.IsValidForAny(
             providedApiKey,
             options.ApiKey,
-            options.RuntimeCollectorApiKey))
+            options.AllowLegacyRuntimeCollectorCredential ? options.RuntimeCollectorApiKey : string.Empty))
     {
         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         await context.Response.WriteAsJsonAsync(new { error = "unauthorized" });

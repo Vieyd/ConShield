@@ -38,8 +38,16 @@ public static class RuntimeCollectorApp
             {
                 BaseAddress = new Uri(options.Endpoint!),
                 Timeout = TimeSpan.FromSeconds(options.SubmitTimeoutSeconds)
-            }, apiKey!);
+            }, apiKey!, options.SensorId, options.SensorCredentialId);
         }
+
+        using var heartbeatCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var heartbeatTask = client is not null && options.SensorId.HasValue
+            ? client.RunHeartbeatLoopAsync(
+                TimeSpan.FromSeconds(options.HeartbeatIntervalSeconds),
+                options.MaxRetries,
+                heartbeatCancellation.Token)
+            : Task.CompletedTask;
 
         var parser = new FalcoAlertParser();
         var normalizer = new RuntimeEventNormalizer();
@@ -84,6 +92,18 @@ public static class RuntimeCollectorApp
         catch (IOException)
         {
             return RuntimeCollectorExitCode.InputFailure;
+        }
+        finally
+        {
+            heartbeatCancellation.Cancel();
+            try
+            {
+                await heartbeatTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal shutdown of the independent heartbeat loop.
+            }
         }
 
         await stdout.WriteLineAsync($"parsed={counters.Parsed} mapped={counters.Mapped} unmapped={counters.Unmapped} accepted={counters.Accepted} duplicate={counters.Duplicate} invalid={counters.Invalid} failed={counters.Failed}");

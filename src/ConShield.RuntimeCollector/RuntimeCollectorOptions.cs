@@ -7,6 +7,9 @@ public sealed class RuntimeCollectorOptions
     public bool Follow { get; init; }
     public string? Endpoint { get; init; }
     public string ApiKeyEnv { get; init; } = "CONSHIELD_RUNTIME_COLLECTOR_API_KEY";
+    public Guid? SensorId { get; init; }
+    public Guid? SensorCredentialId { get; init; }
+    public int HeartbeatIntervalSeconds { get; init; } = 60;
     public string MappingPath { get; init; } = string.Empty;
     public bool NoSubmit { get; init; }
     public int MaxLineBytes { get; init; } = 262144;
