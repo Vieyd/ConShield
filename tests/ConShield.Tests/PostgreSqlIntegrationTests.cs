@@ -153,6 +153,60 @@ public class PostgreSqlIntegrationTests
         Assert.Equal(occurredAtUtc, saved.OccurredAtUtc);
     }
 
+    [PostgreSqlFact]
+    public async Task SensorInventory_ConstraintsAndUniqueIndexesAreEnforced()
+    {
+        await using var db = await CreateMigratedDbContextAsync();
+        var sensorId = Guid.NewGuid();
+        var credentialId = Guid.NewGuid();
+        db.Sensors.Add(new Sensor
+        {
+            SensorId = sensorId,
+            DisplayName = "First sensor",
+            SourceSystem = SecuritySourceSystems.FalcoRuntimeCollector,
+            Credentials =
+            [
+                new SensorCredential { CredentialId = credentialId, VerifierSha256 = new byte[32] }
+            ]
+        });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        db.Sensors.Add(new Sensor
+        {
+            SensorId = sensorId,
+            DisplayName = "Duplicate sensor",
+            SourceSystem = SecuritySourceSystems.FalcoRuntimeCollector
+        });
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        db.ChangeTracker.Clear();
+
+        db.Sensors.Add(new Sensor
+        {
+            SensorId = Guid.NewGuid(),
+            DisplayName = "Second sensor",
+            SourceSystem = SecuritySourceSystems.FalcoRuntimeCollector,
+            Credentials =
+            [
+                new SensorCredential { CredentialId = credentialId, VerifierSha256 = new byte[32] }
+            ]
+        });
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        db.ChangeTracker.Clear();
+
+        db.Sensors.Add(new Sensor
+        {
+            SensorId = Guid.NewGuid(),
+            DisplayName = "Invalid verifier sensor",
+            SourceSystem = SecuritySourceSystems.FalcoRuntimeCollector,
+            Credentials =
+            [
+                new SensorCredential { CredentialId = Guid.NewGuid(), VerifierSha256 = new byte[31] }
+            ]
+        });
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
     private static async Task<ApplicationDbContext> CreateMigratedDbContextAsync()
     {
         var db = CreatePostgreSqlDbContext();

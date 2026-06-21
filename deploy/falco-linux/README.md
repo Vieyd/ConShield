@@ -10,6 +10,8 @@ This kit deploys a real Falco sensor on a Fedora 44 VM while Windows remains the
 - Falco writes bounded JSONL to `/var/log/conshield/falco-events.jsonl`.
 - `conshield-runtime` is a non-login account and runs only the collector.
 - The source-specific runtime API key exists only in `/etc/conshield/runtime-collector.env` (`0600 root:root`).
+- Sensor and credential IDs are public selectors; the credential is bound to the enrolled sensor and its reserved source system.
+- The collector sends a bounded heartbeat that updates inventory state without creating SIEM events.
 - The endpoint is HTTP only on the isolated VMware host-only network.
 
 ## Staging expected by the installer
@@ -32,6 +34,8 @@ sudo ./verify-pipeline.sh
 ```
 
 The installer rejects symlinks and weak ownership/modes for secret staging, creates a timestamped backup of `/etc/falco/falco.yaml`, applies only the required engine/output keys, validates Falco and systemd configuration, and deletes the temporary secret copy on exit.
+
+Create the staging file from `conshield-runtime-collector.env.example` only after the corresponding sensor credential has been provisioned in the central database. It must contain exactly the endpoint, sensor ID, credential ID, credential, and heartbeat interval entries shown by the example. Do not pass the credential through command-line arguments.
 
 ## Rollback
 

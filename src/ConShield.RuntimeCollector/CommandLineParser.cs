@@ -69,6 +69,31 @@ public static class CommandLineParser
                 return ParseResult.Invalid("--endpoint must be an absolute http/https URL.");
         }
 
+        var sensorIdValue = Environment.GetEnvironmentVariable("CONSHIELD_SENSOR_ID");
+        var credentialIdValue = Environment.GetEnvironmentVariable("CONSHIELD_SENSOR_CREDENTIAL_ID");
+        if (string.IsNullOrWhiteSpace(sensorIdValue) != string.IsNullOrWhiteSpace(credentialIdValue))
+            return ParseResult.Invalid("CONSHIELD_SENSOR_ID and CONSHIELD_SENSOR_CREDENTIAL_ID must be configured together.");
+        Guid? sensorId = null;
+        Guid? sensorCredentialId = null;
+        if (!string.IsNullOrWhiteSpace(sensorIdValue))
+        {
+            if (!Guid.TryParse(sensorIdValue, out var parsedSensorId) || parsedSensorId == Guid.Empty
+                || !Guid.TryParse(credentialIdValue, out var parsedCredentialId) || parsedCredentialId == Guid.Empty)
+            {
+                return ParseResult.Invalid("Sensor identity environment variables must contain non-empty UUIDs.");
+            }
+            sensorId = parsedSensorId;
+            sensorCredentialId = parsedCredentialId;
+        }
+
+        var heartbeatInterval = 60;
+        var heartbeatValue = Environment.GetEnvironmentVariable("CONSHIELD_HEARTBEAT_INTERVAL_SECONDS");
+        if (!string.IsNullOrWhiteSpace(heartbeatValue)
+            && (!int.TryParse(heartbeatValue, out heartbeatInterval) || heartbeatInterval is < 15 or > 3600))
+        {
+            return ParseResult.Invalid("CONSHIELD_HEARTBEAT_INTERVAL_SECONDS must be between 15 and 3600.");
+        }
+
         return ParseResult.Valid(new RuntimeCollectorOptions
         {
             Stdin = stdin,
@@ -76,6 +101,9 @@ public static class CommandLineParser
             Follow = values.ContainsKey("follow"),
             Endpoint = endpoint?.TrimEnd('/'),
             ApiKeyEnv = Get(values, "api-key-env") ?? "CONSHIELD_RUNTIME_COLLECTOR_API_KEY",
+            SensorId = sensorId,
+            SensorCredentialId = sensorCredentialId,
+            HeartbeatIntervalSeconds = heartbeatInterval,
             MappingPath = mapping!,
             NoSubmit = noSubmit,
             MaxLineBytes = ReadInt(values, "max-line-bytes", 4096, 1048576, 262144),

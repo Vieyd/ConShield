@@ -110,6 +110,10 @@ The repository now includes `deploy/falco-linux` and a validated Fedora 44 deplo
 
 RuntimeCollector accepts `CONSHIELD_ENDPOINT` for the dedicated sensor environment file and retains `CONSHIELD_BASE_URL` compatibility. Its stopgap source-specific credential is stored in `CONSHIELD_RUNTIME_COLLECTOR_API_KEY` and never appears in `ExecStart`. The general ingestion key cannot authorize the reserved runtime source.
 
+Sensor inventory v1 supports sensor-bound runtime credentials. An enrolled collector sends public `CONSHIELD_SENSOR_ID` and `CONSHIELD_SENSOR_CREDENTIAL_ID` identifiers with its protected credential and posts a bounded heartbeat to `/api/v1/sensors/heartbeat`. The server stores only the credential SHA-256 verifier. Heartbeats update inventory timestamps only and never create security events, outbox messages, alerts, or incidents.
+
+`ExternalEventIngestion:AllowLegacyRuntimeCollectorCredential` temporarily preserves the existing shared runtime key for requests without sensor identity headers. A request that includes either sensor header is always validated as sensor-bound and never falls back to the legacy key. After the Fedora sensor is provisioned and verified, disable the fallback and remove the old shared key from central configuration.
+
 File input is read with a bounded line reader. Follow mode keeps its current offset, reads appended data once, and resets only after the configured `copytruncate` log rotation shrinks or rewrites the current file.
 
 The safe demo rule `ConShield Safe Demo Shell in Container` is container-scoped and matches only the explicit harmless marker `conshield-falco-demo`. It maps to the existing `shell-in-container` baseline and RTE-001. The observed rootless Podman event included container ID, process name, event type, and user name; container name and image repository were unavailable.

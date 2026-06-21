@@ -15,6 +15,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - SIEM-style correlation for selected suspicious patterns.
 - PostgreSQL schema management through EF Core migrations.
 - External event ingestion protected by a local general API key plus a separate stopgap key bound to the reserved Falco runtime source.
+- Sensor inventory credentials are bound to a sensor and source system; PostgreSQL stores only fixed-length SHA-256 verifiers, and invalid sensor headers never fall back to the legacy runtime key.
 - Validation, request size limit, rate limiting, and idempotency for external events.
 - The ingestion rate limiter is scoped only to `POST /api/v1/security-events` and partitions by transport `RemoteIpAddress`.
 - Trivy-based container image scanning through a separate console scanner.
@@ -59,6 +60,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Keep PostgreSQL passwords in local environment variables, user secrets, or ignored development settings.
 - Keep `ExternalEventIngestion:ApiKey` in local configuration or environment variables only.
 - Keep `ExternalEventIngestion:RuntimeCollectorApiKey` and `CONSHIELD_RUNTIME_COLLECTOR_API_KEY` local; the general key must not authorize `conshield.falco-runtime-collector`.
+- Keep sensor credentials high-entropy and provision them only through a local operator-controlled path. Public sensor and credential IDs are selectors, not authentication secrets.
 - Prefer `CONSHIELD_API_KEY` for the Collector instead of command-line `--api-key`, because command-line arguments may be visible in shell history or process listings.
 - Prefer `CONSHIELD_API_KEY` for `ConShield.ImageScanner` for the same reason.
 - Keep `CONSHIELD_TRIVY_PATH` local and do not commit Trivy binaries or archives.
@@ -76,7 +78,7 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Add authorization and correlation tests.
 - Add security headers and cookie hardening settings.
 - Add a documented threat model.
-- Add API key rotation, mTLS, centralized secret management, and per-source credentials before production exposure.
+- Add managed credential rotation, mTLS, centralized secret management, and auditable enrollment before production exposure.
 - Add retention policy and operator procedures for `DeadLetter` outbox rows.
 - Add operational DLQ review and replay procedures.
 
@@ -89,4 +91,4 @@ ConShield is a student cybersecurity portfolio project and is not production-rea
 - Falco's embedded health webserver is disabled and no webhook or gRPC output is enabled.
 - Windows accepts sensor traffic only from the Fedora VM over the isolated VMnet1 firewall scope.
 
-This remains a development deployment: HTTP on host-only networking is not a replacement for per-sensor identity, key rotation, mTLS, enrollment, or a centralized secret manager.
+This remains a development deployment: sensor-bound credentials over HTTP on host-only networking are not a replacement for managed key rotation, mTLS, auditable enrollment, or a centralized secret manager.
