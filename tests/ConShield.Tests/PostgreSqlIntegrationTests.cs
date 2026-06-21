@@ -1,4 +1,5 @@
 using ConShield.Application;
+using ConShield.Application.Models;
 using ConShield.Contracts.Constants;
 using ConShield.Contracts.Enums;
 using ConShield.Data;
@@ -205,6 +206,23 @@ public class PostgreSqlIntegrationTests
             ]
         });
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
+    [PostgreSqlFact]
+    public async Task SensorProvisioning_WorksOnPostgreSqlProvider()
+    {
+        await using var db = await CreateMigratedDbContextAsync();
+        var result = await new SensorProvisioningService(db)
+            .ProvisionAsync(new SensorProvisioningRequest("fedora-runtime-integration"));
+        db.ChangeTracker.Clear();
+
+        var sensor = await db.Sensors.Include(x => x.Credentials).SingleAsync();
+        var credential = sensor.Credentials.Single();
+
+        Assert.Equal(result.SensorId, sensor.SensorId);
+        Assert.Equal(result.CredentialId, credential.CredentialId);
+        Assert.Equal(SecuritySourceSystems.FalcoRuntimeCollector, sensor.SourceSystem);
+        Assert.Equal(SensorProvisioningService.CredentialEntropyBytes, credential.VerifierSha256.Length);
     }
 
     private static async Task<ApplicationDbContext> CreateMigratedDbContextAsync()

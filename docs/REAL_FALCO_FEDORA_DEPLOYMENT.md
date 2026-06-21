@@ -96,6 +96,8 @@ Sensor inventory v1 adds public sensor and credential identifiers to the protect
 
 If sensor identity headers are present but invalid, revoked, or mismatched, ConShield returns `401` and does not try the legacy key. Heartbeats update `LastSeenAtUtc` only; they do not enter the SIEM event pipeline. Certificate fingerprint storage is reserved for a future mTLS stage; this deployment still uses HTTP on the isolated host-only network.
 
+Provisioning and the accepted rollout order are documented in [SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md](SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md). The operator-only console tool generates the credential locally and stores only its verifier. Disable the legacy fallback only after heartbeat and runtime ingestion succeed through the enrolled systemd collector.
+
 ## Next Stage
 
-Add multi-host sensor enrollment, per-source credentials, mTLS-ready identity, source inventory, and heartbeat events.
+Add controlled credential rotation/revocation and audit history. Full mTLS remains a separate later stage.

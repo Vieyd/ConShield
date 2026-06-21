@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\src\ConShield.MongoProjection\ConShield.MongoProjection.csproj" />
     <ProjectReference Include="..\..\src\ConShield.RuntimeDetection\ConShield.RuntimeDetection.csproj" />
     <ProjectReference Include="..\..\src\ConShield.RuntimeCollector\ConShield.RuntimeCollector.csproj" />
+    <ProjectReference Include="..\..\src\ConShield.SensorProvisioning\ConShield.SensorProvisioning.csproj" />
   </ItemGroup>
 
   <ItemGroup>
