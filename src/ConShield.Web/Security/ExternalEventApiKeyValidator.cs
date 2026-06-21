@@ -15,6 +15,9 @@ public static class ExternalEventApiKeyValidator
         return CryptographicOperations.FixedTimeEquals(providedBytes, configuredBytes);
     }
 
+    public static bool IsValidForAny(string? providedApiKey, params string[] configuredApiKeys) =>
+        configuredApiKeys.Any(configured => IsValid(providedApiKey, configured));
+
     public static string PartitionFingerprint(string? providedApiKey)
     {
         if (string.IsNullOrWhiteSpace(providedApiKey))

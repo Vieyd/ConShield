@@ -63,6 +63,28 @@ public class PostgreSqlIntegrationTests
     }
 
     [PostgreSqlFact]
+    public async Task Correlation_ConcurrentRuns_CreateOneAlertAndIncident()
+    {
+        await using (var setup = await CreateMigratedDbContextAsync())
+        {
+            AddLoginFailures(setup, "operator", 3);
+            await setup.SaveChangesAsync();
+        }
+
+        await using var firstDb = CreatePostgreSqlDbContext();
+        await using var secondDb = CreatePostgreSqlDbContext();
+        var results = await Task.WhenAll(
+            CreateService(firstDb).RunAsync(),
+            CreateService(secondDb).RunAsync());
+
+        await using var verify = CreatePostgreSqlDbContext();
+        Assert.Equal(1, results.Sum(x => x.CreatedAlerts));
+        Assert.Equal(1, results.Sum(x => x.CreatedIncidents));
+        Assert.Equal(1, await verify.SiemAlerts.CountAsync(x => x.RuleCode == "BF-001"));
+        Assert.Equal(1, await verify.Incidents.CountAsync(x => x.Name.Contains("BF-001")));
+    }
+
+    [PostgreSqlFact]
     public async Task QueryFilters_AreCaseInsensitiveOnPostgreSqlProvider()
     {
         await using var db = await CreateMigratedDbContextAsync();

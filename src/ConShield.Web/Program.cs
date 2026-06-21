@@ -183,7 +183,10 @@ app.Use(async (context, next) =>
     }
 
     var providedApiKey = context.Request.Headers["X-ConShield-Api-Key"].FirstOrDefault();
-    if (!ExternalEventApiKeyValidator.IsValid(providedApiKey, options.ApiKey))
+    if (!ExternalEventApiKeyValidator.IsValidForAny(
+            providedApiKey,
+            options.ApiKey,
+            options.RuntimeCollectorApiKey))
     {
         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         await context.Response.WriteAsJsonAsync(new { error = "unauthorized" });

@@ -46,7 +46,7 @@ public static class RuntimeCollectorApp
         var counters = new Counters();
         try
         {
-            await foreach (var line in ReadLinesAsync(options, stdin, cancellationToken))
+            await foreach (var line in BoundedRuntimeLineReader.ReadAsync(options, stdin, cancellationToken))
             {
                 var parsedLine = parser.Parse(line, DateTime.UtcNow, TimeSpan.FromMinutes(5), TimeSpan.FromDays(30));
                 if (!parsedLine.Success)
@@ -88,41 +88,6 @@ public static class RuntimeCollectorApp
 
         await stdout.WriteLineAsync($"parsed={counters.Parsed} mapped={counters.Mapped} unmapped={counters.Unmapped} accepted={counters.Accepted} duplicate={counters.Duplicate} invalid={counters.Invalid} failed={counters.Failed}");
         return counters.Failed > 0 || counters.Invalid > 0 ? RuntimeCollectorExitCode.PartialFailure : RuntimeCollectorExitCode.Success;
-    }
-
-    private static async IAsyncEnumerable<byte[]> ReadLinesAsync(
-        RuntimeCollectorOptions options,
-        TextReader stdin,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        if (options.Stdin)
-        {
-            while (await stdin.ReadLineAsync(cancellationToken) is { } line)
-            {
-                var bytes = System.Text.Encoding.UTF8.GetBytes(line);
-                yield return bytes.Length <= options.MaxLineBytes ? bytes : new byte[options.MaxLineBytes + 1];
-            }
-            yield break;
-        }
-
-        do
-        {
-            await using var stream = new FileStream(options.FilePath!, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var reader = new StreamReader(stream, new System.Text.UTF8Encoding(false, true));
-            while (!reader.EndOfStream)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var line = await reader.ReadLineAsync(cancellationToken);
-                if (line is not null)
-                {
-                    var bytes = System.Text.Encoding.UTF8.GetBytes(line);
-                    yield return bytes.Length <= options.MaxLineBytes ? bytes : new byte[options.MaxLineBytes + 1];
-                }
-            }
-            if (!options.Follow)
-                yield break;
-            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-        } while (options.Follow);
     }
 
     private sealed class Counters

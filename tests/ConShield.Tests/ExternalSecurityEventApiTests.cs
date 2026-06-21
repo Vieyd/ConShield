@@ -18,6 +18,7 @@ namespace ConShield.Tests;
 public class ExternalSecurityEventApiTests
 {
     private const string ApiKey = "test-api-key-not-secret";
+    private const string RuntimeApiKey = "test-runtime-api-key-not-secret";
     private const string ApiKeyHeader = "X-ConShield-Api-Key";
 
     [PostgreSqlFact]
@@ -90,6 +91,77 @@ public class ExternalSecurityEventApiTests
         await using var factory = await CreateFactoryAsync();
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add(ApiKeyHeader, "wrong-key");
+
+        var response = await client.PostAsJsonAsync("/api/v1/security-events", ValidPayload());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
+    public async Task RuntimeSource_WithRuntimeKey_IsAccepted()
+    {
+        await using var factory = await CreateFactoryAsync();
+        using var client = factory.CreateClient();
+        AddRuntimeApiKey(client);
+
+        var response = await client.PostAsJsonAsync("/api/v1/security-events", RuntimePayload());
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        await using var db = factory.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(1, await db.SecurityEvents.CountAsync(x => x.SourceSystem == "conshield.falco-runtime-collector"));
+    }
+
+    [PostgreSqlFact]
+    public async Task RuntimeSource_WithGeneralKey_IsRejectedAndCannotTriggerRte001()
+    {
+        await using var factory = await CreateFactoryAsync();
+        using var client = factory.CreateClient();
+        AddApiKey(client);
+
+        var response = await client.PostAsJsonAsync("/api/v1/security-events", RuntimePayload());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(0, await db.SecurityEvents.CountAsync(x => x.SourceSystem == "conshield.falco-runtime-collector"));
+        var result = await scope.ServiceProvider.GetRequiredService<ISiemCorrelationService>().RunAsync();
+        Assert.Equal(0, result.CreatedAlerts);
+        Assert.Equal(0, await db.SiemAlerts.CountAsync(x => x.RuleCode == "RTE-001"));
+    }
+
+    [PostgreSqlFact]
+    public async Task RuntimeSource_WithMissingOrWrongKey_IsRejected()
+    {
+        await using var factory = await CreateFactoryAsync();
+        using var missingClient = factory.CreateClient();
+        using var wrongClient = factory.CreateClient();
+        wrongClient.DefaultRequestHeaders.Add(ApiKeyHeader, "wrong-runtime-key");
+
+        var missing = await missingClient.PostAsJsonAsync("/api/v1/security-events", RuntimePayload());
+        var wrong = await wrongClient.PostAsJsonAsync("/api/v1/security-events", RuntimePayload());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, missing.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, wrong.StatusCode);
+    }
+
+    [PostgreSqlFact]
+    public async Task RuntimeSource_WhenRuntimeCredentialIsNotConfigured_FailsClosed()
+    {
+        await using var factory = await CreateFactoryAsync(runtimeApiKey: string.Empty);
+        using var client = factory.CreateClient();
+        AddApiKey(client);
+
+        var response = await client.PostAsJsonAsync("/api/v1/security-events", RuntimePayload());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
+    public async Task NonRuntimeSource_WithRuntimeKey_IsRejected()
+    {
+        await using var factory = await CreateFactoryAsync();
+        using var client = factory.CreateClient();
+        AddRuntimeApiKey(client);
 
         var response = await client.PostAsJsonAsync("/api/v1/security-events", ValidPayload());
 
@@ -408,7 +480,9 @@ public class ExternalSecurityEventApiTests
         Assert.Equal(0, await db.SiemAlerts.CountAsync(x => x.RuleCode == "CR-001"));
     }
 
-    private static async Task<WebApplicationFactory<Program>> CreateFactoryAsync(int maxRequestBodyBytes = 32768)
+    private static async Task<WebApplicationFactory<Program>> CreateFactoryAsync(
+        int maxRequestBodyBytes = 32768,
+        string runtimeApiKey = RuntimeApiKey)
     {
         var connectionString = Environment.GetEnvironmentVariable("CONSHIELD_TEST_POSTGRES_CONNECTION")
             ?? throw new InvalidOperationException("CONSHIELD_TEST_POSTGRES_CONNECTION is required.");
@@ -424,6 +498,7 @@ public class ExternalSecurityEventApiTests
                         ["ConnectionStrings:DefaultConnection"] = connectionString,
                         ["ExternalEventIngestion:Enabled"] = "true",
                         ["ExternalEventIngestion:ApiKey"] = ApiKey,
+                        ["ExternalEventIngestion:RuntimeCollectorApiKey"] = runtimeApiKey,
                         ["ExternalEventIngestion:MaxRequestBodyBytes"] = maxRequestBodyBytes.ToString(),
                         ["ExternalEventIngestion:AllowedFutureClockSkewMinutes"] = "5"
                     });
@@ -439,6 +514,38 @@ public class ExternalSecurityEventApiTests
     private static void AddApiKey(HttpClient client)
     {
         client.DefaultRequestHeaders.Add(ApiKeyHeader, ApiKey);
+    }
+
+    private static void AddRuntimeApiKey(HttpClient client)
+    {
+        client.DefaultRequestHeaders.Add(ApiKeyHeader, RuntimeApiKey);
+    }
+
+    private static object RuntimePayload()
+    {
+        return new
+        {
+            externalEventId = Guid.NewGuid(),
+            occurredAtUtc = DateTime.UtcNow,
+            sourceSystem = "conshield.falco-runtime-collector",
+            eventType = "container.runtime.shell_spawned",
+            severity = "High",
+            sourceHost = "runtime-node",
+            description = "Mapped runtime event.",
+            additionalData = new
+            {
+                schemaVersion = 1,
+                provider = "falco-compatible",
+                mappingId = "falco-container-runtime-baseline",
+                mappingVersion = "1.0.0",
+                mappingSha256 = new string('a', 64),
+                mappingKey = "shell-in-container",
+                correlate = true,
+                falcoRule = "Terminal shell in container",
+                containerId = "runtime-container-1",
+                processName = "sh"
+            }
+        };
     }
 
     private static object ValidPayload(

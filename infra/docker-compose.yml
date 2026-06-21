@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${CONSHIELD_POSTGRES_USER:-conshield}
       POSTGRES_PASSWORD: ${CONSHIELD_POSTGRES_PASSWORD:?Set CONSHIELD_POSTGRES_PASSWORD before starting PostgreSQL}
     ports:
-      - "${CONSHIELD_POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${CONSHIELD_POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -25,7 +25,7 @@ services:
       RABBITMQ_DEFAULT_PASS: ${CONSHIELD_RABBITMQ_PASSWORD:?Set CONSHIELD_RABBITMQ_PASSWORD before starting RabbitMQ}
       RABBITMQ_DEFAULT_VHOST: /conshield
     ports:
-      - "${CONSHIELD_RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "127.0.0.1:${CONSHIELD_RABBITMQ_AMQP_PORT:-5672}:5672"
       - "127.0.0.1:${CONSHIELD_RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq

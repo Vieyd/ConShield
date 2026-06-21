@@ -465,6 +465,21 @@ public class SiemCorrelationServiceTests
     }
 
     [Fact]
+    public async Task RTE001_CriticalCandidatePreservesCriticalAlertAndIncidentSeverity()
+    {
+        await using var db = CreateDbContext();
+        AddRuntimeEvent(db, "container.runtime.shell_spawned", "shell-in-container", "runtime-container-1", severity: EventSeverity.High);
+        AddRuntimeEvent(db, "container.runtime.shell_spawned", "shell-in-container", "runtime-container-1", severity: EventSeverity.Critical);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RunAsync();
+
+        Assert.Equal(1, result.CreatedAlerts);
+        Assert.Equal(EventSeverity.Critical, (await db.SiemAlerts.SingleAsync()).Severity);
+        Assert.Equal(EventSeverity.Critical, (await db.Incidents.SingleAsync()).Severity);
+    }
+
+    [Fact]
     public async Task RTE001_MalformedAdditionalData_DoesNotBreakCorrelation()
     {
         await using var db = CreateDbContext();
@@ -617,14 +632,15 @@ public class SiemCorrelationServiceTests
         string externalEventType,
         string mappingKey,
         string containerId,
-        bool correlate = true)
+        bool correlate = true,
+        EventSeverity severity = EventSeverity.High)
     {
         dbContext.SecurityEvents.Add(new SecurityEventEntry
         {
             OccurredAtUtc = DateTime.UtcNow.AddSeconds(-10),
             EventType = SecurityEventType.ExternalEvent,
             ExternalEventType = externalEventType,
-            Severity = EventSeverity.High,
+            Severity = severity,
             SourceSystem = "conshield.falco-runtime-collector",
             SourceHost = "runtime-node",
             Description = "Falco-compatible runtime event.",

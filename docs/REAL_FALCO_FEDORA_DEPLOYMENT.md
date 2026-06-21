@@ -31,16 +31,43 @@ Falco modern_ebpf -> protected JSONL -> RuntimeCollector
 - Falco's embedded webserver is disabled; webhook and gRPC output are not used.
 - `/var/log/conshield/falco-events.jsonl` is `0640 root:conshield-runtime`.
 - `/etc/conshield/runtime-collector.env` is `0600 root:root`.
-- The API key is an environment value, never a process argument.
+- The source-specific runtime API key is an environment value, never a process argument.
 - The systemd service uses `NoNewPrivileges`, `PrivateTmp`, `PrivateDevices`, `ProtectHome`, `ProtectSystem`, `RestrictSUIDSGID`, `LockPersonality`, and an empty capability bounding set.
 - Logrotate retains seven rotations and rotates daily or earlier at 25 MB using `copytruncate`, which is compatible with file-follow mode.
 - Windows Firewall admits TCP 5080 only from the Fedora host-only address on VMnet1.
+
+## Windows Network Boundary
+
+Bind the development Web/API only to loopback and VMnet1:
+
+~~~text
+ASPNETCORE_URLS=http://127.0.0.1:5080;http://192.168.54.1:5080
+~~~
+
+PostgreSQL 5432, RabbitMQ AMQP 5672, RabbitMQ management 15672, and MongoDB 27017 are bound to `127.0.0.1` by the tracked Compose file. From an elevated PowerShell 7 session, remove broad generated Web program rules and recreate the Fedora-only rule:
+
+~~~powershell
+Get-NetFirewallRule -DisplayName "conshield.web.exe" -ErrorAction SilentlyContinue |
+  Remove-NetFirewallRule
+Get-NetFirewallRule -DisplayName "ConShield API from Fedora VM" -ErrorAction SilentlyContinue |
+  Remove-NetFirewallRule
+New-NetFirewallRule `
+  -DisplayName "ConShield API from Fedora VM" `
+  -Direction Inbound `
+  -Action Allow `
+  -Protocol TCP `
+  -LocalPort 5080 `
+  -InterfaceAlias "VMware Network Adapter VMnet1" `
+  -RemoteAddress 192.168.54.128
+~~~
+
+Do not disable Windows Firewall. Loopback access does not require an inbound allow rule.
 
 ## Installation And Rollback
 
 The tracked kit is in `deploy/falco-linux`. `install-fedora.sh` uses official Fedora packages and the official Falco RPM repository, creates a timestamped Falco configuration backup, applies targeted engine/output/webserver keys, validates upstream plus local rules, and enables the services.
 
-`uninstall-fedora.sh` stops and removes the collector and restores the original Falco configuration. It retains the Falco package and logs for review and never removes container storage or Windows Docker volumes.
+`uninstall-fedora.sh` stops and removes the collector and restores the original Falco configuration. It retains the Falco package and logs for review and never removes container storage or Windows Docker volumes. Credential staging must use an invoking-user-owned `0700` directory and a regular `0600` file; the installer rejects symlinks and removes the staging file on exit.
 
 ## Verification Result
 

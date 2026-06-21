@@ -2,6 +2,7 @@ using ConShield.Application;
 using ConShield.Application.Models;
 using ConShield.Web.Options;
 using ConShield.Web.Security;
+using ConShield.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -32,6 +33,16 @@ public sealed class ApiV1SecurityEventsController : ControllerBase
     {
         if (request is null)
             return BadRequest(new { error = "invalid_request" });
+
+        var providedApiKey = Request.Headers["X-ConShield-Api-Key"].FirstOrDefault();
+        var expectedApiKey = string.Equals(
+            request.SourceSystem?.Trim(),
+            SecuritySourceSystems.FalcoRuntimeCollector,
+            StringComparison.Ordinal)
+            ? _options.Value.RuntimeCollectorApiKey
+            : _options.Value.ApiKey;
+        if (!ExternalEventApiKeyValidator.IsValid(providedApiKey, expectedApiKey))
+            return Unauthorized(new { error = "unauthorized" });
 
         var validation = _ingestionService.Validate(
             request,

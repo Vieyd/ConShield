@@ -1,8 +1,10 @@
 namespace ConShield.RuntimeDetection;
 
+using ConShield.Contracts.Constants;
+
 public static class RuntimeDetectionConstants
 {
-    public const string SourceSystem = "conshield.falco-runtime-collector";
+    public const string SourceSystem = SecuritySourceSystems.FalcoRuntimeCollector;
     public const string Provider = "falco-compatible";
     public const string SchemaName = "falco-compatible-v1";
     public const int AdditionalDataSchemaVersion = 1;
