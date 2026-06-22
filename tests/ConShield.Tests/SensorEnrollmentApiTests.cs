@@ -130,6 +130,31 @@ public sealed class SensorEnrollmentApiTests
     }
 
     [PostgreSqlFact]
+    public async Task FallbackDisabled_AllowsMissingRuntimeCollectorApiKey()
+    {
+        await using var factory = await CreateFactoryAsync(allowLegacy: false, runtimeApiKey: null);
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/Account/Login");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
+    public async Task FallbackDisabled_SensorBoundRuntimeRequestAccepted()
+    {
+        await using var factory = await CreateFactoryAsync(allowLegacy: false, runtimeApiKey: null);
+        await ProvisionSensorAsync(factory);
+        using var client = SensorClient(factory, SensorId, CredentialId, SensorSecret);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/security-events",
+            RuntimePayload("conshield.falco-runtime-collector"));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
     public async Task RevokedSensorCredential_CannotSubmitSecurityEvent()
     {
         await using var factory = await CreateFactoryAsync();
@@ -170,11 +195,25 @@ public sealed class SensorEnrollmentApiTests
     [PostgreSqlFact]
     public async Task LegacyRuntimeCredential_IsRejectedWhenFallbackDisabled()
     {
-        await using var factory = await CreateFactoryAsync(allowLegacy: false);
+        await using var factory = await CreateFactoryAsync(allowLegacy: false, runtimeApiKey: null);
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-ConShield-Api-Key", LegacySecret);
 
         var response = await client.PostAsJsonAsync("/api/v1/security-events", RuntimePayload("conshield.falco-runtime-collector"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
+    public async Task FallbackDisabled_GeneralKeyStillCannotSubmitReservedRuntimeSource()
+    {
+        await using var factory = await CreateFactoryAsync(allowLegacy: false, runtimeApiKey: null);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-ConShield-Api-Key", "general-test-key");
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/security-events",
+            RuntimePayload("conshield.falco-runtime-collector"));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -213,23 +252,29 @@ public sealed class SensorEnrollmentApiTests
         Assert.NotNull((await db.Sensors.SingleAsync()).LastSeenAtUtc);
     }
 
-    private static async Task<WebApplicationFactory<Program>> CreateFactoryAsync(bool allowLegacy = true)
+    private static async Task<WebApplicationFactory<Program>> CreateFactoryAsync(
+        bool allowLegacy = true,
+        string? runtimeApiKey = LegacySecret)
     {
         var connectionString = Environment.GetEnvironmentVariable("CONSHIELD_TEST_POSTGRES_CONNECTION")
             ?? throw new InvalidOperationException("CONSHIELD_TEST_POSTGRES_CONNECTION is required.");
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Development");
-            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
-                new Dictionary<string, string?>
+            builder.ConfigureAppConfiguration((_, configuration) =>
+            {
+                var values = new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:DefaultConnection"] = connectionString,
                     ["ExternalEventIngestion:Enabled"] = "true",
                     ["ExternalEventIngestion:ApiKey"] = "general-test-key",
-                    ["ExternalEventIngestion:RuntimeCollectorApiKey"] = LegacySecret,
                     ["ExternalEventIngestion:AllowLegacyRuntimeCollectorCredential"] = allowLegacy.ToString(),
                     ["ExternalEventIngestion:MaxRequestBodyBytes"] = "32768"
-                }));
+                };
+                if (runtimeApiKey is not null)
+                    values["ExternalEventIngestion:RuntimeCollectorApiKey"] = runtimeApiKey;
+                configuration.AddInMemoryCollection(values);
+            });
         });
         await using var db = factory.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await db.Database.EnsureDeletedAsync();
