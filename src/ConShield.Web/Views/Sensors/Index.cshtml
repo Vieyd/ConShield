@@ -39,6 +39,7 @@ else
                     <th>Created UTC</th>
                     <th>Updated UTC</th>
                     <th>Revoked UTC</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -76,6 +77,24 @@ else
                         <td>@sensor.CreatedAtUtc.ToString("u")</td>
                         <td>@sensor.UpdatedAtUtc.ToString("u")</td>
                         <td>@(sensor.RevokedAtUtc?.ToString("u") ?? "—")</td>
+                        <td>
+                            @if (sensor.CanRotateCredential)
+                            {
+                                <form asp-controller="Sensors"
+                                      asp-action="RotateCredential"
+                                      method="post"
+                                      onsubmit="return confirm('Rotate this sensor credential? The new credential is shown once and must be copied directly to the protected Fedora environment.');">
+                                    <input type="hidden" name="sensorId" value="@sensor.SensorId" />
+                                    <button type="submit" class="btn btn-sm btn-outline-warning">
+                                        Rotate credential
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">not available</span>
+                            }
+                        </td>
                     </tr>
                 }
             </tbody>

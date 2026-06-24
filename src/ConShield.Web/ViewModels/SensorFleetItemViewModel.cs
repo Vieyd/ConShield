@@ -12,6 +12,7 @@ public sealed class SensorFleetItemViewModel
     public bool HasCertificateFingerprint { get; init; }
     public int CredentialCount { get; init; }
     public int ActiveCredentialCount { get; init; }
+    public bool CanRotateCredential { get; init; }
     public DateTime? OldestCredentialCreatedAtUtc { get; init; }
     public DateTime? NewestCredentialCreatedAtUtc { get; init; }
     public string Status { get; init; } = string.Empty;
@@ -47,6 +48,7 @@ public sealed class SensorFleetItemViewModel
             HasCertificateFingerprint = hasCertificateFingerprint,
             CredentialCount = credentialCount,
             ActiveCredentialCount = activeCredentialCount,
+            CanRotateCredential = revokedAtUtc is null,
             OldestCredentialCreatedAtUtc = oldestCredentialCreatedAtUtc,
             NewestCredentialCreatedAtUtc = newestCredentialCreatedAtUtc,
             Status = status,
