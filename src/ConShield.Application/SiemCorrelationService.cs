@@ -190,6 +190,69 @@ public class SiemCorrelationService : ISiemCorrelationService
             cancellationToken: cancellationToken);
 
         Merge(result, created6);
+
+        var recentSensorRevocations = await _dbContext.SecurityEvents
+            .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                        && x.SourceSystem == SecuritySourceSystems.SensorLifecycle
+                        && x.ExternalEventType == SensorLifecycleEventTypes.SensorRevoked
+                        && x.OccurredAtUtc >= now.AddHours(-24))
+            .ToListAsync(cancellationToken);
+
+        var created7 = await ProcessRuleAsync(
+            ruleCode: "LIFE-001",
+            ruleName: "Sensor identity revoked",
+            severity: EventSeverity.Warning,
+            descriptionFactory: group => group.Description,
+            eventIdsFactory: group => group.EventIds,
+            groups: recentSensorRevocations
+                .Select(TryCreateSensorRevokedCandidate)
+                .Where(x => x is not null)
+                .Select(x => x!)
+                .ToList(),
+            createIncident: true,
+            cancellationToken: cancellationToken);
+
+        Merge(result, created7);
+
+        var recentCredentialLifecycleEvents = await _dbContext.SecurityEvents
+            .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                        && x.SourceSystem == SecuritySourceSystems.SensorLifecycle
+                        && (x.ExternalEventType == SensorLifecycleEventTypes.SensorCredentialRotated
+                            || x.ExternalEventType == SensorLifecycleEventTypes.SensorCredentialRevoked)
+                        && x.OccurredAtUtc >= now.AddMinutes(-15))
+            .ToListAsync(cancellationToken);
+
+        var created8 = await ProcessRuleAsync(
+            ruleCode: "LIFE-002",
+            ruleName: "Repeated sensor credential lifecycle changes",
+            severity: EventSeverity.Warning,
+            descriptionFactory: group => group.Description,
+            eventIdsFactory: group => group.EventIds,
+            groups: recentCredentialLifecycleEvents
+                .Select(TryCreateCredentialLifecycleCandidate)
+                .Where(x => x is not null)
+                .Select(x => x!)
+                .GroupBy(x => x.Key, StringComparer.Ordinal)
+                .Select(group =>
+                {
+                    var candidates = group.OrderBy(x => x.EventIds.Min()).ToList();
+                    var displayName = candidates
+                        .Select(x => x.DisplayName)
+                        .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+                    return new RuleCandidate
+                    {
+                        Key = group.Key,
+                        Count = candidates.Count,
+                        Description = $"Sensor credential lifecycle changed {candidates.Count} times in 15 minutes for sensor {group.Key}{FormatDisplayName(displayName)}. Source events: {string.Join(", ", candidates.SelectMany(x => x.EventIds).Distinct().Order())}.",
+                        EventIds = candidates.SelectMany(x => x.EventIds).Distinct().Order().ToList()
+                    };
+                })
+                .Where(x => x.Count >= 3)
+                .ToList(),
+            createIncident: true,
+            cancellationToken: cancellationToken);
+
+        Merge(result, created8);
         return result;
     }
 
@@ -326,6 +389,7 @@ public class SiemCorrelationService : ISiemCorrelationService
         public string Description { get; set; } = string.Empty;
         public List<long> EventIds { get; set; } = new();
         public EventSeverity? Severity { get; set; }
+        public string? DisplayName { get; set; }
     }
 
     private static RuleCandidate? TryCreateImageScanCandidate(SecurityEventEntry entry)
@@ -501,6 +565,67 @@ public class SiemCorrelationService : ISiemCorrelationService
         }
     }
 
+    private static RuleCandidate? TryCreateSensorRevokedCandidate(SecurityEventEntry entry)
+    {
+        var lifecycleData = TryReadLifecycleData(entry);
+        var sensorIdentity = lifecycleData?.SensorId ?? $"source-event-{entry.Id}";
+        var displayName = lifecycleData?.DisplayName;
+        var requestedBy = lifecycleData?.RequestedBy;
+        var revokedCredentialCount = lifecycleData?.RevokedCredentialCount;
+        var revokedCredentialText = revokedCredentialCount is null
+            ? "unknown revoked credential count"
+            : $"revokedCredentialCount={revokedCredentialCount.Value}";
+
+        return new RuleCandidate
+        {
+            Key = NormalizeTriggerValue(sensorIdentity),
+            Count = 1,
+            Description = $"Sensor identity was revoked for sensor {sensorIdentity}{FormatDisplayName(displayName)}; requestedBy={SafeUnknown(requestedBy)}; {revokedCredentialText}. Source event #{entry.Id}.",
+            EventIds = [entry.Id],
+            DisplayName = displayName
+        };
+    }
+
+    private static RuleCandidate? TryCreateCredentialLifecycleCandidate(SecurityEventEntry entry)
+    {
+        var lifecycleData = TryReadLifecycleData(entry);
+        if (lifecycleData?.SensorId is null)
+            return null;
+
+        return new RuleCandidate
+        {
+            Key = NormalizeTriggerValue(lifecycleData.SensorId),
+            Count = 1,
+            Description = entry.ExternalEventType ?? "sensor credential lifecycle event",
+            EventIds = [entry.Id],
+            DisplayName = lifecycleData.DisplayName
+        };
+    }
+
+    private static LifecycleAuditData? TryReadLifecycleData(SecurityEventEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.AdditionalDataJson))
+            return null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(entry.AdditionalDataJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return new LifecycleAuditData(
+                ReadGuidString(root, "sensorId"),
+                ReadString(root, "displayName", 256),
+                ReadString(root, "requestedBy", 128),
+                ReadNonNegativeIntOrNull(root, "revokedCredentialCount"));
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private static int ReadNonNegativeInt(JsonElement root, string propertyName)
     {
         if (!root.TryGetProperty(propertyName, out var value))
@@ -510,6 +635,17 @@ public class SiemCorrelationService : ISiemCorrelationService
             return Math.Max(0, number);
 
         return 0;
+    }
+
+    private static int? ReadNonNegativeIntOrNull(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+            return null;
+
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number))
+            return Math.Max(0, number);
+
+        return null;
     }
 
     private static string? ReadString(JsonElement root, string propertyName, int maxLength)
@@ -523,6 +659,12 @@ public class SiemCorrelationService : ISiemCorrelationService
 
         text = new string(text.Where(x => !char.IsControl(x)).ToArray());
         return text.Length <= maxLength ? text : text[..maxLength];
+    }
+
+    private static string? ReadGuidString(JsonElement root, string propertyName)
+    {
+        var text = ReadString(root, propertyName, 64);
+        return Guid.TryParse(text, out var guid) ? guid.ToString("D") : null;
     }
 
     private static bool ReadBool(JsonElement root, string propertyName)
@@ -542,4 +684,16 @@ public class SiemCorrelationService : ISiemCorrelationService
         return value is { Length: 64 }
             && value.All(x => x is >= '0' and <= '9' or >= 'a' and <= 'f');
     }
+
+    private static string FormatDisplayName(string? displayName) =>
+        string.IsNullOrWhiteSpace(displayName) ? string.Empty : $" ({displayName})";
+
+    private static string SafeUnknown(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "unknown" : value;
+
+    private sealed record LifecycleAuditData(
+        string? SensorId,
+        string? DisplayName,
+        string? RequestedBy,
+        int? RevokedCredentialCount);
 }

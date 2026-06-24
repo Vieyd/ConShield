@@ -66,6 +66,26 @@ public static class SiemRuleCatalog
             ConditionText = "mapped runtime event, correlate == true, severity High/Critical",
             WindowText = "10 минут",
             TriggerEntityText = "Container identity + mapping + process"
+        },
+        new SiemRuleDefinition
+        {
+            RuleCode = "LIFE-001",
+            RuleName = "Sensor identity revoked",
+            Severity = EventSeverity.Warning,
+            Description = "Правило выявляет отзыв sensor identity как чувствительное lifecycle-действие.",
+            ConditionText = "SourceSystem == conshield.sensor-lifecycle и ExternalEventType == sensor.revoked",
+            WindowText = "24 часа",
+            TriggerEntityText = "Публичный sensor id"
+        },
+        new SiemRuleDefinition
+        {
+            RuleCode = "LIFE-002",
+            RuleName = "Repeated sensor credential lifecycle changes",
+            Severity = EventSeverity.Warning,
+            Description = "Правило выявляет повторные ротации или отзывы credentials одного sensor за короткий интервал.",
+            ConditionText = "3 и более sensor.credential.rotated/sensor.credential.revoked для одного sensor",
+            WindowText = "15 минут",
+            TriggerEntityText = "Публичный sensor id"
         }
     ];
 }
