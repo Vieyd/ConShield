@@ -4,7 +4,7 @@ ConShield is a student cybersecurity portfolio project: a lightweight SOC/SIEM t
 
 The project is intentionally practical. It demonstrates how a security team can collect audit events, review suspicious activity, manage exceptions, and turn correlated signals into incidents.
 
-For the product-level architecture, scalability model, and implementation roadmap, see [docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md). For a safe presentation package, see [docs/DEMO_EVIDENCE_PACK.md](docs/DEMO_EVIDENCE_PACK.md) and [docs/DIPLOMA_FEATURE_MAP.md](docs/DIPLOMA_FEATURE_MAP.md).
+For the product-level architecture, scalability model, and implementation roadmap, see [docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md). For a safe presentation package, see [docs/DEMO_EVIDENCE_PACK.md](docs/DEMO_EVIDENCE_PACK.md), [docs/DIPLOMA_FEATURE_MAP.md](docs/DIPLOMA_FEATURE_MAP.md), [docs/CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md](docs/CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md), and [docs/DIPLOMA_TEXT_SECTIONS_DRAFT_RU.md](docs/DIPLOMA_TEXT_SECTIONS_DRAFT_RU.md).
 
 ## Features
 

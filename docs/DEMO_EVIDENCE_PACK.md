@@ -4,6 +4,8 @@
 
 This pack explains how to demonstrate ConShield as a prototype complex for protecting containerized applications using image scanning, launch policy, runtime event monitoring, SIEM correlation, operator dashboards, and reporting. It is intended for a safe diploma/coursework defense: every example uses placeholders, local demo routes, and aggregate evidence rather than real credentials or protected environment data.
 
+For a compact current-state handoff, see [CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md](CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md). For Russian diploma/explanatory-note draft text, see [DIPLOMA_TEXT_SECTIONS_DRAFT_RU.md](DIPLOMA_TEXT_SECTIONS_DRAFT_RU.md).
+
 ## Implemented protection chain
 
 1. Image scanning: `ConShield.ImageScanner` wraps Trivy and can submit normalized image vulnerability findings.
