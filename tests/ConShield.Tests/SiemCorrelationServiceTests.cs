@@ -502,6 +502,165 @@ public class SiemCorrelationServiceTests
         Assert.Contains(await db.SiemAlerts.ToListAsync(), x => x.RuleCode == "BF-001");
     }
 
+    [Fact]
+    public async Task SensorRevokedLifecycleEvent_CreatesAlert()
+    {
+        await using var db = CreateDbContext();
+        var sensorId = Guid.NewGuid();
+        AddSensorRevokedLifecycleEvent(db, sensorId, "fedora-runtime-01", "adminib", revokedCredentialCount: 2);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RunAsync();
+
+        Assert.Equal(1, result.CreatedAlerts);
+        Assert.Equal(1, result.CreatedIncidents);
+        var alert = await db.SiemAlerts.SingleAsync();
+        Assert.Equal("LIFE-001", alert.RuleCode);
+        Assert.Equal(EventSeverity.Warning, alert.Severity);
+        Assert.Equal($"LIFE-001:{sensorId:D}", alert.TriggerKey);
+        Assert.Contains("Sensor identity was revoked", alert.Description, StringComparison.Ordinal);
+        Assert.Contains(sensorId.ToString("D"), alert.Description, StringComparison.Ordinal);
+        Assert.Contains("fedora-runtime-01", alert.Description, StringComparison.Ordinal);
+        Assert.Contains("revokedCredentialCount=2", alert.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SensorRevokedLifecycleEvent_AlertPayloadIsSecretSafe()
+    {
+        await using var db = CreateDbContext();
+        var plaintextCredential = "plaintext-credential-that-must-not-render";
+        AddSensorRevokedLifecycleEvent(
+            db,
+            Guid.NewGuid(),
+            "fedora-runtime-01",
+            "adminib",
+            revokedCredentialCount: 1,
+            additionalSecretLikeFields: new Dictionary<string, object?>
+            {
+                ["credential"] = plaintextCredential,
+                ["VerifierSha256"] = "verifier-that-must-not-render",
+                ["apiKey"] = "api-key-that-must-not-render",
+                ["connectionString"] = "Host=localhost;Password=must-not-render"
+            });
+        await db.SaveChangesAsync();
+
+        await CreateService(db).RunAsync();
+
+        var alert = await db.SiemAlerts.SingleAsync();
+        var incident = await db.Incidents.SingleAsync();
+        var rendered = string.Join('|', alert.Description, alert.TriggerKey, alert.SourceEventIdsJson, incident.Notes);
+        Assert.DoesNotContain(plaintextCredential, rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("VerifierSha256", rendered, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("api-key-that-must-not-render", rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("Password=", rendered, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("connectionString", rendered, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SensorRevokedLifecycleEvent_DoesNotDuplicateAlert()
+    {
+        await using var db = CreateDbContext();
+        AddSensorRevokedLifecycleEvent(db, Guid.NewGuid(), "fedora-runtime-01", "adminib", revokedCredentialCount: 1);
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+
+        var first = await service.RunAsync();
+        var second = await service.RunAsync();
+
+        Assert.Equal(1, first.CreatedAlerts);
+        Assert.Equal(0, second.CreatedAlerts);
+        Assert.Equal(1, await db.SiemAlerts.CountAsync(x => x.RuleCode == "LIFE-001"));
+        Assert.Equal(1, await db.Incidents.CountAsync(x => x.Name.Contains("LIFE-001", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task RepeatedCredentialLifecycleEvents_CreateAlert()
+    {
+        await using var db = CreateDbContext();
+        var sensorId = Guid.NewGuid();
+        AddCredentialLifecycleEvent(db, sensorId, SensorLifecycleEventTypes.SensorCredentialRotated, minutesAgo: 1);
+        AddCredentialLifecycleEvent(db, sensorId, SensorLifecycleEventTypes.SensorCredentialRevoked, minutesAgo: 2);
+        AddCredentialLifecycleEvent(db, sensorId, SensorLifecycleEventTypes.SensorCredentialRotated, minutesAgo: 3);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RunAsync();
+
+        Assert.Equal(1, result.CreatedAlerts);
+        var alert = await db.SiemAlerts.SingleAsync();
+        Assert.Equal("LIFE-002", alert.RuleCode);
+        Assert.Equal(EventSeverity.Warning, alert.Severity);
+        Assert.Equal($"LIFE-002:{sensorId:D}", alert.TriggerKey);
+        Assert.Contains("changed 3 times in 15 minutes", alert.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RepeatedCredentialLifecycleEvents_GroupBySensor()
+    {
+        await using var db = CreateDbContext();
+        var sensorA = Guid.NewGuid();
+        var sensorB = Guid.NewGuid();
+        AddCredentialLifecycleEvent(db, sensorA, SensorLifecycleEventTypes.SensorCredentialRotated, minutesAgo: 1);
+        AddCredentialLifecycleEvent(db, sensorA, SensorLifecycleEventTypes.SensorCredentialRevoked, minutesAgo: 2);
+        AddCredentialLifecycleEvent(db, sensorA, SensorLifecycleEventTypes.SensorCredentialRotated, minutesAgo: 3);
+        AddCredentialLifecycleEvent(db, sensorB, SensorLifecycleEventTypes.SensorCredentialRotated, minutesAgo: 1);
+        AddCredentialLifecycleEvent(db, sensorB, SensorLifecycleEventTypes.SensorCredentialRevoked, minutesAgo: 2);
+        await db.SaveChangesAsync();
+
+        await CreateService(db).RunAsync();
+
+        var alert = await db.SiemAlerts.SingleAsync();
+        Assert.Equal("LIFE-002", alert.RuleCode);
+        Assert.Equal($"LIFE-002:{sensorA:D}", alert.TriggerKey);
+    }
+
+    [Fact]
+    public async Task RepeatedCredentialLifecycleEvents_BelowThreshold_NoAlert()
+    {
+        await using var db = CreateDbContext();
+        var sensorId = Guid.NewGuid();
+        AddCredentialLifecycleEvent(db, sensorId, SensorLifecycleEventTypes.SensorCredentialRotated, minutesAgo: 1);
+        AddCredentialLifecycleEvent(db, sensorId, SensorLifecycleEventTypes.SensorCredentialRevoked, minutesAgo: 2);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RunAsync();
+
+        Assert.Equal(0, result.CreatedAlerts);
+        Assert.Empty(db.SiemAlerts);
+    }
+
+    [Fact]
+    public async Task RepeatedCredentialLifecycleEvents_AlertPayloadIsSecretSafe()
+    {
+        await using var db = CreateDbContext();
+        var sensorId = Guid.NewGuid();
+        var plaintextCredential = "plaintext-credential-that-must-not-render";
+        AddCredentialLifecycleEvent(db, sensorId, SensorLifecycleEventTypes.SensorCredentialRotated, minutesAgo: 1, additionalSecretLikeFields: new Dictionary<string, object?>
+        {
+            ["credential"] = plaintextCredential,
+            ["VerifierSha256"] = "verifier-that-must-not-render"
+        });
+        AddCredentialLifecycleEvent(db, sensorId, SensorLifecycleEventTypes.SensorCredentialRevoked, minutesAgo: 2, additionalSecretLikeFields: new Dictionary<string, object?>
+        {
+            ["apiKey"] = "api-key-that-must-not-render"
+        });
+        AddCredentialLifecycleEvent(db, sensorId, SensorLifecycleEventTypes.SensorCredentialRotated, minutesAgo: 3, additionalSecretLikeFields: new Dictionary<string, object?>
+        {
+            ["connectionString"] = "Host=localhost;Password=must-not-render"
+        });
+        await db.SaveChangesAsync();
+
+        await CreateService(db).RunAsync();
+
+        var alert = await db.SiemAlerts.SingleAsync();
+        var incident = await db.Incidents.SingleAsync();
+        var rendered = string.Join('|', alert.Description, alert.TriggerKey, alert.SourceEventIdsJson, incident.Notes);
+        Assert.DoesNotContain(plaintextCredential, rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("VerifierSha256", rendered, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("api-key-that-must-not-render", rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("Password=", rendered, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("connectionString", rendered, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -668,6 +827,96 @@ public class SiemCorrelationServiceTests
                 commandLineSha256 = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
             })
         });
+    }
+
+    private static void AddSensorRevokedLifecycleEvent(
+        ApplicationDbContext dbContext,
+        Guid sensorId,
+        string displayName,
+        string requestedBy,
+        int revokedCredentialCount,
+        Dictionary<string, object?>? additionalSecretLikeFields = null)
+    {
+        var payload = LifecyclePayload(
+            sensorId,
+            displayName,
+            requestedBy,
+            action: "revokeSensor",
+            credentialId: null,
+            revokedCredentialCount,
+            additionalSecretLikeFields);
+
+        dbContext.SecurityEvents.Add(new SecurityEventEntry
+        {
+            OccurredAtUtc = DateTime.UtcNow.AddSeconds(-10),
+            EventType = SecurityEventType.ExternalEvent,
+            ExternalEventType = SensorLifecycleEventTypes.SensorRevoked,
+            Severity = EventSeverity.Info,
+            SourceSystem = SecuritySourceSystems.SensorLifecycle,
+            Description = "Sensor revoked.",
+            AdditionalDataJson = System.Text.Json.JsonSerializer.Serialize(payload)
+        });
+    }
+
+    private static void AddCredentialLifecycleEvent(
+        ApplicationDbContext dbContext,
+        Guid sensorId,
+        string externalEventType,
+        int minutesAgo,
+        Dictionary<string, object?>? additionalSecretLikeFields = null)
+    {
+        var payload = LifecyclePayload(
+            sensorId,
+            "fedora-runtime-01",
+            "adminib",
+            externalEventType == SensorLifecycleEventTypes.SensorCredentialRotated ? "rotateCredential" : "revokeCredential",
+            Guid.NewGuid(),
+            revokedCredentialCount: null,
+            additionalSecretLikeFields);
+
+        dbContext.SecurityEvents.Add(new SecurityEventEntry
+        {
+            OccurredAtUtc = DateTime.UtcNow.AddMinutes(-minutesAgo),
+            EventType = SecurityEventType.ExternalEvent,
+            ExternalEventType = externalEventType,
+            Severity = EventSeverity.Info,
+            SourceSystem = SecuritySourceSystems.SensorLifecycle,
+            Description = "Credential lifecycle event.",
+            AdditionalDataJson = System.Text.Json.JsonSerializer.Serialize(payload)
+        });
+    }
+
+    private static Dictionary<string, object?> LifecyclePayload(
+        Guid sensorId,
+        string displayName,
+        string requestedBy,
+        string action,
+        Guid? credentialId,
+        int? revokedCredentialCount,
+        Dictionary<string, object?>? additionalSecretLikeFields)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["sensorId"] = sensorId,
+            ["displayName"] = displayName,
+            ["sourceSystem"] = SecuritySourceSystems.FalcoRuntimeCollector,
+            ["lifecycleSourceSystem"] = SecuritySourceSystems.SensorLifecycle,
+            ["requestedBy"] = requestedBy,
+            ["action"] = action,
+            ["reasonProvided"] = true
+        };
+
+        if (credentialId is not null)
+            payload["credentialId"] = credentialId.Value;
+        if (revokedCredentialCount is not null)
+            payload["revokedCredentialCount"] = revokedCredentialCount.Value;
+        if (additionalSecretLikeFields is not null)
+        {
+            foreach (var pair in additionalSecretLikeFields)
+                payload[pair.Key] = pair.Value;
+        }
+
+        return payload;
     }
 
     private sealed class SpySecurityEventWriter : ISecurityEventWriter

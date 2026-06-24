@@ -79,6 +79,15 @@ When a lifecycle event looks suspicious:
 6. If a real Fedora RuntimeCollector stops reporting after revocation, check whether that outage is expected because the sensor or credential was revoked. Do not disable SELinux, do not print protected env files, and do not rotate/revoke another real sensor only to test the UI.
 7. If the action was not expected, preserve the event id and surrounding context and escalate through the normal incident workflow.
 
+## SIEM/reporting behavior
+
+Lifecycle audit events also feed small deterministic SIEM rules:
+
+- `LIFE-001` — creates a warning alert and incident when `SourceSystem = conshield.sensor-lifecycle` and `ExternalEventType = sensor.revoked`. The alert text uses public metadata only: sensor id, display name, requested-by value, revoked credential count, and source event id.
+- `LIFE-002` — creates a warning alert and incident when one sensor has at least three credential lifecycle events in 15 minutes. It counts `sensor.credential.rotated` and `sensor.credential.revoked`, grouped by public sensor id.
+
+These rules do not rotate, revoke, enroll, or remediate sensors. They do not render plaintext credentials, verifier values, API keys, connection strings, env values, or Fedora protected env file content.
+
 ## Safe handling rules
 
 - Treat generated sensor credentials as secrets.
@@ -91,7 +100,7 @@ When a lifecycle event looks suspicious:
 
 ## Current limitations
 
-- Lifecycle events are informational and do not automatically create SIEM alerts.
+- Lifecycle SIEM rules are intentionally small and deterministic; they are not a full behavioral analytics system.
 - There is no remote remediation or remote enrollment endpoint.
 - There is no mTLS/PKI enforcement yet.
 - The playbook does not replace incident response procedures.
