@@ -35,6 +35,9 @@
                             @if (User.IsInRole("AdminIB"))
                             {
                                 <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Sensors" asp-action="Index">Сенсоры</a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link" asp-controller="Outbox" asp-action="Index">Outbox</a>
                                 </li>
                             }
