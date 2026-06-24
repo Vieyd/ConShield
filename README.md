@@ -4,6 +4,8 @@ ConShield is a student cybersecurity portfolio project: a lightweight SOC/SIEM t
 
 The project is intentionally practical. It demonstrates how a security team can collect audit events, review suspicious activity, manage exceptions, and turn correlated signals into incidents.
 
+For the product-level architecture, scalability model, and implementation roadmap, see [docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md).
+
 ## Features
 
 - Role-based access for `AdminIB` and `Operator`.
@@ -97,8 +99,8 @@ docker compose -f infra/docker-compose.yml up -d postgres
 5. Open `ConShield.sln`.
 6. Set `ConShield.Web` as the startup project.
 7. Set a local ingestion API key in `src/ConShield.Web/appsettings.Development.json` under `ExternalEventIngestion:ApiKey`.
-8. Set a distinct runtime collector key under `ExternalEventIngestion:RuntimeCollectorApiKey`; do not reuse the general key.
-8. Run the application from Visual Studio or with:
+8. Keep `ExternalEventIngestion:AllowLegacyRuntimeCollectorCredential` set to `false` for enrolled-sensor-only runtime operation. The legacy `RuntimeCollectorApiKey` is not required after sensor enrollment.
+9. Run the application from Visual Studio or with:
 
 ```powershell
 dotnet run --project src/ConShield.Web/ConShield.Web.csproj
@@ -110,7 +112,7 @@ The development configuration is intentionally ignored by Git. Keep real local c
 
 ## External Event Ingestion
 
-The current prototype includes a protected HTTP ingestion endpoint. General collectors use `ExternalEventIngestion:ApiKey`; the reserved `conshield.falco-runtime-collector` source requires the distinct `ExternalEventIngestion:RuntimeCollectorApiKey`.
+The current prototype includes a protected HTTP ingestion endpoint. General collectors use `ExternalEventIngestion:ApiKey`. The reserved `conshield.falco-runtime-collector` source is intended to use enrolled sensor identity headers; legacy runtime collector fallback remains disabled in the enrolled-sensor-only operating mode.
 
 ```http
 POST /api/v1/security-events
@@ -274,7 +276,7 @@ For a new machine, copy `src/ConShield.Web/appsettings.Development.example.json`
 
 ## Roadmap
 
-See [docs/ROADMAP.md](docs/ROADMAP.md).
+See [docs/ROADMAP.md](docs/ROADMAP.md) and the product-level [architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md).
 
 ## GitHub Topics
 
