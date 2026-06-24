@@ -16,6 +16,7 @@ For the product-level architecture, scalability model, and implementation roadma
 - PostgreSQL transactional outbox for durable security event delivery to JSONL or RabbitMQ.
 - `ConShield.EventConsumer`, an idempotent RabbitMQ consumer with PostgreSQL inbox receipts and optional MongoDB raw-event projection.
 - AdminIB-only operational health dashboard with read-only aggregate counts for sensor heartbeat freshness, security event freshness, lifecycle audit activity, outbox backlog, and inbox/projection receipts.
+- AdminIB-only security summary report with safe aggregate Markdown export for daily review handoff.
 - Controlled AdminIB DLQ inspection and replay through PostgreSQL quarantine records and a background RabbitMQ replay dispatcher.
 - Protected external security event ingestion endpoint: `POST /api/v1/security-events`.
 - API-key authentication, request validation, request size limit, rate limiting, and idempotency for external events.

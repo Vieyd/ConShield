@@ -7,6 +7,7 @@ This runbook describes how an `AdminIB` operator uses ConShield operational scre
 ## Main screens
 
 - Operations Health: `/Operations/Health`
+- Security Summary Report: `/Reports/SecuritySummary`
 - Security Events: `/SecurityEvents`
 - Sensor Fleet: `/Sensors`
 - Alerts / Incidents: use the existing SIEM alerts and incident registry pages in the app
@@ -18,7 +19,8 @@ This runbook describes how an `AdminIB` operator uses ConShield operational scre
 3. Check Security Events freshness.
 4. Check outbox/inbox health.
 5. Check lifecycle audit activity.
-6. Open Security Events using lifecycle quick filters if needed.
+6. Open Security Summary Report and export the Markdown handoff if the check needs to be attached to an incident or shift note.
+7. Open Security Events using lifecycle quick filters if needed.
 
 ## Lifecycle SIEM alerts
 
@@ -68,6 +70,7 @@ Operator actions:
 - Never inspect or print Fedora protected env files in shared output.
 - Never use audit events as a credential recovery mechanism.
 - Use public sensorId/credentialId only.
+- Use the Security Summary Markdown export only for aggregate counts and timestamps; it is not a source for raw event payloads or secret recovery.
 
 ## Current limitations
 
