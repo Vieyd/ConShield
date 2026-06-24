@@ -1,0 +1,137 @@
+# ConShield Demo and Diploma Evidence Pack
+
+## Purpose
+
+This pack explains how to demonstrate ConShield as a prototype complex for protecting containerized applications using image scanning, launch policy, runtime event monitoring, SIEM correlation, operator dashboards, and reporting. It is intended for a safe diploma/coursework defense: every example uses placeholders, local demo routes, and aggregate evidence rather than real credentials or protected environment data.
+
+## Implemented protection chain
+
+1. Image scanning: `ConShield.ImageScanner` wraps Trivy and can submit normalized image vulnerability findings.
+2. Container policy gate: `ConShield.ContainerPolicy` evaluates Allow/Warn/Block decisions and records policy audit evidence.
+3. Runtime collector / enrolled sensor: `ConShield.RuntimeCollector` submits mapped Falco-compatible events with enrolled sensor identity.
+4. Protected event ingestion: `POST /api/v1/security-events` accepts validated events and protects reserved runtime sources.
+5. Security event storage: PostgreSQL stores normalized `SecurityEvents` for investigation and correlation.
+6. Outbox/RabbitMQ/EventConsumer: transactional outbox, RabbitMQ, inbox receipts, and optional MongoDB projection provide a durable processing path.
+7. Sensor inventory and heartbeat: `/Sensors` and the heartbeat API show enrolled sensor freshness and revocation state.
+8. Credential lifecycle: local provisioning, rotation, revocation, and sensor revocation workflows exist without exposing stored verifiers.
+9. Lifecycle audit events: lifecycle actions write filterable audit events into Security Events.
+10. SIEM rules and alerts: rules include image, policy, runtime, and lifecycle detections such as `LIFE-001` and `LIFE-002`.
+11. Operations Health: `/Operations/Health` provides an AdminIB-only aggregate health view.
+12. Security Summary report/export: `/Reports/SecuritySummary` and the Markdown export provide a safe read-only handoff.
+
+## Mapping to diploma goals
+
+| Diploma task | ConShield evidence |
+| --- | --- |
+| Threat analysis for containerized apps | Architecture/roadmap docs plus implemented scan, policy, and runtime paths |
+| Image vulnerability/secret scanning | `ConShield.ImageScanner`, Trivy flow, and security events |
+| Runtime policy enforcement | `ConShield.ContainerPolicy` policy gate and `POL-001` correlation |
+| Runtime event monitoring | `ConShield.RuntimeCollector`, enrolled sensor heartbeat, and `RTE-001` correlation |
+| Secure ingestion | API key validation and sensor-bound runtime authentication |
+| Event processing pipeline | PostgreSQL outbox, RabbitMQ, EventConsumer, inbox receipts, and optional MongoDB projection |
+| SIEM detection | Correlation rules including `LIFE-001` and `LIFE-002` lifecycle alerts |
+| Operator workflow | `/Operations/Health`, `/SecurityEvents`, `/Sensors`, SIEM alerts/incidents, and reports |
+| Reporting | `/Reports/SecuritySummary` and safe Markdown export |
+
+## Demo scenario
+
+1. Start local infrastructure and apps.
+2. Login as AdminIB.
+3. Open `/Operations/Health` and explain heartbeat, event, outbox, and inbox summaries.
+4. Open `/Sensors` and show sensor status without exposing credentials.
+5. Open `/SecurityEvents` and show standard filters.
+6. Show lifecycle audit filters for `conshield.sensor-lifecycle`.
+7. Show Alerts/Incidents if demo data or previous safe actions have produced them.
+8. Open `/Reports/SecuritySummary`.
+9. Download or copy the Markdown export and explain that it contains only aggregate counts and timestamps.
+10. Explain safe credential handling: generated credentials are one-time handoff material and must not be shown.
+11. Optional: show ImageScanner and PolicyGate command examples with placeholders only.
+12. Optional: show Fedora runtime sensor service status without printing protected env files.
+
+## Demo commands
+
+Use placeholders and safe local examples only. Do not paste real API keys, generated credentials, connection strings, local passwords, or protected Fedora env file contents into the terminal, slides, screenshots, GitHub, or chat.
+
+Start apps:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit
+```
+
+Run validation:
+
+```powershell
+dotnet restore
+dotnet build -c Release --no-restore
+dotnet test -c Release --no-build
+```
+
+Run image scanner without submitting:
+
+```powershell
+dotnet run --project src/ConShield.ImageScanner -- scan --image alpine:3.20 --no-submit
+```
+
+Run policy gate without submitting:
+
+```powershell
+dotnet run --project src/ConShield.ImageScanner -- gate --image alpine:3.20 --policy config/policies/container-baseline-v1.json --no-submit
+```
+
+Open report:
+
+```text
+http://127.0.0.1:5080/Reports/SecuritySummary
+```
+
+Download Markdown export:
+
+```text
+http://127.0.0.1:5080/Reports/SecuritySummaryMarkdown?range=24h
+```
+
+Optional Fedora status evidence should be limited to service state and file permissions, not secret contents.
+
+## Evidence checklist
+
+- [ ] Operations Health page opens for AdminIB.
+- [ ] Security Summary report opens for AdminIB.
+- [ ] Unauthenticated user is redirected to login.
+- [ ] Security Events lifecycle filters are visible.
+- [ ] Sensor Fleet shows sensor status.
+- [ ] Lifecycle audit events are filterable.
+- [ ] `LIFE-001` and `LIFE-002` rules are documented.
+- [ ] Markdown report export contains no raw JSON/secrets.
+- [ ] Test suite passes.
+- [ ] GitHub Actions pass.
+
+## What not to show
+
+- Generated sensor credentials.
+- API keys.
+- `VerifierSha256`.
+- `appsettings.Development.json`.
+- Fedora protected env file contents.
+- RabbitMQ/PostgreSQL passwords.
+- Screenshots with secrets.
+- Connection strings, cookies, tokens, local passwords, or generated reports from a real environment.
+
+## Current limitations
+
+- Prototype, not production hardening.
+- No Kubernetes admission controller.
+- No mTLS binding yet.
+- No centralized secret manager.
+- No automatic remediation.
+- Operations dashboard is DB-backed, not Prometheus/Grafana.
+- Reporting is aggregate/read-only.
+
+## Suggested presentation order
+
+1. Minute 0-1: explain the problem and show the architecture chain: Scan → Policy → Runtime Detection → Event Ingestion → Correlation → Alert/Incident → Report.
+2. Minute 1-2: show `/Operations/Health` as the operator starting point.
+3. Minute 2-3: show `/Sensors` and `/SecurityEvents`, including lifecycle filters.
+4. Minute 3-4: explain SIEM rules and show lifecycle alert documentation for `LIFE-001`/`LIFE-002`.
+5. Minute 4-5: show `/Reports/SecuritySummary` and the Markdown export.
+6. Minute 5-6: show safe CLI examples for image scanning or policy gate in no-submit mode.
+7. Minute 6-7: close with limitations and future work: mTLS, Kubernetes admission control, centralized secret management, observability, and configurable rules.

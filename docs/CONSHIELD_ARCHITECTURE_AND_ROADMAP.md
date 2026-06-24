@@ -204,3 +204,5 @@ Scan → Policy → Runtime Detection → Event Ingestion → Correlation → Al
 ```
 
 It is intentionally built as a safe, local, explainable prototype that can evolve into a larger DevSecOps security platform.
+
+For defense/demo preparation, use [DEMO_EVIDENCE_PACK.md](DEMO_EVIDENCE_PACK.md) and [DIPLOMA_FEATURE_MAP.md](DIPLOMA_FEATURE_MAP.md) to map implemented modules, routes, and future-work boundaries to diploma goals.
