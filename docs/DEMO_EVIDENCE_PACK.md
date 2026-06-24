@@ -20,6 +20,7 @@ For a compact current-state handoff, see [CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md](C
 10. SIEM rules and alerts: rules include image, policy, runtime, and lifecycle detections such as `LIFE-001` and `LIFE-002`.
 11. Operations Health: `/Operations/Health` provides an AdminIB-only aggregate health view.
 12. Security Summary report/export: `/Reports/SecuritySummary` and the Markdown export provide a safe read-only handoff.
+13. Demo scenario runner: `tools/ConShield.DemoScenario` seeds local-only synthetic evidence for safe walkthroughs.
 
 ## Mapping to diploma goals
 
@@ -34,6 +35,7 @@ For a compact current-state handoff, see [CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md](C
 | SIEM detection | Correlation rules including `LIFE-001` and `LIFE-002` lifecycle alerts |
 | Operator workflow | `/Operations/Health`, `/SecurityEvents`, `/Sensors`, SIEM alerts/incidents, and reports |
 | Reporting | `/Reports/SecuritySummary` and safe Markdown export |
+| Safe demo data | `tools/ConShield.DemoScenario` marked synthetic scenarios and marked-only reset |
 
 ## Demo scenario
 
@@ -78,6 +80,29 @@ Run policy gate without submitting:
 
 ```powershell
 dotnet run --project src/ConShield.ImageScanner -- gate --image alpine:3.20 --policy config/policies/container-baseline-v1.json --no-submit
+```
+
+Preview and seed synthetic demo data:
+
+```powershell
+$env:CONSHIELD_DEMO_CONNECTION_STRING = "Host=127.0.0.1;Port=5432;Database=conshield;Username=conshield;Password=<local-dev-password>"
+dotnet run --project tools/ConShield.DemoScenario -- --scenario healthy --dry-run
+dotnet run --project tools/ConShield.DemoScenario -- --scenario full-demo --yes
+```
+
+Use targeted scenarios when the walkthrough needs one screen:
+
+```powershell
+dotnet run --project tools/ConShield.DemoScenario -- --scenario lifecycle-alerts --yes
+dotnet run --project tools/ConShield.DemoScenario -- --scenario runtime-incident --yes
+dotnet run --project tools/ConShield.DemoScenario -- --scenario outbox-backlog --yes
+```
+
+Remove only marked synthetic demo rows:
+
+```powershell
+dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --dry-run
+dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --yes
 ```
 
 Open report:

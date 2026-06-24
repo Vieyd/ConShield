@@ -18,6 +18,7 @@ A compact snapshot of the current project state after the implemented scan → p
 - Lifecycle SIEM rules: `LIFE-001` and `LIFE-002` detect sensor identity revocation and repeated lifecycle changes.
 - Operations Health: `/Operations/Health` provides AdminIB-only aggregate health information.
 - Security Summary report/export: `/Reports/SecuritySummary` and `/Reports/SecuritySummaryMarkdown?range=24h` provide secret-safe aggregate reporting.
+- Demo scenario runner: `tools/ConShield.DemoScenario` can seed/reset clearly marked synthetic local demo data for walkthroughs.
 - Demo/diploma evidence docs: `docs/DEMO_EVIDENCE_PACK.md` and `docs/DIPLOMA_FEATURE_MAP.md` describe the safe demo path and feature mapping.
 
 ## Main user roles
@@ -44,6 +45,7 @@ A compact snapshot of the current project state after the implemented scan → p
 - `src/ConShield.RuntimeCollector`: runtime alert parser/collector for JSONL or stdin/follow mode.
 - `src/ConShield.SensorProvisioning`: local operator-only enrolled sensor credential provisioning.
 - `src/ConShield.EventConsumer`: RabbitMQ consumer, inbox receipt writer, and optional MongoDB projection.
+- `tools/ConShield.DemoScenario`: local-only scenario runner for synthetic `healthy`, `full-demo`, `lifecycle-alerts`, `runtime-incident`, and `outbox-backlog` data.
 
 ## Security boundaries
 
@@ -54,6 +56,7 @@ A compact snapshot of the current project state after the implemented scan → p
 - Lifecycle actions such as rotation/revocation are AdminIB-only.
 - Security Summary reports and Markdown exports are aggregate/read-only and secret-safe.
 - Report exports do not include raw `AdditionalDataJson`, credential plaintext, API keys, connection strings, env values, cookies, tokens, passwords, or local secrets.
+- Demo scenario writes require explicit `CONSHIELD_DEMO_CONNECTION_STRING`; the runner must not print the value and reset deletes only marked demo records.
 
 ## Validation status
 
@@ -87,6 +90,14 @@ Expected result: build/tests pass, EF reports no pending model changes, actionli
 ## Safe demo path
 
 Use `docs/DEMO_EVIDENCE_PACK.md` as the primary safe demo script. It includes a short presentation order, evidence checklist, safe command examples, and what not to show.
+
+Optional local-only synthetic data setup:
+
+```powershell
+dotnet run --project tools/ConShield.DemoScenario -- --scenario full-demo --dry-run
+dotnet run --project tools/ConShield.DemoScenario -- --scenario full-demo --yes
+dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --dry-run
+```
 
 ## Known limitations / future work
 

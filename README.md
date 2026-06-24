@@ -27,7 +27,7 @@ For the product-level architecture, scalability model, and implementation roadma
 - `ConShield.ContainerPolicy`, a pure local evaluator for container policy decisions.
 - `POL-001` SIEM correlation for Block decisions from Container Policy Gate.
 - `RTE-001` SIEM correlation for mapped high-risk Falco-compatible runtime container events.
-- Demo scenario generation for portfolio walkthroughs.
+- Local-only demo scenario runner for portfolio walkthroughs with marked resettable synthetic data.
 - UTC storage with GMT+3 display for the current Russian-language UI.
 
 ## Tech Stack
@@ -56,6 +56,7 @@ ConShield.ContainerPolicy  Pure policy validation and evaluation library
 ConShield.RuntimeDetection Falco-compatible parser, mapping, normalization, and deterministic identity
 ConShield.RuntimeCollector CLI for stdin/file/follow runtime alert ingestion
 ConShield.SensorProvisioning Local operator-only enrolled sensor credential provisioning
+tools/ConShield.DemoScenario Local-only synthetic demo scenario runner
 infra/                     Future infrastructure for message/event pipeline
 docs/                      Architecture, roadmap, security notes
 ```
@@ -271,10 +272,29 @@ For a new machine, copy `src/ConShield.Web/appsettings.Development.example.json`
 2. Review dashboard metrics.
 3. Open security events and confirm login audit entries.
 4. Create or edit a user exception.
-5. Generate a SIEM demo scenario.
+5. Generate a SIEM demo scenario with the local demo runner.
 6. Run correlation and inspect created alerts.
 7. Open the related incident and change its status.
 8. Sign in as `operator` and verify read-only access boundaries.
+
+### Demo Scenario Runner
+
+`tools/ConShield.DemoScenario` seeds clearly marked synthetic data for local walkthroughs only. It never reads Fedora sensor env files, never prints connection strings, and requires an explicit local development connection string for writes:
+
+```powershell
+$env:CONSHIELD_DEMO_CONNECTION_STRING = "Host=127.0.0.1;Port=5432;Database=conshield;Username=conshield;Password=<local-dev-password>"
+dotnet run --project tools/ConShield.DemoScenario -- --scenario healthy --dry-run
+dotnet run --project tools/ConShield.DemoScenario -- --scenario full-demo --yes
+```
+
+Supported scenarios are `healthy`, `full-demo`, `lifecycle-alerts`, `runtime-incident`, and `outbox-backlog`. The lifecycle scenario can trigger `LIFE-001` and `LIFE-002`; the runtime scenario can trigger `RTE-001` using synthetic Falco-compatible data only.
+
+Reset only marked demo records:
+
+```powershell
+dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --dry-run
+dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --yes
+```
 
 ## Roadmap
 

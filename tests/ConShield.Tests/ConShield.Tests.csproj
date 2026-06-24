@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\src\ConShield.RuntimeDetection\ConShield.RuntimeDetection.csproj" />
     <ProjectReference Include="..\..\src\ConShield.RuntimeCollector\ConShield.RuntimeCollector.csproj" />
     <ProjectReference Include="..\..\src\ConShield.SensorProvisioning\ConShield.SensorProvisioning.csproj" />
+    <ProjectReference Include="..\..\tools\ConShield.DemoScenario\ConShield.DemoScenario.csproj" />
   </ItemGroup>
 
   <ItemGroup>
