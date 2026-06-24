@@ -21,6 +21,7 @@ This document tracks credential lifecycle design and implementation notes. Rotat
 - The rotation UI displays the new credential exactly once from the POST response and does not store it in URLs, cookies, session, or TempData.
 - Service-layer credential and sensor revocation exists and preserves database rows for audit history.
 - AdminIB revocation UI exists for credential and sensor revocation with POST, anti-forgery, and explicit confirmation.
+- Service-layer rotation, credential revocation, and sensor revocation write secret-safe lifecycle audit events through the existing SecurityEvents/outbox pipeline.
 - No public revocation API exists.
 
 ## Security goals
@@ -117,7 +118,7 @@ Each dangerous action:
 - shows confirmation;
 - never displays verifier;
 - display plaintext new credential only once for rotation;
-- should write an audit event in a future audit enhancement.
+- writes a service-layer lifecycle audit event after successful mutation.
 
 The read-only inventory should remain useful without offering mutation controls to `Operator` users or unauthenticated users.
 
@@ -151,14 +152,31 @@ public interface ISensorCredentialLifecycleService
 
 Controllers should orchestrate authorization, anti-forgery, confirmation screens, and redirects. They should not perform direct `DbContext` mutations for credential lifecycle state.
 
-## Auditing
+## Lifecycle auditing
 
-Future implementation should create `SecurityEvents` for:
+Implemented service-layer lifecycle actions create `SecurityEvents` with:
 
-- credential rotated;
-- credential revoked;
-- sensor revoked;
-- failed rotation/revocation attempts if relevant.
+- `EventType = ExternalEvent`;
+- `Severity = Info`;
+- `SourceSystem = conshield.sensor-lifecycle`;
+- `ExternalEventType` values:
+  - `sensor.credential.rotated`;
+  - `sensor.credential.revoked`;
+  - `sensor.revoked`.
+
+Events are written through the existing SecurityEvents writer so the event row and outbox message remain in the same EF transaction where practical. Already-revoked idempotent paths do not write duplicate lifecycle events.
+
+Lifecycle audit payloads include public-only metadata:
+
+- sensor public UUID;
+- credential public UUID where applicable;
+- display name;
+- sensor source system;
+- lifecycle source system;
+- action type;
+- requested by;
+- reason-provided boolean;
+- revoked credential count for sensor revocation.
 
 Audit payloads must not include:
 
@@ -167,16 +185,6 @@ Audit payloads must not include:
 - API keys;
 - PostgreSQL or RabbitMQ passwords;
 - Fedora environment file contents.
-
-Suggested safe audit metadata:
-
-- sensor public UUID;
-- credential public UUID;
-- action type;
-- requested by;
-- reason;
-- UTC timestamp;
-- old/new lifecycle state names.
 
 ## Tests required
 

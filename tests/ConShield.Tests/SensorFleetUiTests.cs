@@ -7,6 +7,8 @@ using ConShield.Application;
 using ConShield.Contracts.Constants;
 using ConShield.Data;
 using ConShield.Data.Entities;
+using ConShield.SecurityEvents;
+using ConShield.SecurityEvents.Models;
 using ConShield.Web.Controllers;
 using ConShield.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -464,7 +466,7 @@ public sealed class SensorFleetUiTests
         var nowUtc = DateTime.UtcNow;
         var sensorId = Guid.NewGuid();
         await SeedSensorAsync(db, sensorId, nowUtc);
-        await new SensorCredentialLifecycleService(db).RevokeSensorAsync(sensorId, "adminib", "test revocation");
+        await CreateSensorCredentialLifecycleService(db).RevokeSensorAsync(sensorId, "adminib", "test revocation");
 
         var result = await CreateController(db).Index(CancellationToken.None);
         var model = Assert.IsType<SensorFleetIndexViewModel>(Assert.IsType<ViewResult>(result).Model);
@@ -497,7 +499,10 @@ public sealed class SensorFleetUiTests
     }
 
     private static SensorsController CreateController(ApplicationDbContext db) =>
-        new(db, new SensorCredentialLifecycleService(db));
+        new(db, CreateSensorCredentialLifecycleService(db));
+
+    private static SensorCredentialLifecycleService CreateSensorCredentialLifecycleService(ApplicationDbContext db) =>
+        new(db, new NoOpSecurityEventWriter());
 
     private static SensorsController CreateAuthenticatedController(ApplicationDbContext db)
     {
@@ -594,5 +599,11 @@ public sealed class SensorFleetUiTests
             .UseInMemoryDatabase($"sensor-fleet-ui-{Guid.NewGuid():N}")
             .Options;
         return new ApplicationDbContext(options);
+    }
+
+    private sealed class NoOpSecurityEventWriter : ISecurityEventWriter
+    {
+        public Task WriteAsync(SecurityEventWriteRequest request, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 }

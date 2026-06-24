@@ -1,6 +1,10 @@
 using ConShield.Application.Models;
+using ConShield.Contracts.Constants;
+using ConShield.Contracts.Enums;
 using ConShield.Data;
 using ConShield.Data.Entities;
+using ConShield.SecurityEvents;
+using ConShield.SecurityEvents.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -10,10 +14,12 @@ public sealed class SensorCredentialLifecycleService : ISensorCredentialLifecycl
 {
     private const int RequestedByMaxLength = 256;
     private readonly ApplicationDbContext _dbContext;
+    private readonly ISecurityEventWriter _eventWriter;
 
-    public SensorCredentialLifecycleService(ApplicationDbContext dbContext)
+    public SensorCredentialLifecycleService(ApplicationDbContext dbContext, ISecurityEventWriter eventWriter)
     {
         _dbContext = dbContext;
+        _eventWriter = eventWriter;
     }
 
     public async Task<SensorCredentialRotationResult> RotateCredentialAsync(
@@ -25,8 +31,8 @@ public sealed class SensorCredentialLifecycleService : ISensorCredentialLifecycl
         if (sensorId == Guid.Empty)
             throw new SensorCredentialLifecycleException("Sensor was not found.");
 
-        _ = NormalizeRequestedBy(requestedBy);
-        _ = reason?.Trim();
+        var normalizedRequestedBy = NormalizeRequestedBy(requestedBy);
+        var reasonProvided = IsReasonProvided(reason);
 
         await using var transaction = await BeginTransactionAsync(cancellationToken);
         var sensor = await _dbContext.Sensors
@@ -54,6 +60,18 @@ public sealed class SensorCredentialLifecycleService : ISensorCredentialLifecycl
         sensor.UpdatedAtUtc = now;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await WriteLifecycleAuditEventAsync(
+            SensorLifecycleEventTypes.SensorCredentialRotated,
+            $"Sensor credential rotated for {sensor.DisplayName}.",
+            "rotateCredential",
+            sensor,
+            newCredential.CredentialId,
+            normalizedRequestedBy,
+            reasonProvided,
+            now,
+            revokedCredentialCount: null,
+            cancellationToken);
+
         if (transaction is not null)
             await transaction.CommitAsync(cancellationToken);
 
@@ -78,8 +96,8 @@ public sealed class SensorCredentialLifecycleService : ISensorCredentialLifecycl
         if (credentialId == Guid.Empty)
             throw new SensorCredentialLifecycleException("Credential was not found.");
 
-        _ = NormalizeRequestedBy(requestedBy);
-        _ = reason?.Trim();
+        var normalizedRequestedBy = NormalizeRequestedBy(requestedBy);
+        var reasonProvided = IsReasonProvided(reason);
 
         await using var transaction = await BeginTransactionAsync(cancellationToken);
         var sensor = await _dbContext.Sensors
@@ -100,6 +118,17 @@ public sealed class SensorCredentialLifecycleService : ISensorCredentialLifecycl
             credential.RevokedAtUtc = revokedAtUtc;
             sensor.UpdatedAtUtc = revokedAtUtc;
             await _dbContext.SaveChangesAsync(cancellationToken);
+            await WriteLifecycleAuditEventAsync(
+                SensorLifecycleEventTypes.SensorCredentialRevoked,
+                $"Sensor credential revoked for {sensor.DisplayName}.",
+                "revokeCredential",
+                sensor,
+                credential.CredentialId,
+                normalizedRequestedBy,
+                reasonProvided,
+                revokedAtUtc,
+                revokedCredentialCount: null,
+                cancellationToken);
         }
 
         if (transaction is not null)
@@ -123,8 +152,8 @@ public sealed class SensorCredentialLifecycleService : ISensorCredentialLifecycl
         if (sensorId == Guid.Empty)
             throw new SensorCredentialLifecycleException("Sensor was not found.");
 
-        _ = NormalizeRequestedBy(requestedBy);
-        _ = reason?.Trim();
+        var normalizedRequestedBy = NormalizeRequestedBy(requestedBy);
+        var reasonProvided = IsReasonProvided(reason);
 
         await using var transaction = await BeginTransactionAsync(cancellationToken);
         var sensor = await _dbContext.Sensors
@@ -151,7 +180,20 @@ public sealed class SensorCredentialLifecycleService : ISensorCredentialLifecycl
         }
 
         if (!wasAlreadyRevoked || credentialsRevoked > 0)
+        {
             await _dbContext.SaveChangesAsync(cancellationToken);
+            await WriteLifecycleAuditEventAsync(
+                SensorLifecycleEventTypes.SensorRevoked,
+                $"Sensor revoked for {sensor.DisplayName}.",
+                "revokeSensor",
+                sensor,
+                credentialId: null,
+                normalizedRequestedBy,
+                reasonProvided,
+                revokedAtUtc,
+                credentialsRevoked,
+                cancellationToken);
+        }
 
         if (transaction is not null)
             await transaction.CommitAsync(cancellationToken);
@@ -170,6 +212,55 @@ public sealed class SensorCredentialLifecycleService : ISensorCredentialLifecycl
             ? await _dbContext.Database.BeginTransactionAsync(cancellationToken)
             : null;
 
+    private Task WriteLifecycleAuditEventAsync(
+        string externalEventType,
+        string description,
+        string action,
+        Sensor sensor,
+        Guid? credentialId,
+        string requestedBy,
+        bool reasonProvided,
+        DateTime occurredAtUtc,
+        int? revokedCredentialCount,
+        CancellationToken cancellationToken)
+    {
+        object additionalData = credentialId is null
+            ? new
+            {
+                sensorId = sensor.SensorId,
+                sensor.DisplayName,
+                sourceSystem = sensor.SourceSystem,
+                lifecycleSourceSystem = SecuritySourceSystems.SensorLifecycle,
+                requestedBy,
+                action,
+                reasonProvided,
+                revokedCredentialCount
+            }
+            : new
+            {
+                sensorId = sensor.SensorId,
+                credentialId,
+                sensor.DisplayName,
+                sourceSystem = sensor.SourceSystem,
+                lifecycleSourceSystem = SecuritySourceSystems.SensorLifecycle,
+                requestedBy,
+                action,
+                reasonProvided
+            };
+
+        return _eventWriter.WriteAsync(new SecurityEventWriteRequest
+        {
+            OccurredAtUtc = occurredAtUtc,
+            EventType = SecurityEventType.ExternalEvent,
+            Severity = EventSeverity.Info,
+            UserName = requestedBy,
+            SourceSystem = SecuritySourceSystems.SensorLifecycle,
+            ExternalEventType = externalEventType,
+            Description = description,
+            AdditionalData = additionalData
+        }, cancellationToken);
+    }
+
     private static string NormalizeRequestedBy(string requestedBy)
     {
         var normalized = requestedBy?.Trim() ?? string.Empty;
@@ -177,6 +268,8 @@ public sealed class SensorCredentialLifecycleService : ISensorCredentialLifecycl
             throw new SensorCredentialLifecycleException($"RequestedBy must contain 1 to {RequestedByMaxLength} printable characters.");
         return normalized;
     }
+
+    private static bool IsReasonProvided(string? reason) => !string.IsNullOrWhiteSpace(reason);
 }
 
 public sealed class SensorCredentialLifecycleException : Exception
