@@ -1,3 +1,4 @@
+using ConShield.Application;
 using ConShield.Contracts.Constants;
 using ConShield.Data;
 using ConShield.Web.ViewModels;
@@ -11,11 +12,16 @@ namespace ConShield.Web.Controllers;
 public sealed class SensorsController : Controller
 {
     private const int MaxSensors = 500;
+    private const string RotationReason = "AdminIB UI credential rotation";
     private readonly ApplicationDbContext _dbContext;
+    private readonly ISensorCredentialLifecycleService _credentialLifecycleService;
 
-    public SensorsController(ApplicationDbContext dbContext)
+    public SensorsController(
+        ApplicationDbContext dbContext,
+        ISensorCredentialLifecycleService credentialLifecycleService)
     {
         _dbContext = dbContext;
+        _credentialLifecycleService = credentialLifecycleService;
     }
 
     [HttpGet]
@@ -72,5 +78,32 @@ public sealed class SensorsController : Controller
         };
 
         return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RotateCredential(Guid sensorId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var requestedBy = User.Identity?.Name ?? "unknown";
+            var result = await _credentialLifecycleService.RotateCredentialAsync(
+                sensorId,
+                requestedBy,
+                RotationReason,
+                cancellationToken);
+
+            return View("RotateCredentialResult", SensorCredentialRotationResultViewModel.From(result));
+        }
+        catch (SensorCredentialLifecycleException)
+        {
+            return View(
+                "RotateCredentialFailed",
+                new SensorCredentialRotationFailureViewModel
+                {
+                    SensorId = sensorId,
+                    Message = "Credential rotation could not be completed. The sensor may be missing or revoked."
+                });
+        }
     }
 }

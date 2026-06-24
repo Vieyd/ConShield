@@ -4,7 +4,7 @@
 
 Describe safe future lifecycle management for enrolled sensor credentials used by ConShield RuntimeCollector/Falco sensor ingestion.
 
-This document is a design plan only. It intentionally does not add rotation or revocation implementation, database migrations, controller actions, UI buttons, API endpoints, or RuntimeCollector behavior changes.
+This document tracks credential lifecycle design and implementation notes. Rotation currently exists through a service-layer workflow and an AdminIB-only UI action; revocation remains a future workflow.
 
 ## Current state
 
@@ -16,9 +16,10 @@ This document is a design plan only. It intentionally does not add rotation or r
   - `X-ConShield-Credential-Id`;
   - `X-ConShield-Api-Key`.
 - Legacy runtime collector fallback is disabled.
-- Read-only Sensor Fleet UI exists.
-- Service-layer credential rotation exists as a foundation for future operator workflows.
-- No UI/API rotation or revocation exists yet.
+- Sensor Fleet UI exists for AdminIB users.
+- Service-layer credential rotation exists and is exposed through an AdminIB-only UI action.
+- The rotation UI displays the new credential exactly once from the POST response and does not store it in URLs, cookies, session, or TempData.
+- No revocation UI/API exists yet.
 
 ## Security goals
 
@@ -72,7 +73,7 @@ Proposed safe operator workflow:
    - SHA-256 verifier;
    - `CreatedAtUtc`.
 4. Plaintext credential is shown exactly once.
-5. Old credential remains active during a bounded overlap window or is marked rotated depending on the chosen implementation.
+5. Old active credentials are marked rotated by the service-layer implementation.
 6. Operator updates Fedora `/etc/conshield/runtime-collector.env` securely.
 7. RuntimeCollector restarts.
 8. Heartbeat verifies the new `CredentialId`.
