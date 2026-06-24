@@ -13,6 +13,8 @@ public sealed class SensorsController : Controller
 {
     private const int MaxSensors = 500;
     private const string RotationReason = "AdminIB UI credential rotation";
+    private const string CredentialRevocationReason = "AdminIB UI credential revocation";
+    private const string SensorRevocationReason = "AdminIB UI sensor revocation";
     private readonly ApplicationDbContext _dbContext;
     private readonly ISensorCredentialLifecycleService _credentialLifecycleService;
 
@@ -80,6 +82,56 @@ public sealed class SensorsController : Controller
         return View(model);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Details(Guid sensorId, CancellationToken cancellationToken)
+    {
+        var nowUtc = DateTime.UtcNow;
+        var sensor = await _dbContext.Sensors
+            .AsNoTracking()
+            .Where(x => x.SensorId == sensorId)
+            .Select(x => new
+            {
+                x.SensorId,
+                x.DisplayName,
+                x.SourceSystem,
+                x.LastSeenAtUtc,
+                x.CreatedAtUtc,
+                x.UpdatedAtUtc,
+                x.RevokedAtUtc,
+                HasCertificateFingerprint = x.CertificateFingerprintSha256 != null && x.CertificateFingerprintSha256 != string.Empty,
+                Credentials = x.Credentials
+                    .OrderByDescending(credential => credential.CreatedAtUtc)
+                    .Select(credential => new
+                    {
+                        credential.CredentialId,
+                        credential.CreatedAtUtc,
+                        credential.RotatedAtUtc,
+                        credential.RevokedAtUtc
+                    })
+                    .ToArray()
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (sensor is null)
+            return NotFound();
+
+        return View(SensorDetailsViewModel.Create(
+            sensor.SensorId,
+            sensor.DisplayName,
+            sensor.SourceSystem,
+            sensor.LastSeenAtUtc,
+            sensor.CreatedAtUtc,
+            sensor.UpdatedAtUtc,
+            sensor.RevokedAtUtc,
+            sensor.HasCertificateFingerprint,
+            sensor.Credentials.Select(credential => SensorCredentialDetailsViewModel.Create(
+                credential.CredentialId,
+                credential.CreatedAtUtc,
+                credential.RotatedAtUtc,
+                credential.RevokedAtUtc)),
+            nowUtc));
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RotateCredential(Guid sensorId, CancellationToken cancellationToken)
@@ -103,6 +155,69 @@ public sealed class SensorsController : Controller
                 {
                     SensorId = sensorId,
                     Message = "Credential rotation could not be completed. The sensor may be missing or revoked."
+                });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RevokeCredential(
+        Guid sensorId,
+        Guid credentialId,
+        string? reason,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var requestedBy = User.Identity?.Name ?? "unknown";
+            var result = await _credentialLifecycleService.RevokeCredentialAsync(
+                sensorId,
+                credentialId,
+                requestedBy,
+                string.IsNullOrWhiteSpace(reason) ? CredentialRevocationReason : reason,
+                cancellationToken);
+
+            return View("RevocationResult", SensorRevocationUiResultViewModel.FromCredential(result));
+        }
+        catch (SensorCredentialLifecycleException)
+        {
+            return View(
+                "RevocationFailed",
+                new SensorRevocationFailureViewModel
+                {
+                    SensorId = sensorId,
+                    CredentialId = credentialId,
+                    Message = "Credential revocation could not be completed. The sensor or credential may be missing."
+                });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RevokeSensor(
+        Guid sensorId,
+        string? reason,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var requestedBy = User.Identity?.Name ?? "unknown";
+            var result = await _credentialLifecycleService.RevokeSensorAsync(
+                sensorId,
+                requestedBy,
+                string.IsNullOrWhiteSpace(reason) ? SensorRevocationReason : reason,
+                cancellationToken);
+
+            return View("RevocationResult", SensorRevocationUiResultViewModel.FromSensor(result));
+        }
+        catch (SensorCredentialLifecycleException)
+        {
+            return View(
+                "RevocationFailed",
+                new SensorRevocationFailureViewModel
+                {
+                    SensorId = sensorId,
+                    Message = "Sensor revocation could not be completed. The sensor may be missing."
                 });
         }
     }

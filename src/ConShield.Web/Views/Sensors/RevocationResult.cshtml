@@ -1,0 +1,49 @@
+@model SensorRevocationUiResultViewModel
+
+@{
+    ViewData["Title"] = "Revocation completed";
+}
+
+<h1>Revocation completed</h1>
+
+<div class="alert alert-warning">
+    Revocation changes authentication behavior immediately. Fedora RuntimeCollector configuration
+    was not changed automatically.
+</div>
+
+<dl class="row">
+    <dt class="col-sm-3">Action</dt>
+    <dd class="col-sm-9">@Model.Action</dd>
+
+    <dt class="col-sm-3">Sensor display name</dt>
+    <dd class="col-sm-9">@Model.DisplayName</dd>
+
+    <dt class="col-sm-3">Sensor ID</dt>
+    <dd class="col-sm-9"><code>@Model.SensorId</code></dd>
+
+    <dt class="col-sm-3">Source system</dt>
+    <dd class="col-sm-9"><code>@Model.SourceSystem</code></dd>
+
+    @if (Model.CredentialId is not null)
+    {
+        <dt class="col-sm-3">Credential ID</dt>
+        <dd class="col-sm-9"><code>@Model.CredentialId</code></dd>
+    }
+
+    @if (Model.RevokedCredentialCount is not null)
+    {
+        <dt class="col-sm-3">Revoked credentials</dt>
+        <dd class="col-sm-9">@Model.RevokedCredentialCount</dd>
+    }
+
+    <dt class="col-sm-3">Revoked UTC</dt>
+    <dd class="col-sm-9">@Model.RevokedAtUtc.ToString("u")</dd>
+
+    <dt class="col-sm-3">Already revoked</dt>
+    <dd class="col-sm-9">@(Model.WasAlreadyRevoked ? "yes" : "no")</dd>
+</dl>
+
+<a asp-controller="Sensors" asp-action="Details" asp-route-sensorId="@Model.SensorId" class="btn btn-primary">
+    Back to sensor details
+</a>
+<a asp-controller="Sensors" asp-action="Index" class="btn btn-outline-secondary">Back to Sensors</a>

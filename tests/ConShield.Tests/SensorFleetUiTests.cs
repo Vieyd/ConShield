@@ -47,6 +47,27 @@ public sealed class SensorFleetUiTests
     }
 
     [Fact]
+    public void RevokeUi_UsesPostAndAntiForgery()
+    {
+        var revokeCredential = typeof(SensorsController).GetMethod(
+            nameof(SensorsController.RevokeCredential),
+            [typeof(Guid), typeof(Guid), typeof(string), typeof(CancellationToken)]);
+        var revokeSensor = typeof(SensorsController).GetMethod(
+            nameof(SensorsController.RevokeSensor),
+            [typeof(Guid), typeof(string), typeof(CancellationToken)]);
+
+        Assert.NotNull(revokeCredential);
+        Assert.NotNull(revokeCredential.GetCustomAttribute<HttpPostAttribute>());
+        Assert.NotNull(revokeCredential.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
+        Assert.Null(revokeCredential.GetCustomAttribute<AllowAnonymousAttribute>());
+
+        Assert.NotNull(revokeSensor);
+        Assert.NotNull(revokeSensor.GetCustomAttribute<HttpPostAttribute>());
+        Assert.NotNull(revokeSensor.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
+        Assert.Null(revokeSensor.GetCustomAttribute<AllowAnonymousAttribute>());
+    }
+
+    [Fact]
     public async Task Index_ProjectsSensorMetadataAndCredentialCountsWithoutVerifier()
     {
         await using var db = CreateDbContext();
@@ -92,6 +113,23 @@ public sealed class SensorFleetUiTests
     }
 
     [Fact]
+    public async Task AdminIB_CanOpenSensorDetails()
+    {
+        await using var db = CreateDbContext();
+        var nowUtc = DateTime.UtcNow;
+        var sensorId = Guid.NewGuid();
+        await SeedSensorAsync(db, sensorId, nowUtc);
+
+        var result = await CreateController(db).Details(sensorId, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<SensorDetailsViewModel>(view.Model);
+        Assert.Equal(sensorId, model.SensorId);
+        Assert.Equal("fedora-runtime-01", model.DisplayName);
+        Assert.Equal(2, model.Credentials.Count);
+    }
+
+    [Fact]
     public void Operator_CannotSeeOrPostRotateCredential()
     {
         var controllerAuthorize = typeof(SensorsController).GetCustomAttribute<AuthorizeAttribute>();
@@ -104,6 +142,31 @@ public sealed class SensorFleetUiTests
         Assert.DoesNotContain(AppRoles.Operator, controllerAuthorize.Roles, StringComparison.Ordinal);
         Assert.NotNull(method);
         Assert.Null(method.GetCustomAttribute<AllowAnonymousAttribute>());
+    }
+
+    [Fact]
+    public void Operator_CannotOpenSensorDetailsOrPostRevocation()
+    {
+        var controllerAuthorize = typeof(SensorsController).GetCustomAttribute<AuthorizeAttribute>();
+        var details = typeof(SensorsController).GetMethod(
+            nameof(SensorsController.Details),
+            [typeof(Guid), typeof(CancellationToken)]);
+        var revokeCredential = typeof(SensorsController).GetMethod(
+            nameof(SensorsController.RevokeCredential),
+            [typeof(Guid), typeof(Guid), typeof(string), typeof(CancellationToken)]);
+        var revokeSensor = typeof(SensorsController).GetMethod(
+            nameof(SensorsController.RevokeSensor),
+            [typeof(Guid), typeof(string), typeof(CancellationToken)]);
+
+        Assert.NotNull(controllerAuthorize);
+        Assert.Equal(AppRoles.AdminIB, controllerAuthorize.Roles);
+        Assert.DoesNotContain(AppRoles.Operator, controllerAuthorize.Roles, StringComparison.Ordinal);
+        Assert.NotNull(details);
+        Assert.NotNull(revokeCredential);
+        Assert.NotNull(revokeSensor);
+        Assert.Null(details.GetCustomAttribute<AllowAnonymousAttribute>());
+        Assert.Null(revokeCredential.GetCustomAttribute<AllowAnonymousAttribute>());
+        Assert.Null(revokeSensor.GetCustomAttribute<AllowAnonymousAttribute>());
     }
 
     [Fact]
@@ -134,6 +197,47 @@ public sealed class SensorFleetUiTests
 
         var response = await client.PostAsync(
             "/Sensors/RotateCredential",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["sensorId"] = Guid.NewGuid().ToString("D")
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/Account/Login", response.Headers.Location?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Unauthenticated_PostRevokeCredential_RedirectsToLogin()
+    {
+        await using var factory = CreateUnauthenticatedFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.PostAsync(
+            "/Sensors/RevokeCredential",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["sensorId"] = Guid.NewGuid().ToString("D"),
+                ["credentialId"] = Guid.NewGuid().ToString("D")
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/Account/Login", response.Headers.Location?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Unauthenticated_PostRevokeSensor_RedirectsToLogin()
+    {
+        await using var factory = CreateUnauthenticatedFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.PostAsync(
+            "/Sensors/RevokeSensor",
             new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["sensorId"] = Guid.NewGuid().ToString("D")
@@ -178,6 +282,120 @@ public sealed class SensorFleetUiTests
         Assert.Contains("CONSHIELD_SENSOR_ID", resultView, StringComparison.Ordinal);
         Assert.Contains("CONSHIELD_SENSOR_CREDENTIAL_ID", resultView, StringComparison.Ordinal);
         Assert.Contains("CONSHIELD_RUNTIME_COLLECTOR_API_KEY", resultView, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SensorDetails_DoesNotRenderVerifierOrPlaintext()
+    {
+        var detailsView = ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "Details.cshtml");
+        var resultView = ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "RevocationResult.cshtml");
+        var failureView = ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "RevocationFailed.cshtml");
+        var combined = string.Concat(detailsView, resultView, failureView);
+
+        Assert.DoesNotContain("VerifierSha256", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Verifier", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("OneTimeCredential", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("CONSHIELD_RUNTIME_COLLECTOR_API_KEY", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("API key", combined, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SensorDetails_ShowsCredentialPublicIdsAndStatuses()
+    {
+        await using var db = CreateDbContext();
+        var nowUtc = DateTime.UtcNow;
+        var sensorId = Guid.NewGuid();
+        await SeedSensorAsync(db, sensorId, nowUtc);
+        var credentialIds = await db.SensorCredentials
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .Select(x => x.CredentialId)
+            .ToArrayAsync();
+
+        var result = await CreateController(db).Details(sensorId, CancellationToken.None);
+        var model = Assert.IsType<SensorDetailsViewModel>(Assert.IsType<ViewResult>(result).Model);
+
+        Assert.Equal(credentialIds, model.Credentials.Select(x => x.CredentialId));
+        Assert.Contains(model.Credentials, credential => credential.Status == "Active");
+        Assert.Contains(model.Credentials, credential => credential.Status == "Revoked");
+        Assert.All(model.Credentials, credential => Assert.True(credential.CredentialId != Guid.Empty));
+    }
+
+    [Fact]
+    public async Task RevokeCredential_Post_RevokesCredentialAndRedirectsOrShowsSuccess()
+    {
+        await using var db = CreateDbContext();
+        var nowUtc = DateTime.UtcNow;
+        var sensorId = Guid.NewGuid();
+        await SeedSensorAsync(db, sensorId, nowUtc);
+        var credentialId = await db.SensorCredentials
+            .Where(x => x.RevokedAtUtc == null)
+            .Select(x => x.CredentialId)
+            .SingleAsync();
+        var controller = CreateAuthenticatedController(db);
+
+        var result = await controller.RevokeCredential(sensorId, credentialId, reason: null, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.Equal("RevocationResult", view.ViewName);
+        var model = Assert.IsType<SensorRevocationUiResultViewModel>(view.Model);
+        Assert.Equal(sensorId, model.SensorId);
+        Assert.Equal(credentialId, model.CredentialId);
+        Assert.NotNull((await db.SensorCredentials.SingleAsync(x => x.CredentialId == credentialId)).RevokedAtUtc);
+    }
+
+    [Fact]
+    public async Task RevokeCredential_ButtonHiddenForRevokedCredential()
+    {
+        await using var db = CreateDbContext();
+        var nowUtc = DateTime.UtcNow;
+        var sensorId = Guid.NewGuid();
+        await SeedSensorAsync(db, sensorId, nowUtc);
+
+        var result = await CreateController(db).Details(sensorId, CancellationToken.None);
+        var model = Assert.IsType<SensorDetailsViewModel>(Assert.IsType<ViewResult>(result).Model);
+        var revoked = Assert.Single(model.Credentials, credential => credential.RevokedAtUtc is not null);
+        var detailsView = ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "Details.cshtml");
+
+        Assert.False(revoked.CanRevokeCredential);
+        Assert.Contains("credential.CanRevokeCredential", detailsView, StringComparison.Ordinal);
+        Assert.Contains("Отозвать credential", detailsView, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RevokeSensor_Post_RevokesSensorAndAllCredentials()
+    {
+        await using var db = CreateDbContext();
+        var nowUtc = DateTime.UtcNow;
+        var sensorId = Guid.NewGuid();
+        await SeedSensorAsync(db, sensorId, nowUtc);
+        var controller = CreateAuthenticatedController(db);
+
+        var result = await controller.RevokeSensor(sensorId, reason: null, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.Equal("RevocationResult", view.ViewName);
+        var model = Assert.IsType<SensorRevocationUiResultViewModel>(view.Model);
+        Assert.Equal(sensorId, model.SensorId);
+        Assert.NotNull((await db.Sensors.SingleAsync()).RevokedAtUtc);
+        Assert.All(await db.SensorCredentials.ToArrayAsync(), credential => Assert.NotNull(credential.RevokedAtUtc));
+    }
+
+    [Fact]
+    public async Task RevokeSensor_ButtonHiddenForRevokedSensor()
+    {
+        await using var db = CreateDbContext();
+        var nowUtc = DateTime.UtcNow;
+        var sensorId = Guid.NewGuid();
+        await SeedSensorAsync(db, sensorId, nowUtc, sensorRevokedAtUtc: nowUtc);
+
+        var result = await CreateController(db).Details(sensorId, CancellationToken.None);
+        var model = Assert.IsType<SensorDetailsViewModel>(Assert.IsType<ViewResult>(result).Model);
+        var indexView = ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "Index.cshtml");
+        var detailsView = ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "Details.cshtml");
+
+        Assert.False(model.CanRevokeSensor);
+        Assert.Contains("sensor.CanRevokeSensor", indexView, StringComparison.Ordinal);
+        Assert.Contains("Model.CanRevokeSensor", detailsView, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -255,8 +473,8 @@ public sealed class SensorFleetUiTests
 
         Assert.Equal("Revoked", sensor.Status);
         Assert.False(sensor.CanRotateCredential);
-        Assert.DoesNotContain("Revoke credential", viewText, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Revoke sensor", viewText, StringComparison.OrdinalIgnoreCase);
+        Assert.False(sensor.CanRevokeSensor);
+        Assert.Contains("sensor.CanRevokeSensor", viewText, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -298,6 +516,26 @@ public sealed class SensorFleetUiTests
         };
         return controller;
     }
+
+    private static WebApplicationFactory<Program> CreateUnauthenticatedFactory() =>
+        new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Production");
+                builder.ConfigureAppConfiguration((_, configuration) =>
+                {
+                    configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["ConnectionStrings:DefaultConnection"] = "Host=localhost;Database=unused;Username=unused;Password=unused",
+                        ["ExternalEventIngestion:Enabled"] = "false",
+                        ["SecurityEventOutbox:Enabled"] = "false",
+                        ["DeadLetterReplay:Enabled"] = "false",
+                        ["MongoProjection:Enabled"] = "false",
+                        ["RabbitMq:Enabled"] = "false"
+                    });
+                });
+                builder.ConfigureServices(services => services.RemoveAll<IHostedService>());
+            });
 
     private static async Task SeedSensorAsync(
         ApplicationDbContext db,
