@@ -29,6 +29,7 @@ public sealed class SensorIdentityService : ISensorIdentityService
             .AsNoTracking()
             .Where(x => x.CredentialId == credentialId
                 && x.RevokedAtUtc == null
+                && x.RotatedAtUtc == null
                 && x.Sensor.SensorId == sensorId
                 && x.Sensor.RevokedAtUtc == null)
             .Select(x => new
@@ -73,7 +74,8 @@ public sealed class SensorIdentityService : ISensorIdentityService
                 && x.RevokedAtUtc == null
                 && x.Credentials.Any(c => c.Id == identity.CredentialRecordId
                     && c.CredentialId == identity.CredentialId
-                    && c.RevokedAtUtc == null))
+                    && c.RevokedAtUtc == null
+                    && c.RotatedAtUtc == null))
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(x => x.LastSeenAtUtc, now)
                 .SetProperty(x => x.UpdatedAtUtc, now), cancellationToken);
