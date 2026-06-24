@@ -65,6 +65,23 @@ Operator actions:
 6. Create an incident from a relevant security event or alert when needed.
 7. Document the operator conclusion.
 
+## Local synthetic demo scenarios
+
+For a safe local walkthrough, an operator/developer can seed marked synthetic records with `tools/ConShield.DemoScenario`. This is not a production remediation or sensor operation path; it does not touch Fedora services and does not publish RabbitMQ messages.
+
+```powershell
+$env:CONSHIELD_DEMO_CONNECTION_STRING = "Host=127.0.0.1;Port=5432;Database=conshield;Username=conshield;Password=<local-dev-password>"
+dotnet run --project tools/ConShield.DemoScenario -- --scenario lifecycle-alerts --yes
+dotnet run --project tools/ConShield.DemoScenario -- --scenario outbox-backlog --yes
+```
+
+Before cleanup, preview the marked rows and then reset only demo data:
+
+```powershell
+dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --dry-run
+dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --yes
+```
+
 ## Safe handling rules
 
 - Never paste generated credentials into GitHub, chat, screenshots, or logs.

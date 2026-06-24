@@ -37,6 +37,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConShield.RuntimeCollector"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConShield.SensorProvisioning", "src\ConShield.SensorProvisioning\ConShield.SensorProvisioning.csproj", "{A755DDC8-ED0E-44A3-B2E4-1696E143B7C9}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{07C2787E-EAC7-C090-1BA3-A61EC2A24D84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConShield.DemoScenario", "tools\ConShield.DemoScenario\ConShield.DemoScenario.csproj", "{3B179617-8FAE-4B29-8D22-847D01FF6F45}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -227,6 +231,18 @@ Global
 		{A755DDC8-ED0E-44A3-B2E4-1696E143B7C9}.Release|x64.Build.0 = Release|Any CPU
 		{A755DDC8-ED0E-44A3-B2E4-1696E143B7C9}.Release|x86.ActiveCfg = Release|Any CPU
 		{A755DDC8-ED0E-44A3-B2E4-1696E143B7C9}.Release|x86.Build.0 = Release|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Debug|x64.Build.0 = Debug|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Debug|x86.Build.0 = Debug|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Release|x64.ActiveCfg = Release|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Release|x64.Build.0 = Release|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Release|x86.ActiveCfg = Release|Any CPU
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -242,6 +258,7 @@ Global
 		{D25A4A34-2E87-4EA9-B957-4AAD288EC4B0} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{55CA3AFD-D5AE-4A10-BB05-AA39BBDC80F9} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{A755DDC8-ED0E-44A3-B2E4-1696E143B7C9} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{3B179617-8FAE-4B29-8D22-847D01FF6F45} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {440459BC-C47C-415E-A21C-B12E5B9F3A91}
