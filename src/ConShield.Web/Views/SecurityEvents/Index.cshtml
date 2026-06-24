@@ -14,6 +14,28 @@
     }
 </div>
 
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a class="btn btn-sm btn-outline-info"
+       asp-controller="SecurityEvents"
+       asp-action="Index"
+       asp-route-SourceSystem="@SecuritySourceSystems.SensorLifecycle">Lifecycle сенсоров</a>
+    <a class="btn btn-sm btn-outline-info"
+       asp-controller="SecurityEvents"
+       asp-action="Index"
+       asp-route-SourceSystem="@SecuritySourceSystems.SensorLifecycle"
+       asp-route-ExternalEventType="@SensorLifecycleEventTypes.SensorCredentialRotated">Ротации</a>
+    <a class="btn btn-sm btn-outline-info"
+       asp-controller="SecurityEvents"
+       asp-action="Index"
+       asp-route-SourceSystem="@SecuritySourceSystems.SensorLifecycle"
+       asp-route-ExternalEventType="@SensorLifecycleEventTypes.SensorCredentialRevoked">Отзыв credentials</a>
+    <a class="btn btn-sm btn-outline-info"
+       asp-controller="SecurityEvents"
+       asp-action="Index"
+       asp-route-SourceSystem="@SecuritySourceSystems.SensorLifecycle"
+       asp-route-ExternalEventType="@SensorLifecycleEventTypes.SensorRevoked">Отзыв сенсоров</a>
+</div>
+
 <form method="get" class="row g-2 mb-4">
     <div class="col-md-3">
         <input name="UserName" value="@Model.Filter.UserName" class="form-control" placeholder="Пользователь" />
@@ -51,7 +73,13 @@
         </select>
     </div>
     <div class="col-md-3">
-        <input name="SearchText" value="@Model.Filter.SearchText" class="form-control" placeholder="Описание / IP / JSON" />
+        <input name="SearchText" value="@Model.Filter.SearchText" class="form-control" placeholder="Описание / IP / JSON / источник" />
+    </div>
+    <div class="col-md-4">
+        <input name="SourceSystem" value="@Model.Filter.SourceSystem" class="form-control" placeholder="Источник" />
+    </div>
+    <div class="col-md-4">
+        <input name="ExternalEventType" value="@Model.Filter.ExternalEventType" class="form-control" placeholder="Внешний тип" />
     </div>
     <div class="col-md-2 d-grid">
         <button type="submit" class="btn btn-outline-light">Применить</button>
@@ -64,6 +92,8 @@
         <th>ID</th>
         <th>Время (GMT+3)</th>
         <th>Тип</th>
+        <th>Источник</th>
+        <th>Внешний тип</th>
         <th>Критичность</th>
         <th>Пользователь</th>
         <th>IP</th>
@@ -82,6 +112,8 @@
             <td>@item.Id</td>
             <td>@item.OccurredAtUtc.ToMoscowDisplay()</td>
             <td>@item.EventType</td>
+            <td><code>@item.SourceSystem</code></td>
+            <td><code>@item.ExternalEventType</code></td>
             <td>
                 @switch (item.Severity)
                 {

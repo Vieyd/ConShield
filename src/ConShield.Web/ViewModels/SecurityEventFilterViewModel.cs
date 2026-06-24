@@ -8,4 +8,6 @@ public class SecurityEventFilterViewModel
     public EventSeverity? Severity { get; set; }
     public SecurityEventType? EventType { get; set; }
     public string? SearchText { get; set; }
+    public string? SourceSystem { get; set; }
+    public string? ExternalEventType { get; set; }
 }

@@ -11,7 +11,9 @@ public static class QueryFilters
         string? userName,
         EventSeverity? severity,
         SecurityEventType? eventType,
-        string? searchText)
+        string? searchText,
+        string? sourceSystem = null,
+        string? externalEventType = null)
     {
         if (!string.IsNullOrWhiteSpace(userName))
         {
@@ -29,13 +31,27 @@ public static class QueryFilters
             query = query.Where(x => x.EventType == eventType.Value);
         }
 
+        if (!string.IsNullOrWhiteSpace(sourceSystem))
+        {
+            var normalizedSourceSystem = sourceSystem.Trim().ToLower();
+            query = query.Where(x => x.SourceSystem != null && x.SourceSystem.ToLower() == normalizedSourceSystem);
+        }
+
+        if (!string.IsNullOrWhiteSpace(externalEventType))
+        {
+            var normalizedExternalEventType = externalEventType.Trim().ToLower();
+            query = query.Where(x => x.ExternalEventType != null && x.ExternalEventType.ToLower() == normalizedExternalEventType);
+        }
+
         if (!string.IsNullOrWhiteSpace(searchText))
         {
             var pattern = ToContainsPattern(searchText);
             query = query.Where(x =>
                 EF.Functions.ILike(x.Description, pattern) ||
                 (x.AdditionalDataJson != null && EF.Functions.ILike(x.AdditionalDataJson, pattern)) ||
-                (x.SourceIp != null && EF.Functions.ILike(x.SourceIp, pattern)));
+                (x.SourceIp != null && EF.Functions.ILike(x.SourceIp, pattern)) ||
+                (x.SourceSystem != null && EF.Functions.ILike(x.SourceSystem, pattern)) ||
+                (x.ExternalEventType != null && EF.Functions.ILike(x.ExternalEventType, pattern)));
         }
 
         return query;

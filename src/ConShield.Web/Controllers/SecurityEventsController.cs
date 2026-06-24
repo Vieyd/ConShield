@@ -20,7 +20,13 @@ public class SecurityEventsController : Controller
     public async Task<IActionResult> Index([FromQuery] SecurityEventFilterViewModel filter, CancellationToken cancellationToken)
     {
         var query = _dbContext.SecurityEvents
-            .ApplySecurityEventFilters(filter.UserName, filter.Severity, filter.EventType, filter.SearchText);
+            .ApplySecurityEventFilters(
+                filter.UserName,
+                filter.Severity,
+                filter.EventType,
+                filter.SearchText,
+                filter.SourceSystem,
+                filter.ExternalEventType);
 
         var events = await query
             .OrderByDescending(x => x.OccurredAtUtc)
@@ -49,6 +55,8 @@ public class SecurityEventsController : Controller
                 x.Severity,
                 x.UserName,
                 x.SourceIp,
+                x.SourceSystem,
+                x.ExternalEventType,
                 x.Description,
                 x.AdditionalDataJson
             })
