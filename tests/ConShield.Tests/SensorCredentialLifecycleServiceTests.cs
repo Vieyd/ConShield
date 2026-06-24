@@ -81,10 +81,139 @@ public sealed class SensorCredentialLifecycleServiceTests
         Assert.Empty(await db.SensorCredentials.ToListAsync());
     }
 
-    private static async Task<Guid> SeedSensorAsync(ApplicationDbContext db, DateTime? sensorRevokedAtUtc = null)
+    [Fact]
+    public async Task RevokeCredential_MarksCredentialRevoked()
+    {
+        await using var db = CreateDbContext();
+        var sensorId = await SeedSensorAsync(db);
+        var credentialId = await db.SensorCredentials.Select(x => x.CredentialId).SingleAsync();
+        var service = new SensorCredentialLifecycleService(db);
+        var before = DateTime.UtcNow;
+
+        var result = await service.RevokeCredentialAsync(sensorId, credentialId, "adminib", "compromised");
+
+        var credential = await db.SensorCredentials.SingleAsync();
+        Assert.Equal(sensorId, result.SensorId);
+        Assert.Equal(credentialId, result.CredentialId);
+        Assert.False(result.WasAlreadyRevoked);
+        Assert.NotNull(credential.RevokedAtUtc);
+        Assert.True(credential.RevokedAtUtc >= before);
+        Assert.True((await db.Sensors.SingleAsync()).UpdatedAtUtc >= result.RevokedAtUtc);
+    }
+
+    [Fact]
+    public async Task RevokeCredential_DoesNotDeleteCredential()
+    {
+        await using var db = CreateDbContext();
+        var sensorId = await SeedSensorAsync(db);
+        var credentialId = await db.SensorCredentials.Select(x => x.CredentialId).SingleAsync();
+        var service = new SensorCredentialLifecycleService(db);
+
+        await service.RevokeCredentialAsync(sensorId, credentialId, "adminib", reason: null);
+        var second = await service.RevokeCredentialAsync(sensorId, credentialId, "adminib", reason: null);
+
+        Assert.True(second.WasAlreadyRevoked);
+        Assert.Equal(1, await db.SensorCredentials.CountAsync());
+        Assert.NotNull((await db.SensorCredentials.SingleAsync()).RevokedAtUtc);
+    }
+
+    [Fact]
+    public async Task RevokeCredential_UnknownSensorFails()
+    {
+        await using var db = CreateDbContext();
+        var service = new SensorCredentialLifecycleService(db);
+
+        await Assert.ThrowsAsync<SensorCredentialLifecycleException>(() =>
+            service.RevokeCredentialAsync(Guid.NewGuid(), Guid.NewGuid(), "adminib", reason: null));
+    }
+
+    [Fact]
+    public async Task RevokeCredential_UnknownCredentialFails()
+    {
+        await using var db = CreateDbContext();
+        var sensorId = await SeedSensorAsync(db);
+        var service = new SensorCredentialLifecycleService(db);
+
+        await Assert.ThrowsAsync<SensorCredentialLifecycleException>(() =>
+            service.RevokeCredentialAsync(sensorId, Guid.NewGuid(), "adminib", reason: null));
+
+        Assert.Null((await db.SensorCredentials.SingleAsync()).RevokedAtUtc);
+    }
+
+    [Fact]
+    public async Task RevokeSensor_MarksSensorRevoked()
+    {
+        await using var db = CreateDbContext();
+        var sensorId = await SeedSensorAsync(db);
+        var service = new SensorCredentialLifecycleService(db);
+        var before = DateTime.UtcNow;
+
+        var result = await service.RevokeSensorAsync(sensorId, "adminib", "retired");
+
+        var sensor = await db.Sensors.SingleAsync();
+        Assert.Equal(sensorId, result.SensorId);
+        Assert.False(result.WasAlreadyRevoked);
+        Assert.NotNull(sensor.RevokedAtUtc);
+        Assert.True(sensor.RevokedAtUtc >= before);
+        Assert.True(sensor.UpdatedAtUtc >= result.RevokedAtUtc);
+    }
+
+    [Fact]
+    public async Task RevokeSensor_MarksAllCredentialsRevoked()
+    {
+        await using var db = CreateDbContext();
+        var sensorId = await SeedSensorAsync(db, credentialCount: 2);
+        var service = new SensorCredentialLifecycleService(db);
+
+        var result = await service.RevokeSensorAsync(sensorId, "adminib", reason: null);
+        var second = await service.RevokeSensorAsync(sensorId, "adminib", reason: null);
+
+        Assert.Equal(2, result.RevokedCredentialCount);
+        Assert.True(second.WasAlreadyRevoked);
+        Assert.Equal(0, second.RevokedCredentialCount);
+        Assert.Equal(2, await db.SensorCredentials.CountAsync());
+        Assert.All(await db.SensorCredentials.ToArrayAsync(), credential => Assert.NotNull(credential.RevokedAtUtc));
+    }
+
+    [Fact]
+    public async Task RevokeSensor_UnknownSensorFails()
+    {
+        await using var db = CreateDbContext();
+        var service = new SensorCredentialLifecycleService(db);
+
+        await Assert.ThrowsAsync<SensorCredentialLifecycleException>(() =>
+            service.RevokeSensorAsync(Guid.NewGuid(), "adminib", reason: null));
+    }
+
+    [Fact]
+    public void RevocationResultModels_DoNotExposeVerifierOrPlaintextCredential()
+    {
+        Assert.DoesNotContain(
+            typeof(ConShield.Application.Models.SensorCredentialRevocationResult).GetProperties(),
+            property => property.Name.Contains("Verifier", StringComparison.OrdinalIgnoreCase)
+                || property.Name.Equals("Credential", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            typeof(ConShield.Application.Models.SensorRevocationResult).GetProperties(),
+            property => property.Name.Contains("Verifier", StringComparison.OrdinalIgnoreCase)
+                || property.Name.Equals("Credential", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static async Task<Guid> SeedSensorAsync(
+        ApplicationDbContext db,
+        DateTime? sensorRevokedAtUtc = null,
+        int credentialCount = 1)
     {
         var now = DateTime.UtcNow;
         var sensorId = Guid.NewGuid();
+        var credentials = Enumerable.Range(0, credentialCount)
+            .Select(index => new SensorCredential
+            {
+                CredentialId = Guid.NewGuid(),
+                CreatedAtUtc = now.AddMinutes(-10 - index),
+                VerifierSha256 = SHA256.HashData(Encoding.UTF8.GetBytes($"{OriginalCredential}-{index}"))
+            })
+            .ToList();
+
         db.Sensors.Add(new Sensor
         {
             SensorId = sensorId,
@@ -93,15 +222,7 @@ public sealed class SensorCredentialLifecycleServiceTests
             RevokedAtUtc = sensorRevokedAtUtc,
             CreatedAtUtc = now.AddMinutes(-10),
             UpdatedAtUtc = now.AddMinutes(-10),
-            Credentials =
-            [
-                new SensorCredential
-                {
-                    CredentialId = Guid.NewGuid(),
-                    CreatedAtUtc = now.AddMinutes(-10),
-                    VerifierSha256 = SHA256.HashData(Encoding.UTF8.GetBytes(OriginalCredential))
-                }
-            ]
+            Credentials = credentials
         });
         await db.SaveChangesAsync();
         return sensorId;

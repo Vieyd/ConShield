@@ -4,7 +4,7 @@
 
 Describe safe future lifecycle management for enrolled sensor credentials used by ConShield RuntimeCollector/Falco sensor ingestion.
 
-This document tracks credential lifecycle design and implementation notes. Rotation currently exists through a service-layer workflow and an AdminIB-only UI action; revocation remains a future workflow.
+This document tracks credential lifecycle design and implementation notes. Rotation currently exists through a service-layer workflow and an AdminIB-only UI action. Credential and sensor revocation exist in the service layer; revocation UI remains a future workflow.
 
 ## Current state
 
@@ -19,6 +19,7 @@ This document tracks credential lifecycle design and implementation notes. Rotat
 - Sensor Fleet UI exists for AdminIB users.
 - Service-layer credential rotation exists and is exposed through an AdminIB-only UI action.
 - The rotation UI displays the new credential exactly once from the POST response and does not store it in URLs, cookies, session, or TempData.
+- Service-layer credential and sensor revocation exists and preserves database rows for audit history.
 - No revocation UI/API exists yet.
 
 ## Security goals
@@ -132,13 +133,14 @@ public interface ISensorCredentialLifecycleService
         string? reason,
         CancellationToken cancellationToken);
 
-    Task RevokeCredentialAsync(
+    Task<SensorCredentialRevocationResult> RevokeCredentialAsync(
+        Guid sensorId,
         Guid credentialId,
         string requestedBy,
         string? reason,
         CancellationToken cancellationToken);
 
-    Task RevokeSensorAsync(
+    Task<SensorRevocationResult> RevokeSensorAsync(
         Guid sensorId,
         string requestedBy,
         string? reason,

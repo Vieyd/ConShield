@@ -66,6 +66,105 @@ public sealed class SensorCredentialLifecycleService : ISensorCredentialLifecycl
             now);
     }
 
+    public async Task<SensorCredentialRevocationResult> RevokeCredentialAsync(
+        Guid sensorId,
+        Guid credentialId,
+        string requestedBy,
+        string? reason,
+        CancellationToken cancellationToken = default)
+    {
+        if (sensorId == Guid.Empty)
+            throw new SensorCredentialLifecycleException("Sensor was not found.");
+        if (credentialId == Guid.Empty)
+            throw new SensorCredentialLifecycleException("Credential was not found.");
+
+        _ = NormalizeRequestedBy(requestedBy);
+        _ = reason?.Trim();
+
+        await using var transaction = await BeginTransactionAsync(cancellationToken);
+        var sensor = await _dbContext.Sensors
+            .Include(x => x.Credentials)
+            .SingleOrDefaultAsync(x => x.SensorId == sensorId, cancellationToken);
+
+        if (sensor is null)
+            throw new SensorCredentialLifecycleException("Sensor was not found.");
+
+        var credential = sensor.Credentials.SingleOrDefault(x => x.CredentialId == credentialId);
+        if (credential is null)
+            throw new SensorCredentialLifecycleException("Credential was not found.");
+
+        var wasAlreadyRevoked = credential.RevokedAtUtc is not null;
+        var revokedAtUtc = credential.RevokedAtUtc ?? DateTime.UtcNow;
+        if (!wasAlreadyRevoked)
+        {
+            credential.RevokedAtUtc = revokedAtUtc;
+            sensor.UpdatedAtUtc = revokedAtUtc;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
+
+        return new SensorCredentialRevocationResult(
+            sensor.SensorId,
+            credential.CredentialId,
+            sensor.DisplayName,
+            sensor.SourceSystem,
+            revokedAtUtc,
+            wasAlreadyRevoked);
+    }
+
+    public async Task<SensorRevocationResult> RevokeSensorAsync(
+        Guid sensorId,
+        string requestedBy,
+        string? reason,
+        CancellationToken cancellationToken = default)
+    {
+        if (sensorId == Guid.Empty)
+            throw new SensorCredentialLifecycleException("Sensor was not found.");
+
+        _ = NormalizeRequestedBy(requestedBy);
+        _ = reason?.Trim();
+
+        await using var transaction = await BeginTransactionAsync(cancellationToken);
+        var sensor = await _dbContext.Sensors
+            .Include(x => x.Credentials)
+            .SingleOrDefaultAsync(x => x.SensorId == sensorId, cancellationToken);
+
+        if (sensor is null)
+            throw new SensorCredentialLifecycleException("Sensor was not found.");
+
+        var wasAlreadyRevoked = sensor.RevokedAtUtc is not null;
+        var revokedAtUtc = sensor.RevokedAtUtc ?? DateTime.UtcNow;
+        var credentialsRevoked = 0;
+
+        if (!wasAlreadyRevoked)
+        {
+            sensor.RevokedAtUtc = revokedAtUtc;
+            sensor.UpdatedAtUtc = revokedAtUtc;
+        }
+
+        foreach (var credential in sensor.Credentials.Where(x => x.RevokedAtUtc is null))
+        {
+            credential.RevokedAtUtc = revokedAtUtc;
+            credentialsRevoked++;
+        }
+
+        if (!wasAlreadyRevoked || credentialsRevoked > 0)
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
+
+        return new SensorRevocationResult(
+            sensor.SensorId,
+            sensor.DisplayName,
+            sensor.SourceSystem,
+            revokedAtUtc,
+            credentialsRevoked,
+            wasAlreadyRevoked);
+    }
+
     private async Task<IDbContextTransaction?> BeginTransactionAsync(CancellationToken cancellationToken) =>
         _dbContext.Database.IsRelational()
             ? await _dbContext.Database.BeginTransactionAsync(cancellationToken)
