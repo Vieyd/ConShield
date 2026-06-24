@@ -13,6 +13,7 @@ public sealed class SensorFleetItemViewModel
     public int CredentialCount { get; init; }
     public int ActiveCredentialCount { get; init; }
     public bool CanRotateCredential { get; init; }
+    public bool CanRevokeSensor { get; init; }
     public DateTime? OldestCredentialCreatedAtUtc { get; init; }
     public DateTime? NewestCredentialCreatedAtUtc { get; init; }
     public string Status { get; init; } = string.Empty;
@@ -49,6 +50,7 @@ public sealed class SensorFleetItemViewModel
             CredentialCount = credentialCount,
             ActiveCredentialCount = activeCredentialCount,
             CanRotateCredential = revokedAtUtc is null,
+            CanRevokeSensor = revokedAtUtc is null,
             OldestCredentialCreatedAtUtc = oldestCredentialCreatedAtUtc,
             NewestCredentialCreatedAtUtc = newestCredentialCreatedAtUtc,
             Status = status,

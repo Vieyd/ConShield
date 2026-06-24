@@ -78,6 +78,13 @@ else
                         <td>@sensor.UpdatedAtUtc.ToString("u")</td>
                         <td>@(sensor.RevokedAtUtc?.ToString("u") ?? "—")</td>
                         <td>
+                            <div class="d-flex flex-column gap-1">
+                                <a asp-controller="Sensors"
+                                   asp-action="Details"
+                                   asp-route-sensorId="@sensor.SensorId"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Детали
+                                </a>
                             @if (sensor.CanRotateCredential)
                             {
                                 <form asp-controller="Sensors"
@@ -90,10 +97,24 @@ else
                                     </button>
                                 </form>
                             }
+                                @if (sensor.CanRevokeSensor)
+                                {
+                                    <form asp-controller="Sensors"
+                                          asp-action="RevokeSensor"
+                                          method="post"
+                                          onsubmit="return confirm('Отозвать сенсор? Все credentials сенсора будут отозваны, а RuntimeCollector heartbeat/event ingestion перестанут приниматься.');">
+                                        <input type="hidden" name="sensorId" value="@sensor.SensorId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            Отозвать сенсор
+                                        </button>
+                                    </form>
+                                }
+                            }
                             else
                             {
                                 <span class="text-muted small">not available</span>
                             }
+                            </div>
                         </td>
                     </tr>
                 }

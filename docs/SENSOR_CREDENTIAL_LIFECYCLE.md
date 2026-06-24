@@ -4,7 +4,7 @@
 
 Describe safe future lifecycle management for enrolled sensor credentials used by ConShield RuntimeCollector/Falco sensor ingestion.
 
-This document tracks credential lifecycle design and implementation notes. Rotation currently exists through a service-layer workflow and an AdminIB-only UI action. Credential and sensor revocation exist in the service layer; revocation UI remains a future workflow.
+This document tracks credential lifecycle design and implementation notes. Rotation currently exists through a service-layer workflow and an AdminIB-only UI action. Credential and sensor revocation exist in the service layer and are exposed through AdminIB-only UI actions.
 
 ## Current state
 
@@ -20,7 +20,8 @@ This document tracks credential lifecycle design and implementation notes. Rotat
 - Service-layer credential rotation exists and is exposed through an AdminIB-only UI action.
 - The rotation UI displays the new credential exactly once from the POST response and does not store it in URLs, cookies, session, or TempData.
 - Service-layer credential and sensor revocation exists and preserves database rows for audit history.
-- No revocation UI/API exists yet.
+- AdminIB revocation UI exists for credential and sensor revocation with POST, anti-forgery, and explicit confirmation.
+- No public revocation API exists.
 
 ## Security goals
 
@@ -102,21 +103,21 @@ The first implementation should prefer a narrow service-layer workflow before ad
 
 ## UI boundaries
 
-First implementation should separate:
+The UI separates:
 
 - read-only inventory;
 - rotate credential action;
 - revoke credential action;
 - revoke sensor action.
 
-Each dangerous action should:
+Each dangerous action:
 
-- require the `AdminIB` role;
-- use `POST` plus anti-forgery protection;
-- show confirmation;
-- never display verifier;
+- requires the `AdminIB` role;
+- uses `POST` plus anti-forgery protection;
+- shows confirmation;
+- never displays verifier;
 - display plaintext new credential only once for rotation;
-- write an audit event.
+- should write an audit event in a future audit enhancement.
 
 The read-only inventory should remain useful without offering mutation controls to `Operator` users or unauthenticated users.
 
