@@ -4,6 +4,8 @@
 
 This runbook describes how an `AdminIB` operator uses ConShield operational screens and SIEM lifecycle alerts during daily checks and investigations.
 
+For a safe diploma/demo walkthrough, use [DEMO_EVIDENCE_PACK.md](DEMO_EVIDENCE_PACK.md) together with this runbook.
+
 ## Main screens
 
 - Operations Health: `/Operations/Health`
