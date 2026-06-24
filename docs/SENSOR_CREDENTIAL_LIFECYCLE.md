@@ -166,6 +166,8 @@ Implemented service-layer lifecycle actions create `SecurityEvents` with:
 
 Events are written through the existing SecurityEvents writer so the event row and outbox message remain in the same EF transaction where practical. Already-revoked idempotent paths do not write duplicate lifecycle events.
 
+The Security Events UI exposes SourceSystem and ExternalEventType filters plus quick lifecycle presets for operator investigation of credential rotations, credential revocations, and sensor revocations.
+
 Lifecycle audit payloads include public-only metadata:
 
 - sensor public UUID;

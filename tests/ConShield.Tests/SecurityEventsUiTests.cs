@@ -1,0 +1,213 @@
+using ConShield.Contracts.Constants;
+using ConShield.Contracts.Enums;
+using ConShield.Data;
+using ConShield.Data.Entities;
+using ConShield.Web.Controllers;
+using ConShield.Web.ViewModels;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace ConShield.Tests;
+
+public sealed class SecurityEventsUiTests
+{
+    private const string KnownPlaintextCredential = "plaintext-credential-that-must-not-render";
+    private const string KnownApiKey = "api-key-that-must-not-render";
+
+    [Fact]
+    public async Task SecurityEventsFilter_FiltersBySourceSystem()
+    {
+        await using var db = CreateDbContext();
+        SeedSecurityEvents(db);
+        var controller = new SecurityEventsController(db);
+
+        var model = await IndexModelAsync(controller, new SecurityEventFilterViewModel
+        {
+            SourceSystem = SecuritySourceSystems.SensorLifecycle.ToUpperInvariant()
+        });
+
+        Assert.Equal(3, model.Items.Count);
+        Assert.All(model.Items, item => Assert.Equal(SecuritySourceSystems.SensorLifecycle, item.SourceSystem));
+    }
+
+    [Fact]
+    public async Task SecurityEventsFilter_FiltersByExternalEventType()
+    {
+        await using var db = CreateDbContext();
+        SeedSecurityEvents(db);
+        var controller = new SecurityEventsController(db);
+
+        var model = await IndexModelAsync(controller, new SecurityEventFilterViewModel
+        {
+            ExternalEventType = SensorLifecycleEventTypes.SensorCredentialRevoked.ToUpperInvariant()
+        });
+
+        var item = Assert.Single(model.Items);
+        Assert.Equal(SensorLifecycleEventTypes.SensorCredentialRevoked, item.ExternalEventType);
+    }
+
+    [Fact]
+    public async Task SecurityEventsFilter_CanShowSensorLifecycleEvents()
+    {
+        await using var db = CreateDbContext();
+        SeedSecurityEvents(db);
+        var controller = new SecurityEventsController(db);
+
+        var model = await IndexModelAsync(controller, new SecurityEventFilterViewModel
+        {
+            SourceSystem = SecuritySourceSystems.SensorLifecycle
+        });
+
+        Assert.Equal(3, model.Items.Count);
+        Assert.Contains(model.Items, item => item.ExternalEventType == SensorLifecycleEventTypes.SensorCredentialRotated);
+        Assert.Contains(model.Items, item => item.ExternalEventType == SensorLifecycleEventTypes.SensorCredentialRevoked);
+        Assert.Contains(model.Items, item => item.ExternalEventType == SensorLifecycleEventTypes.SensorRevoked);
+    }
+
+    [Fact]
+    public async Task SecurityEventsFilter_CanShowCredentialRotationsOnly()
+    {
+        await using var db = CreateDbContext();
+        SeedSecurityEvents(db);
+        var controller = new SecurityEventsController(db);
+
+        var model = await IndexModelAsync(controller, new SecurityEventFilterViewModel
+        {
+            SourceSystem = SecuritySourceSystems.SensorLifecycle,
+            ExternalEventType = SensorLifecycleEventTypes.SensorCredentialRotated
+        });
+
+        var item = Assert.Single(model.Items);
+        Assert.Equal(SensorLifecycleEventTypes.SensorCredentialRotated, item.ExternalEventType);
+        Assert.Equal("credential rotation", item.Description);
+    }
+
+    [Fact]
+    public void SecurityEventsIndex_RendersLifecycleQuickLinks()
+    {
+        var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "SecurityEvents", "Index.cshtml");
+
+        Assert.Contains("Lifecycle сенсоров", viewText, StringComparison.Ordinal);
+        Assert.Contains("Ротации", viewText, StringComparison.Ordinal);
+        Assert.Contains("Отзыв credentials", viewText, StringComparison.Ordinal);
+        Assert.Contains("Отзыв сенсоров", viewText, StringComparison.Ordinal);
+        Assert.Contains("asp-route-SourceSystem", viewText, StringComparison.Ordinal);
+        Assert.Contains("asp-route-ExternalEventType", viewText, StringComparison.Ordinal);
+        Assert.Contains(nameof(SecuritySourceSystems.SensorLifecycle), viewText, StringComparison.Ordinal);
+        Assert.Contains(nameof(SensorLifecycleEventTypes.SensorCredentialRotated), viewText, StringComparison.Ordinal);
+        Assert.Contains(nameof(SensorLifecycleEventTypes.SensorCredentialRevoked), viewText, StringComparison.Ordinal);
+        Assert.Contains(nameof(SensorLifecycleEventTypes.SensorRevoked), viewText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SecurityEventsIndex_RendersSourceSystemAndExternalEventType()
+    {
+        var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "SecurityEvents", "Index.cshtml");
+
+        Assert.Contains("Источник", viewText, StringComparison.Ordinal);
+        Assert.Contains("Внешний тип", viewText, StringComparison.Ordinal);
+        Assert.Contains("name=\"SourceSystem\"", viewText, StringComparison.Ordinal);
+        Assert.Contains("name=\"ExternalEventType\"", viewText, StringComparison.Ordinal);
+        Assert.Contains("@item.SourceSystem", viewText, StringComparison.Ordinal);
+        Assert.Contains("@item.ExternalEventType", viewText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SecurityEventsIndex_DoesNotRenderCredentialPlaintextOrVerifier()
+    {
+        await using var db = CreateDbContext();
+        var sensorId = Guid.NewGuid();
+        db.SecurityEvents.Add(new SecurityEventEntry
+        {
+            OccurredAtUtc = DateTime.UtcNow,
+            EventType = SecurityEventType.ExternalEvent,
+            Severity = EventSeverity.Info,
+            UserName = "adminib",
+            SourceSystem = SecuritySourceSystems.SensorLifecycle,
+            ExternalEventType = SensorLifecycleEventTypes.SensorCredentialRotated,
+            Description = "credential rotation",
+            AdditionalDataJson = $$"""
+                {"sensorId":"{{sensorId}}","credentialId":"{{Guid.NewGuid()}}","displayName":"fedora-runtime-01","requestedBy":"adminib","action":"rotateCredential","reasonProvided":true}
+                """
+        });
+        await db.SaveChangesAsync();
+        var controller = new SecurityEventsController(db);
+
+        var model = await IndexModelAsync(controller, new SecurityEventFilterViewModel
+        {
+            SourceSystem = SecuritySourceSystems.SensorLifecycle
+        });
+        var renderedData = Assert.Single(model.Items).AdditionalDataJson ?? string.Empty;
+        var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "SecurityEvents", "Index.cshtml");
+
+        Assert.DoesNotContain(KnownPlaintextCredential, renderedData, StringComparison.Ordinal);
+        Assert.DoesNotContain(KnownApiKey, renderedData, StringComparison.Ordinal);
+        Assert.DoesNotContain("VerifierSha256", renderedData, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(KnownPlaintextCredential, viewText, StringComparison.Ordinal);
+        Assert.DoesNotContain(KnownApiKey, viewText, StringComparison.Ordinal);
+        Assert.DoesNotContain("VerifierSha256", viewText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task<SecurityEventIndexViewModel> IndexModelAsync(
+        SecurityEventsController controller,
+        SecurityEventFilterViewModel filter)
+    {
+        var result = await controller.Index(filter, CancellationToken.None);
+        var view = Assert.IsType<ViewResult>(result);
+        return Assert.IsType<SecurityEventIndexViewModel>(view.Model);
+    }
+
+    private static void SeedSecurityEvents(ApplicationDbContext db)
+    {
+        var now = DateTime.UtcNow;
+        db.SecurityEvents.AddRange(
+            LifecycleEvent(now.AddMinutes(-1), SensorLifecycleEventTypes.SensorCredentialRotated, "credential rotation"),
+            LifecycleEvent(now.AddMinutes(-2), SensorLifecycleEventTypes.SensorCredentialRevoked, "credential revoke"),
+            LifecycleEvent(now.AddMinutes(-3), SensorLifecycleEventTypes.SensorRevoked, "sensor revoke"),
+            new SecurityEventEntry
+            {
+                OccurredAtUtc = now.AddMinutes(-4),
+                EventType = SecurityEventType.LoginFailure,
+                Severity = EventSeverity.Warning,
+                UserName = "operator",
+                SourceSystem = SecuritySourceSystems.FalcoRuntimeCollector,
+                Description = "non lifecycle event",
+                AdditionalDataJson = "{\"source\":\"runtime\"}"
+            });
+        db.SaveChanges();
+    }
+
+    private static SecurityEventEntry LifecycleEvent(DateTime occurredAtUtc, string externalEventType, string description) => new()
+    {
+        OccurredAtUtc = occurredAtUtc,
+        EventType = SecurityEventType.ExternalEvent,
+        Severity = EventSeverity.Info,
+        UserName = "adminib",
+        SourceSystem = SecuritySourceSystems.SensorLifecycle,
+        ExternalEventType = externalEventType,
+        Description = description,
+        AdditionalDataJson = "{\"sensorId\":\"00000000-0000-0000-0000-000000000001\",\"requestedBy\":\"adminib\",\"reasonProvided\":true}"
+    };
+
+    private static ApplicationDbContext CreateDbContext()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase($"security-events-ui-{Guid.NewGuid():N}")
+            .Options;
+        return new ApplicationDbContext(options);
+    }
+
+    private static string ReadRepoFile(params string[] relativePath)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(new[] { directory.FullName }.Concat(relativePath).ToArray());
+            if (File.Exists(candidate))
+                return File.ReadAllText(candidate);
+            directory = directory.Parent;
+        }
+
+        throw new FileNotFoundException($"Could not find repository file: {Path.Combine(relativePath)}");
+    }
+}
