@@ -17,9 +17,11 @@ namespace ConShield.Tests;
 public sealed class SensorEnrollmentApiTests
 {
     private const string SensorSecret = "sensor-test-credential-with-high-entropy-placeholder";
+    private const string SecondSensorSecret = "second-sensor-test-credential-with-high-entropy-placeholder";
     private const string LegacySecret = "legacy-runtime-test-credential";
     private static readonly Guid SensorId = Guid.Parse("11111111-2222-4333-8444-555555555555");
     private static readonly Guid CredentialId = Guid.Parse("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
+    private static readonly Guid SecondCredentialId = Guid.Parse("bbbbbbbb-cccc-4ddd-8eee-ffffffffffff");
 
     [PostgreSqlFact]
     public async Task ValidSensorHeartbeat_UpdatesLastSeenAtUtc()
@@ -204,6 +206,72 @@ public sealed class SensorEnrollmentApiTests
     }
 
     [PostgreSqlFact]
+    public async Task RevokedCredential_CannotSubmitRuntimeEvent()
+    {
+        await using var factory = await CreateFactoryAsync();
+        await ProvisionSensorAsync(factory);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ISensorCredentialLifecycleService>();
+        await service.RevokeCredentialAsync(SensorId, CredentialId, "adminib", "test revocation");
+        using var client = SensorClient(factory, SensorId, CredentialId, SensorSecret);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/security-events",
+            RuntimePayload("conshield.falco-runtime-collector"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
+    public async Task OtherActiveCredentialForSameSensor_RemainsAccepted()
+    {
+        await using var factory = await CreateFactoryAsync();
+        await ProvisionSensorAsync(factory, includeSecondCredential: true);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ISensorCredentialLifecycleService>();
+        await service.RevokeCredentialAsync(SensorId, CredentialId, "adminib", "test revocation");
+        using var client = SensorClient(factory, SensorId, SecondCredentialId, SecondSensorSecret);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/security-events",
+            RuntimePayload("conshield.falco-runtime-collector"));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
+    public async Task RevokedSensor_CannotSubmitRuntimeEvent()
+    {
+        await using var factory = await CreateFactoryAsync();
+        await ProvisionSensorAsync(factory);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ISensorCredentialLifecycleService>();
+        await service.RevokeSensorAsync(SensorId, "adminib", "test sensor revocation");
+        using var client = SensorClient(factory, SensorId, CredentialId, SensorSecret);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/security-events",
+            RuntimePayload("conshield.falco-runtime-collector"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
+    public async Task RevokedSensor_HeartbeatRejected()
+    {
+        await using var factory = await CreateFactoryAsync();
+        await ProvisionSensorAsync(factory);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ISensorCredentialLifecycleService>();
+        await service.RevokeSensorAsync(SensorId, "adminib", "test sensor revocation");
+        using var client = SensorClient(factory, SensorId, CredentialId, SensorSecret);
+
+        var response = await client.PostAsJsonAsync("/api/v1/sensors/heartbeat", new { });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
     public async Task InvalidSensorCredential_DoesNotFallBackToLegacyKey()
     {
         await using var factory = await CreateFactoryAsync(allowLegacy: true);
@@ -320,24 +388,36 @@ public sealed class SensorEnrollmentApiTests
     private static async Task ProvisionSensorAsync(
         WebApplicationFactory<Program> factory,
         DateTime? sensorRevokedAtUtc = null,
-        DateTime? credentialRevokedAtUtc = null)
+        DateTime? credentialRevokedAtUtc = null,
+        bool includeSecondCredential = false)
     {
         await using var db = factory.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var credentials = new List<SensorCredential>
+        {
+            new()
+            {
+                CredentialId = CredentialId,
+                VerifierSha256 = SHA256.HashData(Encoding.UTF8.GetBytes(SensorSecret)),
+                RevokedAtUtc = credentialRevokedAtUtc
+            }
+        };
+
+        if (includeSecondCredential)
+        {
+            credentials.Add(new SensorCredential
+            {
+                CredentialId = SecondCredentialId,
+                VerifierSha256 = SHA256.HashData(Encoding.UTF8.GetBytes(SecondSensorSecret))
+            });
+        }
+
         db.Sensors.Add(new Sensor
         {
             SensorId = SensorId,
             DisplayName = "Test Fedora sensor",
             SourceSystem = "conshield.falco-runtime-collector",
             RevokedAtUtc = sensorRevokedAtUtc,
-            Credentials =
-            [
-                new SensorCredential
-                {
-                    CredentialId = CredentialId,
-                    VerifierSha256 = SHA256.HashData(Encoding.UTF8.GetBytes(SensorSecret)),
-                    RevokedAtUtc = credentialRevokedAtUtc
-                }
-            ]
+            Credentials = credentials
         });
         await db.SaveChangesAsync();
     }

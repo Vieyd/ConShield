@@ -239,6 +239,26 @@ public sealed class SensorFleetUiTests
         Assert.Contains("not available", viewText, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task SensorFleet_ShowsRevokedStatus()
+    {
+        await using var db = CreateDbContext();
+        var nowUtc = DateTime.UtcNow;
+        var sensorId = Guid.NewGuid();
+        await SeedSensorAsync(db, sensorId, nowUtc);
+        await new SensorCredentialLifecycleService(db).RevokeSensorAsync(sensorId, "adminib", "test revocation");
+
+        var result = await CreateController(db).Index(CancellationToken.None);
+        var model = Assert.IsType<SensorFleetIndexViewModel>(Assert.IsType<ViewResult>(result).Model);
+        var sensor = Assert.Single(model.Sensors);
+        var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "Index.cshtml");
+
+        Assert.Equal("Revoked", sensor.Status);
+        Assert.False(sensor.CanRotateCredential);
+        Assert.DoesNotContain("Revoke credential", viewText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Revoke sensor", viewText, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData(null, false, "Never seen")]
     [InlineData(1, false, "Online")]
