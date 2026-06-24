@@ -126,7 +126,8 @@ Current limits:
    - rotate sensor credential;
    - revoke credential;
    - revoke sensor;
-   - preserve an audit trail.
+   - preserve an audit trail;
+   - follow the [sensor credential lifecycle design](SENSOR_CREDENTIAL_LIFECYCLE.md).
 
 3. Enrolled-sensor-only documentation and tests:
    - startup without legacy runtime key;

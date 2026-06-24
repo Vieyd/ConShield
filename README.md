@@ -344,3 +344,5 @@ Falco 0.44.1 modern_ebpf -> protected JSONL -> RuntimeCollector
 The deployment keeps SELinux enforcing, reuses Podman, runs RuntimeCollector as a non-login user, and does not install Kubernetes. See [`docs/REAL_FALCO_FEDORA_DEPLOYMENT.md`](docs/REAL_FALCO_FEDORA_DEPLOYMENT.md).
 
 Enrolled sensor credentials are created with the local operator-only `ConShield.SensorProvisioning` tool. Follow [`docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md`](docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md) for protected credential transfer, heartbeat and event verification, legacy fallback disablement, and rollback.
+
+Future credential rotation and revocation should follow the design in [`docs/SENSOR_CREDENTIAL_LIFECYCLE.md`](docs/SENSOR_CREDENTIAL_LIFECYCLE.md). The current product keeps this as a planned security-sensitive workflow, not an automatic or public enrollment path.
