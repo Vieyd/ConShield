@@ -35,6 +35,13 @@
        asp-route-SourceSystem="@SecuritySourceSystems.SensorLifecycle"
        asp-route-ExternalEventType="@SensorLifecycleEventTypes.SensorRevoked">Отзыв сенсоров</a>
 </div>
+<div class="alert alert-secondary py-2 mb-3 small">
+    Lifecycle-аудит сенсоров приходит из <code>@SecuritySourceSystems.SensorLifecycle</code>:
+    <code>@SensorLifecycleEventTypes.SensorCredentialRotated</code>,
+    <code>@SensorLifecycleEventTypes.SensorCredentialRevoked</code>,
+    <code>@SensorLifecycleEventTypes.SensorRevoked</code>.
+    См. <code>docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md</code> в репозитории; не вставляйте credentials, API keys или env values в заметки расследования.
+</div>
 
 <form method="get" class="row g-2 mb-4">
     <div class="col-md-3">

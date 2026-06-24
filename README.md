@@ -345,4 +345,4 @@ The deployment keeps SELinux enforcing, reuses Podman, runs RuntimeCollector as 
 
 Enrolled sensor credentials are created with the local operator-only `ConShield.SensorProvisioning` tool. Follow [`docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md`](docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md) for protected credential transfer, heartbeat and event verification, legacy fallback disablement, and rollback.
 
-Future credential rotation and revocation should follow the design in [`docs/SENSOR_CREDENTIAL_LIFECYCLE.md`](docs/SENSOR_CREDENTIAL_LIFECYCLE.md). The current product keeps this as a planned security-sensitive workflow, not an automatic or public enrollment path.
+Credential rotation and revocation should follow the design in [`docs/SENSOR_CREDENTIAL_LIFECYCLE.md`](docs/SENSOR_CREDENTIAL_LIFECYCLE.md). Operators can interpret lifecycle audit events with [`docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md`](docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md).

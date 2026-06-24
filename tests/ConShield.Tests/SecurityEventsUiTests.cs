@@ -100,6 +100,19 @@ public sealed class SecurityEventsUiTests
     }
 
     [Fact]
+    public void SecurityEventsIndex_RendersLifecycleAuditHelpText()
+    {
+        var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "SecurityEvents", "Index.cshtml");
+
+        Assert.Contains(nameof(SecuritySourceSystems.SensorLifecycle), viewText, StringComparison.Ordinal);
+        Assert.Contains(nameof(SensorLifecycleEventTypes.SensorCredentialRotated), viewText, StringComparison.Ordinal);
+        Assert.Contains(nameof(SensorLifecycleEventTypes.SensorCredentialRevoked), viewText, StringComparison.Ordinal);
+        Assert.Contains(nameof(SensorLifecycleEventTypes.SensorRevoked), viewText, StringComparison.Ordinal);
+        Assert.Contains("docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md", viewText, StringComparison.Ordinal);
+        Assert.Contains("не вставляйте credentials", viewText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SecurityEventsIndex_RendersSourceSystemAndExternalEventType()
     {
         var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "SecurityEvents", "Index.cshtml");
@@ -146,6 +159,22 @@ public sealed class SecurityEventsUiTests
         Assert.DoesNotContain(KnownPlaintextCredential, viewText, StringComparison.Ordinal);
         Assert.DoesNotContain(KnownApiKey, viewText, StringComparison.Ordinal);
         Assert.DoesNotContain("VerifierSha256", viewText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void SensorLifecycleAuditPlaybook_ContainsRequiredOperatorGuidance()
+    {
+        var playbook = ReadRepoFile("docs", "SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md");
+
+        Assert.Contains("conshield.sensor-lifecycle", playbook, StringComparison.Ordinal);
+        Assert.Contains("sensor.credential.rotated", playbook, StringComparison.Ordinal);
+        Assert.Contains("sensor.credential.revoked", playbook, StringComparison.Ordinal);
+        Assert.Contains("sensor.revoked", playbook, StringComparison.Ordinal);
+        Assert.Contains("VerifierSha256", playbook, StringComparison.Ordinal);
+        Assert.Contains("plaintext credential", playbook, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not paste credentials", playbook, StringComparison.Ordinal);
+        Assert.Contains("API key", playbook, StringComparison.Ordinal);
+        Assert.Contains("Fedora protected env file content", playbook, StringComparison.Ordinal);
     }
 
     private static async Task<SecurityEventIndexViewModel> IndexModelAsync(

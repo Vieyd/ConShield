@@ -168,6 +168,8 @@ Events are written through the existing SecurityEvents writer so the event row a
 
 The Security Events UI exposes SourceSystem and ExternalEventType filters plus quick lifecycle presets for operator investigation of credential rotations, credential revocations, and sensor revocations.
 
+For operator-facing interpretation guidance, see [SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md](SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md).
+
 Lifecycle audit payloads include public-only metadata:
 
 - sensor public UUID;
