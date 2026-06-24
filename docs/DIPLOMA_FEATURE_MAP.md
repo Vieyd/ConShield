@@ -2,6 +2,8 @@
 
 This map helps choose which implemented modules, screens, and documents to reference in diploma text and demo defense materials.
 
+Use [CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md](CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md) for the final current-state summary and [DIPLOMA_TEXT_SECTIONS_DRAFT_RU.md](DIPLOMA_TEXT_SECTIONS_DRAFT_RU.md) for Russian draft sections.
+
 ## Implemented features
 
 | Feature | Evidence route/file/module | Status |

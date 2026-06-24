@@ -41,6 +41,45 @@ public sealed class DemoEvidenceDocumentationTests
         Assert.Contains("future work", map, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void FinalHandoffSnapshot_ExistsAndCoversCurrentState()
+    {
+        var snapshot = ReadRepoFile("docs", "CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md");
+
+        Assert.Contains("ConShield Final Handoff Snapshot", snapshot, StringComparison.Ordinal);
+        Assert.Contains("/Reports/SecuritySummary", snapshot, StringComparison.Ordinal);
+        Assert.Contains("/Operations/Health", snapshot, StringComparison.Ordinal);
+        Assert.Contains("Security Summary", snapshot, StringComparison.Ordinal);
+        Assert.Contains("lifecycle SIEM", snapshot, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("RabbitMQ", snapshot, StringComparison.Ordinal);
+        Assert.Contains("VerifierSha256", snapshot, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DiplomaTextDraftRu_ExistsAndCoversCoreSections()
+    {
+        var draft = ReadRepoFile("docs", "DIPLOMA_TEXT_SECTIONS_DRAFT_RU.md");
+
+        Assert.Contains("Черновик разделов ВКР", draft, StringComparison.Ordinal);
+        Assert.Contains("Объект и предмет", draft, StringComparison.Ordinal);
+        Assert.Contains("Цель работы", draft, StringComparison.Ordinal);
+        Assert.Contains("Задачи работы", draft, StringComparison.Ordinal);
+        Assert.Contains("Архитектура решения", draft, StringComparison.Ordinal);
+        Assert.Contains("Сценарий демонстрации", draft, StringComparison.Ordinal);
+        Assert.Contains("Направления дальнейшего развития", draft, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DiplomaTextDraftRu_DoesNotClaimProductionReadiness()
+    {
+        var draft = ReadRepoFile("docs", "DIPLOMA_TEXT_SECTIONS_DRAFT_RU.md");
+
+        Assert.Contains("прототип", draft, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("полностью предотвращает все атаки", draft, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("гарантирует безопасность", draft, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("production-ready", draft, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string ReadRepoFile(params string[] relativePath)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
