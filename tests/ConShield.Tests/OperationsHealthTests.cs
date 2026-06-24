@@ -176,6 +176,17 @@ public sealed class OperationsHealthTests
         Assert.Contains("Здоровье", layout, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void OperationsHealth_HelpTextReferencesOperationsSiemRunbook()
+    {
+        var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "Operations", "Health.cshtml");
+
+        Assert.Contains("docs/OPERATIONS_AND_SIEM_RUNBOOK.md", viewText, StringComparison.Ordinal);
+        Assert.Contains("Security Events", viewText, StringComparison.Ordinal);
+        Assert.Contains("SIEM alerts", viewText, StringComparison.Ordinal);
+        Assert.Contains("Sensor Fleet", viewText, StringComparison.Ordinal);
+    }
+
     private static async Task<OperationalHealthViewModel> HealthModelAsync(ApplicationDbContext db)
     {
         var result = await new OperationsController(db).Health(CancellationToken.None);

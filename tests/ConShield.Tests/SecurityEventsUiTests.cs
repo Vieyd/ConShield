@@ -109,7 +109,23 @@ public sealed class SecurityEventsUiTests
         Assert.Contains(nameof(SensorLifecycleEventTypes.SensorCredentialRevoked), viewText, StringComparison.Ordinal);
         Assert.Contains(nameof(SensorLifecycleEventTypes.SensorRevoked), viewText, StringComparison.Ordinal);
         Assert.Contains("docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md", viewText, StringComparison.Ordinal);
+        Assert.Contains("docs/OPERATIONS_AND_SIEM_RUNBOOK.md", viewText, StringComparison.Ordinal);
         Assert.Contains("не вставляйте credentials", viewText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OperationsAndSiemRunbook_ContainsRequiredOperatorGuidance()
+    {
+        var runbook = ReadRepoFile("docs", "OPERATIONS_AND_SIEM_RUNBOOK.md");
+
+        Assert.Contains("/Operations/Health", runbook, StringComparison.Ordinal);
+        Assert.Contains("/SecurityEvents", runbook, StringComparison.Ordinal);
+        Assert.Contains("/Sensors", runbook, StringComparison.Ordinal);
+        Assert.Contains("LIFE-001", runbook, StringComparison.Ordinal);
+        Assert.Contains("LIFE-002", runbook, StringComparison.Ordinal);
+        Assert.Contains("conshield.sensor-lifecycle", runbook, StringComparison.Ordinal);
+        Assert.Contains("VerifierSha256", runbook, StringComparison.Ordinal);
+        Assert.Contains("Never paste generated credentials", runbook, StringComparison.Ordinal);
     }
 
     [Fact]

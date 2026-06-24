@@ -4,6 +4,8 @@
 
 This playbook helps operators interpret ConShield sensor lifecycle audit events in the Security Events UI. It is for investigation and safe handling only; it does not define automated response or remote remediation.
 
+For the broader operator workflow across Operations Health, Security Events, SIEM alerts, incidents, and Sensor Fleet, see [OPERATIONS_AND_SIEM_RUNBOOK.md](OPERATIONS_AND_SIEM_RUNBOOK.md).
+
 ## Event source: `conshield.sensor-lifecycle`
 
 Sensor lifecycle audit events are written as `SecurityEventType.ExternalEvent` with:
