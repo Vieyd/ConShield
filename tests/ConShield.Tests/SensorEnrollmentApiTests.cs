@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
+using ConShield.Application;
 using ConShield.Data;
 using ConShield.Data.Entities;
 using Microsoft.AspNetCore.Hosting;
@@ -121,6 +122,40 @@ public sealed class SensorEnrollmentApiTests
         await using var factory = await CreateFactoryAsync();
         await ProvisionSensorAsync(factory);
         using var client = SensorClient(factory, SensorId, CredentialId, SensorSecret);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/security-events",
+            RuntimePayload("conshield.falco-runtime-collector"));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
+    public async Task RotatedCredential_CannotSubmitRuntimeEvent()
+    {
+        await using var factory = await CreateFactoryAsync();
+        await ProvisionSensorAsync(factory);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ISensorCredentialLifecycleService>();
+        await service.RotateCredentialAsync(SensorId, "adminib", "test rotation");
+        using var client = SensorClient(factory, SensorId, CredentialId, SensorSecret);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/security-events",
+            RuntimePayload("conshield.falco-runtime-collector"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [PostgreSqlFact]
+    public async Task NewCredential_CanSubmitRuntimeEvent()
+    {
+        await using var factory = await CreateFactoryAsync();
+        await ProvisionSensorAsync(factory);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ISensorCredentialLifecycleService>();
+        var rotation = await service.RotateCredentialAsync(SensorId, "adminib", "test rotation");
+        using var client = SensorClient(factory, SensorId, rotation.CredentialId, rotation.Credential);
 
         var response = await client.PostAsJsonAsync(
             "/api/v1/security-events",

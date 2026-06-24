@@ -17,6 +17,7 @@ This document is a design plan only. It intentionally does not add rotation or r
   - `X-ConShield-Api-Key`.
 - Legacy runtime collector fallback is disabled.
 - Read-only Sensor Fleet UI exists.
+- Service-layer credential rotation exists as a foundation for future operator workflows.
 - No UI/API rotation or revocation exists yet.
 
 ## Security goals

@@ -94,6 +94,7 @@ builder.Services.AddScoped<IUserExceptionService, UserExceptionService>();
 builder.Services.AddScoped<ISiemCorrelationService, SiemCorrelationService>();
 builder.Services.AddScoped<IExternalSecurityEventIngestionService, ExternalSecurityEventIngestionService>();
 builder.Services.AddScoped<ISensorIdentityService, SensorIdentityService>();
+builder.Services.AddScoped<ISensorCredentialLifecycleService, SensorCredentialLifecycleService>();
 builder.Services.AddScoped<ISecurityEventWriter, SecurityEventWriter>();
 builder.Services.AddSingleton<IOutboxClock, SystemOutboxClock>();
 builder.Services.AddSingleton<IRabbitMqConnectionProvider, RabbitMqConnectionProvider>();

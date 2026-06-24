@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using ConShield.Application.Models;
 using ConShield.Contracts.Constants;
 using ConShield.Data;
@@ -42,9 +40,7 @@ public sealed class SensorProvisioningService : ISensorProvisioningService
         if (duplicate)
             throw new SensorProvisioningException("A runtime sensor with this display name already exists.");
 
-        var credentialBytes = RandomNumberGenerator.GetBytes(CredentialEntropyBytes);
-        var credential = Base64UrlEncode(credentialBytes);
-        CryptographicOperations.ZeroMemory(credentialBytes);
+        var secret = SensorCredentialSecret.Create();
         var now = DateTime.UtcNow;
         var sensor = new Sensor
         {
@@ -58,7 +54,7 @@ public sealed class SensorProvisioningService : ISensorProvisioningService
                 new SensorCredential
                 {
                     CredentialId = Guid.NewGuid(),
-                    VerifierSha256 = SHA256.HashData(Encoding.UTF8.GetBytes(credential)),
+                    VerifierSha256 = secret.VerifierSha256,
                     CreatedAtUtc = now
                 }
             ]
@@ -72,7 +68,7 @@ public sealed class SensorProvisioningService : ISensorProvisioningService
         return new SensorProvisioningResult(
             sensor.SensorId,
             sensor.Credentials.Single().CredentialId,
-            credential,
+            secret.Credential,
             request.HeartbeatIntervalSeconds);
     }
 
@@ -89,8 +85,6 @@ public sealed class SensorProvisioningService : ISensorProvisioningService
         return normalized;
     }
 
-    private static string Base64UrlEncode(byte[] value) =>
-        Convert.ToBase64String(value).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
 
 public sealed class SensorProvisioningException : Exception
