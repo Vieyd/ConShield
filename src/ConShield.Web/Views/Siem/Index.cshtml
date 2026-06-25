@@ -3,13 +3,13 @@
 @using ConShield.Web.Infrastructure
 @model ConShield.Web.ViewModels.SiemAlertIndexViewModel
 @{
-    ViewData["Title"] = "SIEM-оповещения";
+    ViewData["Title"] = "Оповещения SIEM";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0">SIEM-оповещения</h1>
+    <h1 class="mb-0">Оповещения SIEM</h1>
     <div class="d-flex gap-2">
-        <a asp-action="Rules" class="btn btn-outline-light">Правила корреляции</a>
+        <a asp-action="Rules" class="btn btn-outline-light">Правила SIEM</a>
         @if (User.IsInRole(AppRoles.AdminIB))
         {
             <form asp-action="ResetState" method="post" onsubmit="return confirm('Очистить все SIEM-оповещения и автоматически сформированные инциденты?');">
@@ -18,7 +18,7 @@
             </form>
             <form asp-action="GenerateScenario" method="post">
                 @Html.AntiForgeryToken()
-                <button class="btn btn-outline-info" type="submit">Сгенерировать события</button>
+                <button class="btn btn-outline-info" type="submit">Сформировать события</button>
             </form>
             <form asp-action="RunCorrelation" method="post">
                 @Html.AntiForgeryToken()
@@ -56,7 +56,7 @@
             </select>
         </div>
         <div class="col-md-3">
-            <label class="form-label">RuleCode</label>
+            <label class="form-label">Код правила</label>
             <input name="RuleCode" value="@Model.Filter.RuleCode" class="form-control" />
         </div>
         <div class="col-md-3">
@@ -71,16 +71,16 @@
 </form>
 
 <div class="table-responsive">
-    <table class="table table-dark table-striped align-middle">
+    <table class="table table-striped table-bordered align-middle">
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Создан</th>
-                <th>RuleCode</th>
+                <th>Код правила</th>
                 <th>Правило</th>
                 <th>Критичность</th>
                 <th>Статус</th>
-                <th>IncidentId</th>
+                <th>ID инцидента</th>
                 <th>Описание</th>
                 <th></th>
             </tr>
@@ -91,22 +91,22 @@
             <tr>
                 <td>@item.Id</td>
                 <td>@item.CreatedAtUtc.ToMoscowDisplay()</td>
-                <td>@item.RuleCode</td>
+                <td><code class="id-code">@item.RuleCode</code></td>
                 <td>@item.RuleName</td>
                 <td>
                     @switch (item.Severity)
                     {
                         case EventSeverity.Critical:
-                            <span class="badge text-bg-danger">Critical</span>
+                            <span class="badge text-bg-danger">Критический</span>
                             break;
                         case EventSeverity.High:
-                            <span class="badge text-bg-primary">High</span>
+                            <span class="badge text-bg-primary">Высокий</span>
                             break;
                         case EventSeverity.Warning:
-                            <span class="badge text-bg-warning">Warning</span>
+                            <span class="badge text-bg-warning">Предупреждение</span>
                             break;
                         default:
-                            <span class="badge text-bg-info">Info</span>
+                            <span class="badge text-bg-info">Информационный</span>
                             break;
                     }
                 </td>
@@ -123,7 +123,7 @@
                 </td>
                 <td>@item.Description</td>
                 <td class="text-nowrap">
-                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-light">Открыть</a>
+                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Открыть</a>
                     @if (User.IsInRole(AppRoles.AdminIB))
                     {
                         <form asp-action="ChangeStatus" method="post" class="d-inline">

@@ -3,20 +3,20 @@
 @using ConShield.Web.ViewModels
 @model ConShield.Web.ViewModels.SecuritySummaryReportViewModel
 @{
-    ViewData["Title"] = "Security summary";
+    ViewData["Title"] = "Сводка безопасности";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h2 class="mb-1">Security summary</h2>
-        <div class="text-muted small">AdminIB-only read-only report built from aggregate PostgreSQL data.</div>
+        <h2 class="mb-1">Сводка безопасности</h2>
+        <div class="text-muted small">Read-only отчет для AdminIB на основе агрегированных данных PostgreSQL.</div>
     </div>
     <span class="badge @SecuritySummaryStatus.CssClass(Model.OverallStatus)">@Model.OverallStatus</span>
 </div>
 
 <div class="alert alert-info py-2">
-    Report/export includes only counts and timestamps. It does not show raw event JSON, credentials, hashes,
-    API keys, environment values, tokens, passwords, cookies, or connection strings.
+    Отчет и экспорт содержат только счетчики и временные метки. Они не показывают raw event JSON, учетные данные, hashes,
+    API keys, environment values, tokens, passwords, cookies или connection strings.
     See <code>docs/OPERATIONS_AND_SIEM_RUNBOOK.md</code> for the daily workflow.
 </div>
 
@@ -26,23 +26,23 @@
     <a class="btn btn-sm @(Model.RangeKey == "7d" ? "btn-primary" : "btn-outline-primary")"
        asp-controller="Reports" asp-action="SecuritySummary" asp-route-range="7d">7d</a>
     <a class="btn btn-sm btn-outline-secondary"
-       asp-controller="Reports" asp-action="SecuritySummaryMarkdown" asp-route-range="@Model.RangeKey">Download Markdown</a>
+       asp-controller="Reports" asp-action="SecuritySummaryMarkdown" asp-route-range="@Model.RangeKey">Скачать Markdown</a>
 </div>
 
 <div class="text-muted small mb-4">
-    Generated: @Model.GeneratedAtUtc.ToMoscowDisplay() · Range: @Model.RangeLabel
+    Сформировано: @Model.GeneratedAtUtc.ToMoscowDisplay() · Диапазон: @Model.RangeLabel
     (@Model.RangeStartUtc.ToMoscowDisplay() — @Model.RangeEndUtc.ToMoscowDisplay())
 </div>
 
-<h4>Sensors</h4>
+<h4>Сенсоры</h4>
 <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Total / active</div><div class="fs-5"><span class="badge bg-dark">@Model.Sensors.Total / @Model.Sensors.Active</span></div></div></div></div>
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Revoked</div><div class="fs-5"><span class="badge bg-dark">@Model.Sensors.Revoked</span></div></div></div></div>
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Online / warning / offline</div><div class="fs-5"><span class="badge bg-dark">@Model.Sensors.Online / @Model.Sensors.Warning / @Model.Sensors.Offline</span></div></div></div></div>
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Latest heartbeat</div><div class="fs-5"><span class="badge bg-dark">@(Model.Sensors.LatestHeartbeatAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Всего / активных</div><div class="fs-5"><span class="badge badge-neutral">@Model.Sensors.Total / @Model.Sensors.Active</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Отозваны</div><div class="fs-5"><span class="badge badge-neutral">@Model.Sensors.Revoked</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">В сети / предупреждение / нет связи</div><div class="fs-5"><span class="badge badge-neutral">@Model.Sensors.Online / @Model.Sensors.Warning / @Model.Sensors.Offline</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Последний heartbeat</div><div class="fs-5"><span class="badge badge-neutral">@(Model.Sensors.LatestHeartbeatAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div></div>
 </div>
 
-<h4>Security events</h4>
+<h4>События безопасности</h4>
 <div class="row g-3 mb-4">
     <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Events in range</div><div class="fs-5"><span class="badge bg-dark">@Model.SecurityEvents.EventsInRange</span></div></div></div></div>
     <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Latest event</div><div class="fs-5"><span class="badge bg-dark">@(Model.SecurityEvents.LatestEventAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div></div>
@@ -53,20 +53,20 @@
 <h4>SIEM</h4>
 <div class="row g-3 mb-4">
     <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Active alerts</div><div class="fs-5"><span class="badge bg-dark">@Model.Siem.ActiveAlerts</span></div></div></div></div>
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Lifecycle SIEM alerts</div><div class="fs-5"><span class="badge bg-dark">@Model.Siem.LifecycleAlertsInRange</span></div></div></div></div>
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">LIFE-001 / LIFE-002</div><div class="fs-5"><span class="badge bg-dark">@Model.Siem.Life001AlertsInRange / @Model.Siem.Life002AlertsInRange</span></div></div></div></div>
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Incidents in range</div><div class="fs-5"><span class="badge bg-dark">@Model.Siem.IncidentsInRange</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Lifecycle-оповещения SIEM</div><div class="fs-5"><span class="badge badge-neutral">@Model.Siem.LifecycleAlertsInRange</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">LIFE-001 / LIFE-002</div><div class="fs-5"><span class="badge badge-neutral">@Model.Siem.Life001AlertsInRange / @Model.Siem.Life002AlertsInRange</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Инциденты за период</div><div class="fs-5"><span class="badge badge-neutral">@Model.Siem.IncidentsInRange</span></div></div></div></div>
 </div>
 
-<h4>Pipeline</h4>
+<h4>Пайплайн доставки</h4>
 <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Outbox pending / processing</div><div class="fs-5"><span class="badge bg-dark">@Model.Pipeline.OutboxPending / @Model.Pipeline.OutboxProcessing</span></div></div></div></div>
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Outbox dead-letter</div><div class="fs-5"><span class="badge bg-dark">@Model.Pipeline.OutboxDeadLetter</span></div></div></div></div>
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Inbox total / in range</div><div class="fs-5"><span class="badge bg-dark">@Model.Pipeline.InboxTotal / @Model.Pipeline.InboxInRange</span></div></div></div></div>
-    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Redelivered / delivery count &gt; 1</div><div class="fs-5"><span class="badge bg-dark">@Model.Pipeline.InboxRedelivered / @Model.Pipeline.InboxDeliveryCountOverOne</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Очередь: ожидает / в обработке</div><div class="fs-5"><span class="badge badge-neutral">@Model.Pipeline.OutboxPending / @Model.Pipeline.OutboxProcessing</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Очередь: Dead-letter</div><div class="fs-5"><span class="badge badge-neutral">@Model.Pipeline.OutboxDeadLetter</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Подтверждения: всего / за период</div><div class="fs-5"><span class="badge badge-neutral">@Model.Pipeline.InboxTotal / @Model.Pipeline.InboxInRange</span></div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Повторные доставки / count &gt; 1</div><div class="fs-5"><span class="badge badge-neutral">@Model.Pipeline.InboxRedelivered / @Model.Pipeline.InboxDeliveryCountOverOne</span></div></div></div></div>
 </div>
 
-<h4>Operator checklist</h4>
+<h4>Чек-лист оператора</h4>
 <ul class="mb-4">
     @foreach (var item in Model.OperatorChecklist)
     {
@@ -74,5 +74,5 @@
     }
 </ul>
 
-<h4>Markdown export preview</h4>
+<h4>Предпросмотр Markdown-экспорта</h4>
 <textarea class="form-control font-monospace small mb-4" rows="18" readonly>@Model.Markdown</textarea>

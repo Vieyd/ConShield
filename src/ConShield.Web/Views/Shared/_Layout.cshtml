@@ -8,43 +8,53 @@
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
+    @{
+        string IsActive(string controller, string? action = null)
+        {
+            var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+            var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+            var controllerMatches = string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase);
+            var actionMatches = action is null || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase);
+            return controllerMatches && actionMatches ? "active" : string.Empty;
+        }
+    }
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <nav class="navbar navbar-expand-lg app-navbar mb-4">
             <div class="container-fluid">
                 <a class="navbar-brand" asp-controller="Home" asp-action="Index">ConShield</a>
 
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <div class="collapse navbar-collapse show">
-                        <ul class="navbar-nav me-auto">
+                        <ul class="navbar-nav me-auto app-nav-list">
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="UserExceptions" asp-action="Index">Пользовательские исключения</a>
+                                <a class="nav-link @IsActive("UserExceptions")" asp-controller="UserExceptions" asp-action="Index">Исключения доступа</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="SecurityEvents" asp-action="Index">События безопасности</a>
+                                <a class="nav-link @IsActive("SecurityEvents")" asp-controller="SecurityEvents" asp-action="Index">События</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Incidents" asp-action="Index">Инциденты</a>
+                                <a class="nav-link @IsActive("Incidents")" asp-controller="Incidents" asp-action="Index">Инциденты</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Siem" asp-action="Index">SIEM-оповещения</a>
+                                <a class="nav-link @IsActive("Siem", "Index")" asp-controller="Siem" asp-action="Index">Оповещения SIEM</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Siem" asp-action="Rules">SIEM-правила</a>
+                                <a class="nav-link @IsActive("Siem", "Rules")" asp-controller="Siem" asp-action="Rules">Правила SIEM</a>
                             </li>
                             @if (User.IsInRole("AdminIB"))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Sensors" asp-action="Index">Сенсоры</a>
+                                    <a class="nav-link @IsActive("Sensors")" asp-controller="Sensors" asp-action="Index">Сенсоры</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Operations" asp-action="Health">Здоровье</a>
+                                    <a class="nav-link @IsActive("Operations", "Health")" asp-controller="Operations" asp-action="Health">Состояние</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Reports" asp-action="SecuritySummary">Отчёты</a>
+                                    <a class="nav-link @IsActive("Reports")" asp-controller="Reports" asp-action="SecuritySummary">Отчёты</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Outbox" asp-action="Index">Outbox</a>
+                                    <a class="nav-link @IsActive("Outbox")" asp-controller="Outbox" asp-action="Index">Очередь</a>
                                 </li>
                             }
                         </ul>

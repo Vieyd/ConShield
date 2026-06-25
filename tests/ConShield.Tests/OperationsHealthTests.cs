@@ -173,7 +173,7 @@ public sealed class OperationsHealthTests
         Assert.Contains("User.IsInRole(\"AdminIB\")", layout, StringComparison.Ordinal);
         Assert.Contains("asp-controller=\"Operations\"", layout, StringComparison.Ordinal);
         Assert.Contains("asp-action=\"Health\"", layout, StringComparison.Ordinal);
-        Assert.Contains("Здоровье", layout, StringComparison.Ordinal);
+        Assert.Contains("Состояние", layout, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -182,9 +182,9 @@ public sealed class OperationsHealthTests
         var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "Operations", "Health.cshtml");
 
         Assert.Contains("docs/OPERATIONS_AND_SIEM_RUNBOOK.md", viewText, StringComparison.Ordinal);
-        Assert.Contains("Security Events", viewText, StringComparison.Ordinal);
-        Assert.Contains("SIEM alerts", viewText, StringComparison.Ordinal);
-        Assert.Contains("Sensor Fleet", viewText, StringComparison.Ordinal);
+        Assert.Contains("События безопасности", viewText, StringComparison.Ordinal);
+        Assert.Contains("Оповещения SIEM", viewText, StringComparison.Ordinal);
+        Assert.Contains("Сенсоры", viewText, StringComparison.Ordinal);
     }
 
     private static async Task<OperationalHealthViewModel> HealthModelAsync(ApplicationDbContext db)

@@ -1,49 +1,49 @@
 @model SensorRevocationUiResultViewModel
 
 @{
-    ViewData["Title"] = "Revocation completed";
+    ViewData["Title"] = "Отзыв выполнен";
 }
 
-<h1>Revocation completed</h1>
+<h1>Отзыв выполнен</h1>
 
 <div class="alert alert-warning">
-    Revocation changes authentication behavior immediately. Fedora RuntimeCollector configuration
-    was not changed automatically.
+    Отзыв меняет поведение аутентификации немедленно. Конфигурация Fedora RuntimeCollector
+    автоматически не изменялась.
 </div>
 
 <dl class="row">
-    <dt class="col-sm-3">Action</dt>
+    <dt class="col-sm-3">Действие</dt>
     <dd class="col-sm-9">@Model.Action</dd>
 
-    <dt class="col-sm-3">Sensor display name</dt>
+    <dt class="col-sm-3">Имя сенсора</dt>
     <dd class="col-sm-9">@Model.DisplayName</dd>
 
     <dt class="col-sm-3">Sensor ID</dt>
     <dd class="col-sm-9"><code>@Model.SensorId</code></dd>
 
-    <dt class="col-sm-3">Source system</dt>
+    <dt class="col-sm-3">Система-источник</dt>
     <dd class="col-sm-9"><code>@Model.SourceSystem</code></dd>
 
     @if (Model.CredentialId is not null)
     {
-        <dt class="col-sm-3">Credential ID</dt>
+        <dt class="col-sm-3">ID учетных данных</dt>
         <dd class="col-sm-9"><code>@Model.CredentialId</code></dd>
     }
 
     @if (Model.RevokedCredentialCount is not null)
     {
-        <dt class="col-sm-3">Revoked credentials</dt>
+        <dt class="col-sm-3">Отозвано учетных данных</dt>
         <dd class="col-sm-9">@Model.RevokedCredentialCount</dd>
     }
 
-    <dt class="col-sm-3">Revoked UTC</dt>
+    <dt class="col-sm-3">Отозвано UTC</dt>
     <dd class="col-sm-9">@Model.RevokedAtUtc.ToString("u")</dd>
 
-    <dt class="col-sm-3">Already revoked</dt>
-    <dd class="col-sm-9">@(Model.WasAlreadyRevoked ? "yes" : "no")</dd>
+    <dt class="col-sm-3">Уже было отозвано</dt>
+    <dd class="col-sm-9">@(Model.WasAlreadyRevoked ? "да" : "нет")</dd>
 </dl>
 
 <a asp-controller="Sensors" asp-action="Details" asp-route-sensorId="@Model.SensorId" class="btn btn-primary">
-    Back to sensor details
+    К карточке сенсора
 </a>
-<a asp-controller="Sensors" asp-action="Index" class="btn btn-outline-secondary">Back to Sensors</a>
+<a asp-controller="Sensors" asp-action="Index" class="btn btn-outline-secondary">К сенсорам</a>

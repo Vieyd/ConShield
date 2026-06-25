@@ -1,5 +1,123 @@
 body {
-    background-color: #f8f9fa;
+    background-color: #f4f7fb;
+    color: #1f2937;
+}
+
+.app-navbar {
+    background: #ffffff;
+    border-bottom: 1px solid #dbe4f0;
+    box-shadow: 0 .25rem 1rem rgba(15, 23, 42, .08);
+}
+
+.app-navbar .navbar-brand {
+    color: #0f172a;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+.app-navbar .navbar-text,
+.app-navbar .nav-link {
+    color: #334155;
+}
+
+.app-nav-list {
+    gap: .25rem;
+}
+
+.app-navbar .nav-link {
+    border-radius: .65rem;
+    padding: .45rem .7rem;
+}
+
+.app-navbar .nav-link:hover,
+.app-navbar .nav-link.active {
+    background: #e0ecff;
+    color: #0f3f88;
+}
+
+main.container {
+    max-width: 1320px;
+}
+
+.table {
+    --bs-table-bg: #fff;
+    --bs-table-striped-bg: #f8fafc;
+    --bs-table-hover-bg: #eef4ff;
+    border-color: #d9e2ef;
+}
+
+.table thead th {
+    background: #eef2f7;
+    color: #334155;
+    font-weight: 700;
+    border-bottom-color: #cbd5e1;
+}
+
+.card {
+    border-color: #d9e2ef;
+    box-shadow: 0 .2rem .8rem rgba(15, 23, 42, .04);
+}
+
+.btn {
+    border-radius: .55rem;
+}
+
+.btn-outline-light {
+    color: #334155;
+    border-color: #cbd5e1;
+    background-color: #fff;
+}
+
+.btn-outline-light:hover {
+    color: #0f172a;
+    border-color: #94a3b8;
+    background-color: #f1f5f9;
+}
+
+.badge {
+    font-weight: 650;
+    letter-spacing: .01em;
+}
+
+.badge-neutral {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.badge-ok {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-attention {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-danger-soft {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.id-code,
+td code,
+dd code {
+    color: #334155;
+    background: #eef2f7;
+    border: 1px solid #d9e2ef;
+    border-radius: .35rem;
+    padding: .1rem .35rem;
+    word-break: break-word;
+}
+
+.action-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+}
+
+.action-stack form {
+    display: inline;
 }
 
 code {

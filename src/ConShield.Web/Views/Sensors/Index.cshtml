@@ -8,18 +8,18 @@
     <div>
         <h1 class="mb-1">Сенсоры</h1>
         <p class="text-muted mb-0">
-            Read-only enrolled sensor inventory. Secrets and credential verifiers are never displayed.
+            Реестр зарегистрированных сенсоров. Секреты и verifier-значения учетных данных не отображаются.
         </p>
     </div>
     <div class="text-muted small">
-        Generated UTC: @Model.GeneratedAtUtc.ToString("u")
+        Сформировано UTC: @Model.GeneratedAtUtc.ToString("u")
     </div>
 </div>
 
 @if (Model.Sensors.Count == 0)
 {
     <div class="alert alert-info">
-        Enrolled sensors are not available yet.
+        Зарегистрированные сенсоры пока отсутствуют.
     </div>
 }
 else
@@ -28,18 +28,18 @@ else
         <table class="table table-sm table-striped align-middle">
             <thead>
                 <tr>
-                    <th>Status</th>
-                    <th>Display name</th>
+                    <th>Статус</th>
+                    <th>Имя</th>
                     <th>Sensor ID</th>
-                    <th>Source system</th>
-                    <th>Last seen UTC</th>
-                    <th>Heartbeat age</th>
-                    <th>Credentials</th>
-                    <th>Certificate</th>
-                    <th>Created UTC</th>
-                    <th>Updated UTC</th>
-                    <th>Revoked UTC</th>
-                    <th>Actions</th>
+                    <th>Система-источник</th>
+                    <th>Последняя активность UTC</th>
+                    <th>Давность heartbeat</th>
+                    <th>Учетные данные</th>
+                    <th>Сертификат</th>
+                    <th>Создано UTC</th>
+                    <th>Обновлено UTC</th>
+                    <th>Отозвано UTC</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -50,53 +50,53 @@ else
                             <span class="badge @sensor.StatusCssClass">@sensor.Status</span>
                         </td>
                         <td>@sensor.DisplayName</td>
-                        <td><code>@sensor.SensorId</code></td>
-                        <td><code>@sensor.SourceSystem</code></td>
+                        <td><code class="id-code">@sensor.SensorId</code></td>
+                        <td><code class="id-code">@sensor.SourceSystem</code></td>
                         <td>@(sensor.LastSeenAtUtc?.ToString("u") ?? "—")</td>
                         <td>@sensor.HeartbeatAgeText</td>
                         <td>
-                            <span class="badge bg-primary">@sensor.ActiveCredentialCount active</span>
-                            <span class="text-muted small">/ @sensor.CredentialCount total</span>
+                            <span class="badge text-bg-primary">@sensor.ActiveCredentialCount активных</span>
+                            <span class="text-muted small">/ всего @sensor.CredentialCount</span>
                             @if (sensor.NewestCredentialCreatedAtUtc is not null)
                             {
                                 <div class="text-muted small">
-                                    newest: @sensor.NewestCredentialCreatedAtUtc.Value.ToString("u")
+                                    последняя: @sensor.NewestCredentialCreatedAtUtc.Value.ToString("u")
                                 </div>
                             }
                         </td>
                         <td>
                             @if (sensor.HasCertificateFingerprint)
                             {
-                                <span class="badge bg-success">present</span>
+                                <span class="badge badge-ok">Есть</span>
                             }
                             else
                             {
-                                <span class="badge bg-light text-dark border">not set</span>
+                                <span class="badge badge-neutral">Не задан</span>
                             }
                         </td>
                         <td>@sensor.CreatedAtUtc.ToString("u")</td>
                         <td>@sensor.UpdatedAtUtc.ToString("u")</td>
                         <td>@(sensor.RevokedAtUtc?.ToString("u") ?? "—")</td>
                         <td>
-                            <div class="d-flex flex-column gap-1">
+                            <div class="action-stack">
                                 <a asp-controller="Sensors"
                                    asp-action="Details"
                                    asp-route-sensorId="@sensor.SensorId"
                                    class="btn btn-sm btn-outline-primary">
-                                    Детали
+                                    Открыть
                                 </a>
-                            @if (sensor.CanRotateCredential)
-                            {
-                                <form asp-controller="Sensors"
-                                      asp-action="RotateCredential"
-                                      method="post"
-                                      onsubmit="return confirm('Rotate this sensor credential? The new credential is shown once and must be copied directly to the protected Fedora environment.');">
-                                    <input type="hidden" name="sensorId" value="@sensor.SensorId" />
-                                    <button type="submit" class="btn btn-sm btn-outline-warning">
-                                        Rotate credential
-                                    </button>
-                                </form>
-                            }
+                                @if (sensor.CanRotateCredential)
+                                {
+                                    <form asp-controller="Sensors"
+                                          asp-action="RotateCredential"
+                                          method="post"
+                                          onsubmit="return confirm('Ротировать учетные данные сенсора? Новый секрет будет показан один раз и должен быть сразу перенесен в защищенную Fedora-среду.');">
+                                        <input type="hidden" name="sensorId" value="@sensor.SensorId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">
+                                            Ротировать
+                                        </button>
+                                    </form>
+                                }
                                 @if (sensor.CanRevokeSensor)
                                 {
                                     <form asp-controller="Sensors"
@@ -109,11 +109,10 @@ else
                                         </button>
                                     </form>
                                 }
-                            }
-                            else
-                            {
-                                <span class="text-muted small">not available</span>
-                            }
+                                @if (!sensor.CanRotateCredential && !sensor.CanRevokeSensor)
+                                {
+                                    <span class="text-muted small">Недоступно</span>
+                                }
                             </div>
                         </td>
                     </tr>

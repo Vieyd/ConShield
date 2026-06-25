@@ -270,6 +270,8 @@ For a new machine, copy `src/ConShield.Web/appsettings.Development.example.json`
 
 ConShield Web login uses `DemoUsers` from configuration; `adminib` and `operator` are configuration users, not database users. If login fails after changing local passwords, restart the Web process so it reloads `appsettings.Development.json` or inherited environment variables.
 
+Save `appsettings.Development.json` as UTF-8 when Cyrillic display names are used. Environment variables may override file values; if a browser JSON viewer shows mojibake for display names after setting values from PowerShell, prefer the UTF-8 local JSON file and restart Web.
+
 In `Development`, open the secret-free diagnostics endpoint:
 
 ```text

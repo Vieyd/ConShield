@@ -109,7 +109,7 @@ public sealed class SensorFleetUiTests
         var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "Index.cshtml");
 
         Assert.True(sensor.CanRotateCredential);
-        Assert.Contains("Rotate credential", viewText, StringComparison.Ordinal);
+        Assert.Contains("Ротировать", viewText, StringComparison.Ordinal);
         Assert.Contains("asp-action=\"RotateCredential\"", viewText, StringComparison.Ordinal);
         Assert.Contains("sensor.CanRotateCredential", viewText, StringComparison.Ordinal);
     }
@@ -456,7 +456,7 @@ public sealed class SensorFleetUiTests
 
         Assert.False(sensor.CanRotateCredential);
         Assert.Contains("sensor.CanRotateCredential", viewText, StringComparison.Ordinal);
-        Assert.Contains("not available", viewText, StringComparison.Ordinal);
+        Assert.Contains("Недоступно", viewText, StringComparison.Ordinal);
     }
 
     [Fact]

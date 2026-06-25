@@ -1,18 +1,18 @@
 @model ConShield.EventPipeline.SecurityEventOutboxStatusSnapshot
 
 @{
-    ViewData["Title"] = "Outbox";
+    ViewData["Title"] = "Очередь отправки";
     var mongo = ViewBag.MongoProjection as ConShield.MongoProjection.MongoProjectionStatusSnapshot;
     var deadLetters = ViewBag.DeadLetters as ConShield.EventPipeline.DeadLetterStatusSnapshot;
 }
 
-<h1 class="mb-3">Security Event Outbox</h1>
+<h1 class="mb-3">Очередь отправки событий</h1>
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="card">
             <div class="card-body">
-                <div class="text-muted small">Pending</div>
+                <div class="text-muted small">Ожидает</div>
                 <div class="fs-3">@Model.PendingCount</div>
             </div>
         </div>
@@ -20,7 +20,7 @@
     <div class="col-md-3">
         <div class="card">
             <div class="card-body">
-                <div class="text-muted small">Processing</div>
+                <div class="text-muted small">В обработке</div>
                 <div class="fs-3">@Model.ProcessingCount</div>
             </div>
         </div>
@@ -28,7 +28,7 @@
     <div class="col-md-3">
         <div class="card">
             <div class="card-body">
-                <div class="text-muted small">Delivered</div>
+                <div class="text-muted small">Доставлено</div>
                 <div class="fs-3">@Model.DeliveredCount</div>
             </div>
         </div>
@@ -36,7 +36,7 @@
     <div class="col-md-3">
         <div class="card">
             <div class="card-body">
-                <div class="text-muted small">DeadLetter</div>
+                <div class="text-muted small">Ошибка доставки / Dead-letter</div>
                 <div class="fs-3">@Model.DeadLetterCount</div>
             </div>
         </div>
@@ -45,11 +45,11 @@
 
 <div class="mb-3">
     <span class="badge @(Model.IsDegraded ? "bg-warning text-dark" : "bg-success")">
-        @(Model.IsDegraded ? "Degraded" : "Healthy")
+        @(Model.IsDegraded ? "Требует внимания" : "Норма")
     </span>
     <span class="ms-3">Transport: <strong>@Model.Transport</strong></span>
-    <span class="ms-3">Oldest pending age: @(Model.OldestPendingAge?.ToString(@"hh\:mm\:ss") ?? "-")</span>
-    <span class="ms-3">Last delivered UTC: @(Model.LastDeliveredAtUtc?.ToString("u") ?? "-")</span>
+    <span class="ms-3">Старейшее ожидание: @(Model.OldestPendingAge?.ToString(@"hh\:mm\:ss") ?? "-")</span>
+    <span class="ms-3">Последняя доставка UTC: @(Model.LastDeliveredAtUtc?.ToString("u") ?? "-")</span>
 </div>
 
 @if (deadLetters is not null)
@@ -136,7 +136,7 @@
         <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
-                    <div class="text-muted small">Inbox receipts</div>
+                    <div class="text-muted small">Подтверждения получения</div>
                     <div class="fs-5">@Model.RabbitMq.InboxReceiptCount</div>
                 </div>
             </div>
@@ -188,12 +188,12 @@
             <th>MessageId</th>
             <th>SecurityEventId</th>
             <th>MessageType</th>
-            <th>Status</th>
+            <th>Статус</th>
             <th>Attempts</th>
-            <th>Created UTC</th>
-            <th>Available UTC</th>
-            <th>Delivered UTC</th>
-            <th>Error</th>
+            <th>Создано UTC</th>
+            <th>Доступно UTC</th>
+            <th>Доставлено UTC</th>
+            <th>Ошибка</th>
         </tr>
     </thead>
     <tbody>

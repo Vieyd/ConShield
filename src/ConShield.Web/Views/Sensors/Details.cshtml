@@ -27,19 +27,19 @@
             <dt class="col-sm-3">Source system</dt>
             <dd class="col-sm-9"><code>@Model.SourceSystem</code></dd>
 
-            <dt class="col-sm-3">Last seen UTC</dt>
+            <dt class="col-sm-3">Последняя активность UTC</dt>
             <dd class="col-sm-9">@(Model.LastSeenAtUtc?.ToString("u") ?? "—")</dd>
 
-            <dt class="col-sm-3">Heartbeat age</dt>
+            <dt class="col-sm-3">Давность heartbeat</dt>
             <dd class="col-sm-9">@Model.HeartbeatAgeText</dd>
 
             <dt class="col-sm-3">Certificate</dt>
             <dd class="col-sm-9">@(Model.HasCertificateFingerprint ? "present" : "not set")</dd>
 
-            <dt class="col-sm-3">Created UTC</dt>
+            <dt class="col-sm-3">Создано UTC</dt>
             <dd class="col-sm-9">@Model.CreatedAtUtc.ToString("u")</dd>
 
-            <dt class="col-sm-3">Updated UTC</dt>
+            <dt class="col-sm-3">Обновлено UTC</dt>
             <dd class="col-sm-9">@Model.UpdatedAtUtc.ToString("u")</dd>
 
             <dt class="col-sm-3">Revoked UTC</dt>
@@ -67,7 +67,7 @@
 
 @if (Model.Credentials.Count == 0)
 {
-    <div class="alert alert-info">Credentials are not available for this sensor.</div>
+    <div class="alert alert-info">Учетные данные для этого сенсора недоступны.</div>
 }
 else
 {
@@ -75,9 +75,9 @@ else
         <table class="table table-sm table-striped align-middle">
             <thead>
                 <tr>
-                    <th>Status</th>
+                    <th>Статус</th>
                     <th>Credential ID</th>
-                    <th>Created UTC</th>
+                    <th>Создано UTC</th>
                     <th>Rotated UTC</th>
                     <th>Revoked UTC</th>
                     <th>Actions</th>
@@ -108,7 +108,7 @@ else
                             }
                             else
                             {
-                                <span class="text-muted small">not available</span>
+                                <span class="text-muted small">Недоступно</span>
                             }
                         </td>
                     </tr>
