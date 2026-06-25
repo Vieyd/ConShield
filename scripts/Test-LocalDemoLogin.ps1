@@ -53,6 +53,43 @@ function Get-AntiforgeryToken {
     return [System.Net.WebUtility]::HtmlDecode($match.Groups[1].Value)
 }
 
+function Get-SafeHeaderValue {
+    param(
+        [Parameter(Mandatory = $false)]$Headers,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    if ($null -eq $Headers) {
+        return $null
+    }
+
+    if ($Headers -is [System.Collections.IDictionary]) {
+        if ($Headers.Contains($Name)) {
+            return $Headers[$Name]
+        }
+
+        foreach ($key in $Headers.Keys) {
+            if ([string]::Equals([string]$key, $Name, [System.StringComparison]::OrdinalIgnoreCase)) {
+                return $Headers[$key]
+            }
+        }
+
+        return $null
+    }
+
+    try {
+        $value = $Headers[$Name]
+        if ($null -ne $value) {
+            return $value
+        }
+    }
+    catch {
+        return $null
+    }
+
+    return $null
+}
+
 $normalizedBaseUrl = $BaseUrl.TrimEnd('/')
 $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
 
@@ -108,7 +145,7 @@ try {
         -SkipHttpErrorCheck `
         -TimeoutSec 10
     $loginPostStatus = [int]$loginPost.StatusCode
-    $loginLocation = $loginPost.Headers.Location
+    $loginLocation = Get-SafeHeaderValue -Headers $loginPost.Headers -Name 'Location'
 
     $authenticatedProbe = Invoke-WebRequest `
         -Uri "$normalizedBaseUrl/Operations/Health" `
@@ -117,15 +154,17 @@ try {
         -SkipHttpErrorCheck `
         -TimeoutSec 10
     $probeStatus = [int]$authenticatedProbe.StatusCode
+    $probeLocation = Get-SafeHeaderValue -Headers $authenticatedProbe.Headers -Name 'Location'
 
     $failedByLoginPage = $loginPostStatus -eq 200 -and $loginPost.Content -match 'Неверный логин или пароль'
     $successByRedirect = $loginPostStatus -in @(301, 302, 303, 307, 308) -and ($null -eq $loginLocation -or $loginLocation.ToString() -notmatch '/Account/Login')
     $successByProbe = $probeStatus -eq 200
+    $failedByProbeRedirect = $probeStatus -in @(301, 302, 303, 307, 308) -and $null -ne $probeLocation -and $probeLocation.ToString() -match '/Account/Login'
 
     if ($successByRedirect -or $successByProbe) {
         Write-SafeInfo 'login_result=success'
     }
-    elseif ($failedByLoginPage) {
+    elseif ($failedByLoginPage -or $failedByProbeRedirect) {
         Write-SafeInfo 'login_result=failed'
     }
     else {

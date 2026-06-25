@@ -285,6 +285,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib -BaseUrl http://127.0.0.1:5080
 ```
 
+The script reads the diagnostics endpoint first, submits the real login form with an antiforgery token, and then probes `/Operations/Health` with the same session. If diagnostics show `HasPassword = true` but the script returns `login_result=failed`, the configured password likely differs from the one entered.
+
 Temporary shell-only configuration can be set with placeholders like this:
 
 ```powershell
@@ -294,7 +296,7 @@ $env:DemoUsers__0__DisplayName = "Администратор ИБ"
 $env:DemoUsers__0__Role = "AdminIB"
 ```
 
-After changing `DemoUsers`, restart Web. If the diagnostics endpoint shows the expected user and `HasPassword = true` but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, screenshots, logs, GitHub, or committed local config.
+After changing `DemoUsers`, restart Web. If the diagnostics endpoint and script succeed but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, screenshots, logs, GitHub, or committed local config.
 
 ## Demo Flow
 
