@@ -1,10 +1,12 @@
 using System.Text.Json;
+using System.Text;
 using ConShield.SecurityEvents;
 using ConShield.SecurityEvents.Models;
 using ConShield.Web.Controllers;
 using ConShield.Web.Options;
 using ConShield.Web.ViewModels;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -89,6 +91,147 @@ public class LocalDemoLoginDiagnosticsTests
     }
 
     [Fact]
+    public async Task DemoUserPasswordVerify_ReturnsSafeMatchInDevelopment()
+    {
+        const string configuredPassword = "configured-password-that-must-not-render";
+        var controller = CreateController(
+            "Development",
+            [
+                new DemoUserOptions
+                {
+                    UserName = "adminib",
+                    Password = configuredPassword,
+                    DisplayName = "Администратор ИБ",
+                    Role = "AdminIB"
+                }
+            ]);
+        SetJsonRequest(controller, new { userName = "adminib", password = configuredPassword });
+
+        var result = Assert.IsType<JsonResult>(await controller.VerifyDemoUserPassword());
+        var model = Assert.IsType<DemoUserPasswordVerifyViewModel>(result.Value);
+        var serialized = JsonSerializer.Serialize(result.Value);
+
+        Assert.Equal("Development", model.Environment);
+        Assert.Equal("adminib", model.UserName);
+        Assert.True(model.UserFound);
+        Assert.True(model.HasConfiguredPassword);
+        Assert.True(model.PasswordMatches);
+        Assert.Equal("AdminIB", model.Role);
+        Assert.DoesNotContain(configuredPassword, serialized, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DemoUserPasswordVerify_ReturnsMismatchWithoutLeakingPassword()
+    {
+        const string configuredPassword = "configured-password-that-must-not-render";
+        const string submittedPassword = "submitted-password-that-must-not-render";
+        var controller = CreateController(
+            "Development",
+            [
+                new DemoUserOptions
+                {
+                    UserName = "adminib",
+                    Password = configuredPassword,
+                    DisplayName = "Администратор ИБ",
+                    Role = "AdminIB"
+                }
+            ]);
+        SetJsonRequest(controller, new { userName = "adminib", password = submittedPassword });
+
+        var result = Assert.IsType<JsonResult>(await controller.VerifyDemoUserPassword());
+        var model = Assert.IsType<DemoUserPasswordVerifyViewModel>(result.Value);
+        var serialized = JsonSerializer.Serialize(result.Value);
+
+        Assert.True(model.UserFound);
+        Assert.True(model.HasConfiguredPassword);
+        Assert.False(model.PasswordMatches);
+        Assert.DoesNotContain(configuredPassword, serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain(submittedPassword, serialized, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DemoUserPasswordVerify_AcceptsFormPayload()
+    {
+        const string configuredPassword = "configured-password-that-must-not-render";
+        var controller = CreateController(
+            "Development",
+            [
+                new DemoUserOptions
+                {
+                    UserName = "adminib",
+                    Password = configuredPassword,
+                    DisplayName = "Администратор ИБ",
+                    Role = "AdminIB"
+                }
+            ]);
+        controller.Request.ContentType = "application/x-www-form-urlencoded";
+        controller.Request.Form = new FormCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+        {
+            ["userName"] = "adminib",
+            ["password"] = configuredPassword
+        });
+
+        var result = Assert.IsType<JsonResult>(await controller.VerifyDemoUserPassword());
+        var model = Assert.IsType<DemoUserPasswordVerifyViewModel>(result.Value);
+
+        Assert.True(model.UserFound);
+        Assert.True(model.HasConfiguredPassword);
+        Assert.True(model.PasswordMatches);
+    }
+
+    [Fact]
+    public async Task DemoUserPasswordVerify_NotAvailableOutsideDevelopment()
+    {
+        var controller = CreateController(
+            "Production",
+            [
+                new DemoUserOptions
+                {
+                    UserName = "adminib",
+                    Password = "configured-password-that-must-not-render",
+                    DisplayName = "Администратор ИБ",
+                    Role = "AdminIB"
+                }
+            ]);
+        SetJsonRequest(controller, new { userName = "adminib", password = "submitted-password-that-must-not-render" });
+
+        Assert.IsType<NotFoundResult>(await controller.VerifyDemoUserPassword());
+    }
+
+    [Fact]
+    public async Task DemoUserPasswordVerify_DoesNotExposeSecrets()
+    {
+        const string configuredPassword = "configured-password-that-must-not-render";
+        const string submittedPassword = "submitted-password-that-must-not-render";
+        var controller = CreateController(
+            "Development",
+            [
+                new DemoUserOptions
+                {
+                    UserName = "adminib",
+                    Password = configuredPassword,
+                    DisplayName = "Администратор ИБ",
+                    Role = "AdminIB"
+                }
+            ]);
+        SetJsonRequest(controller, new { userName = "adminib", password = submittedPassword });
+
+        var result = Assert.IsType<JsonResult>(await controller.VerifyDemoUserPassword());
+        var serialized = JsonSerializer.Serialize(result.Value);
+
+        Assert.DoesNotContain(configuredPassword, serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain(submittedPassword, serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain("passwordLength", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("hash", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("cookie", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("token", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("connection string", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("api key", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("VerifierSha256", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Password values are intentionally not returned or logged", serialized, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LocalDemoLoginScript_UsesSafeLocationHeaderAccess()
     {
         var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
@@ -170,6 +313,44 @@ public class LocalDemoLoginDiagnosticsTests
     }
 
     [Fact]
+    public void TestLocalDemoUserPasswordScript_DoesNotPrintPasswordOrBody()
+    {
+        var script = ReadRepoFile("scripts", "Test-LocalDemoUserPassword.ps1");
+
+        Assert.Contains("Read-Host -Prompt 'Password' -AsSecureString", script, StringComparison.Ordinal);
+        Assert.Contains("password_match={0}", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Write-Host $Password", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $Password", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $plainPassword", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $plainPassword", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $body", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $body", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $verify", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $verify", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("cookie", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("antiforgery", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TestLocalDemoLoginScript_PrintsPasswordMatchButNotPassword()
+    {
+        var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
+
+        Assert.Contains("password_match={0}", script, StringComparison.Ordinal);
+        Assert.Contains("SkipPasswordVerify", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Write-Host $Password", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $Password", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $plainPassword", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $plainPassword", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $body", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $body", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $token", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $token", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $session", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $session", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void LocalDemoLoginScript_PrintsSafeStatusAndResult()
     {
         var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
@@ -194,7 +375,11 @@ public class LocalDemoLoginDiagnosticsTests
 
         Assert.Contains("DemoUsers", combinedDocs, StringComparison.Ordinal);
         Assert.Contains("/Account/DemoUserDiagnostics", combinedDocs, StringComparison.Ordinal);
+        Assert.Contains("/Account/DemoUserDiagnostics/VerifyPassword", combinedDocs, StringComparison.Ordinal);
+        Assert.Contains("password_match=False", combinedDocs, StringComparison.Ordinal);
+        Assert.Contains("password_match=True", combinedDocs, StringComparison.Ordinal);
         Assert.Contains("scripts/Test-LocalDemoLogin.ps1", combinedDocs, StringComparison.Ordinal);
+        Assert.Contains("scripts/Test-LocalDemoUserPassword.ps1", combinedDocs, StringComparison.Ordinal);
         Assert.Contains("restart", combinedDocs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("do not paste passwords", combinedDocs, StringComparison.OrdinalIgnoreCase);
     }
@@ -206,7 +391,20 @@ public class LocalDemoLoginDiagnosticsTests
             Options.Create(users),
             new NoOpSecurityEventWriter(),
             new TestWebHostEnvironment { EnvironmentName = environmentName },
-            NullLogger<AccountController>.Instance);
+            NullLogger<AccountController>.Instance)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+
+    private static void SetJsonRequest(AccountController controller, object body)
+    {
+        var json = JsonSerializer.Serialize(body);
+        controller.Request.ContentType = "application/json";
+        controller.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(json));
+    }
 
     private static string ReadRepoFile(params string[] relativePath)
     {
