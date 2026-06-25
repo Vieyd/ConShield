@@ -1,10 +1,10 @@
 @model SensorRevocationFailureViewModel
 
 @{
-    ViewData["Title"] = "Revocation failed";
+    ViewData["Title"] = "Отзыв не выполнен";
 }
 
-<h1>Revocation failed</h1>
+<h1>Отзыв не выполнен</h1>
 
 <div class="alert alert-danger">
     @Model.Message
@@ -16,12 +16,12 @@
 
     @if (Model.CredentialId is not null)
     {
-        <dt class="col-sm-3">Credential ID</dt>
+        <dt class="col-sm-3">ID учетных данных</dt>
         <dd class="col-sm-9"><code>@Model.CredentialId</code></dd>
     }
 </dl>
 
 <a asp-controller="Sensors" asp-action="Details" asp-route-sensorId="@Model.SensorId" class="btn btn-primary">
-    Back to sensor details
+    К карточке сенсора
 </a>
-<a asp-controller="Sensors" asp-action="Index" class="btn btn-outline-secondary">Back to Sensors</a>
+<a asp-controller="Sensors" asp-action="Index" class="btn btn-outline-secondary">К сенсорам</a>

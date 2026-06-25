@@ -69,6 +69,8 @@ Operator actions:
 
 Local Web login uses configured `DemoUsers`, not database user records. If `adminib` or `operator` cannot sign in after changing a local password, restart Web so the process reloads `appsettings.Development.json` or inherited environment variables.
 
+Save `appsettings.Development.json` as UTF-8 for Cyrillic display names. Environment variables may override file values; if diagnostics JSON shows mojibake after setting PowerShell environment variables, prefer file-based UTF-8 config and restart Web.
+
 In Development only, open:
 
 ```text

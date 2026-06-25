@@ -2,11 +2,11 @@
 @using ConShield.Contracts.Enums
 @model IReadOnlyCollection<SiemRuleDefinition>
 @{
-    ViewData["Title"] = "Правила корреляции";
+    ViewData["Title"] = "Правила SIEM";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0">Правила корреляции</h1>
+    <h1 class="mb-0">Правила SIEM</h1>
     <a asp-action="Index" class="btn btn-outline-light">К оповещениям</a>
 </div>
 
@@ -15,10 +15,10 @@
 </div>
 
 <div class="table-responsive">
-    <table class="table table-dark table-striped align-middle">
+    <table class="table table-striped table-bordered align-middle">
         <thead>
             <tr>
-                <th>RuleCode</th>
+                <th>Код правила</th>
                 <th>Название</th>
                 <th>Критичность</th>
                 <th>Условие</th>
@@ -31,22 +31,22 @@
         @foreach (var item in Model)
         {
             <tr>
-                <td>@item.RuleCode</td>
+                <td><code class="id-code">@item.RuleCode</code></td>
                 <td>@item.RuleName</td>
                 <td>
                     @switch (item.Severity)
                     {
                         case EventSeverity.Critical:
-                            <span class="badge text-bg-danger">Critical</span>
+                            <span class="badge text-bg-danger">Критический</span>
                             break;
                         case EventSeverity.High:
-                            <span class="badge text-bg-primary">High</span>
+                            <span class="badge text-bg-primary">Высокий</span>
                             break;
                         case EventSeverity.Warning:
-                            <span class="badge text-bg-warning">Warning</span>
+                            <span class="badge text-bg-warning">Предупреждение</span>
                             break;
                         default:
-                            <span class="badge text-bg-info">Info</span>
+                            <span class="badge text-bg-info">Информационный</span>
                             break;
                     }
                 </td>

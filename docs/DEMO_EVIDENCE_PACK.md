@@ -60,6 +60,8 @@ Local login troubleshooting:
 
 ConShield Web login uses `DemoUsers` from configuration, not database users. `adminib` and `operator` are local configuration users. If login fails, restart Web after editing `appsettings.Development.json` or environment variables, then open the Development-only secret-free endpoint:
 
+Save `appsettings.Development.json` as UTF-8 for Cyrillic display names. Environment variables may override file values; if diagnostics JSON shows mojibake after setting PowerShell environment variables, prefer file-based UTF-8 config and restart Web.
+
 ```text
 http://127.0.0.1:5080/Account/DemoUserDiagnostics
 ```
