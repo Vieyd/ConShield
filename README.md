@@ -266,6 +266,36 @@ Local demo accounts are configured in `src/ConShield.Web/appsettings.Development
 
 For a new machine, copy `src/ConShield.Web/appsettings.Development.example.json` to `src/ConShield.Web/appsettings.Development.json` and set local demo usernames and passwords there. The development file is ignored by Git and must not be committed.
 
+### Local Login Troubleshooting
+
+ConShield Web login uses `DemoUsers` from configuration; `adminib` and `operator` are configuration users, not database users. If login fails after changing local passwords, restart the Web process so it reloads `appsettings.Development.json` or inherited environment variables.
+
+In `Development`, open the secret-free diagnostics endpoint:
+
+```text
+http://127.0.0.1:5080/Account/DemoUserDiagnostics
+```
+
+It shows the environment, configured demo-user count, user names, display names, roles, and `HasPassword`; it never returns passwords, password length, hashes, cookies, tokens, API keys, or connection strings.
+
+To test the real login form without printing the password:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib -BaseUrl http://127.0.0.1:5080
+```
+
+Temporary shell-only configuration can be set with placeholders like this:
+
+```powershell
+$env:DemoUsers__0__UserName = "adminib"
+$env:DemoUsers__0__Password = "CHANGE_ME"
+$env:DemoUsers__0__DisplayName = "Администратор ИБ"
+$env:DemoUsers__0__Role = "AdminIB"
+```
+
+After changing `DemoUsers`, restart Web. If the diagnostics endpoint shows the expected user and `HasPassword = true` but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, screenshots, logs, GitHub, or committed local config.
+
 ## Demo Flow
 
 1. Sign in as `adminib`.

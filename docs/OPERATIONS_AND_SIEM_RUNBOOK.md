@@ -65,6 +65,35 @@ Operator actions:
 6. Create an incident from a relevant security event or alert when needed.
 7. Document the operator conclusion.
 
+## Local login troubleshooting
+
+Local Web login uses configured `DemoUsers`, not database user records. If `adminib` or `operator` cannot sign in after changing a local password, restart Web so the process reloads `appsettings.Development.json` or inherited environment variables.
+
+In Development only, open:
+
+```text
+http://127.0.0.1:5080/Account/DemoUserDiagnostics
+```
+
+The diagnostics response is secret-free and shows only environment, configured demo-user count, user name, display name, role, `HasPassword`, and warnings. It does not show password values, password length, hashes, connection strings, cookies, tokens, API keys, or verifier values.
+
+To test the real login form safely:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
+```
+
+Temporary shell-only placeholder configuration:
+
+```powershell
+$env:DemoUsers__0__UserName = "adminib"
+$env:DemoUsers__0__Password = "CHANGE_ME"
+$env:DemoUsers__0__DisplayName = "Администратор ИБ"
+$env:DemoUsers__0__Role = "AdminIB"
+```
+
+After changing config, restart Web. If diagnostics look correct but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, tickets, screenshots, logs, or committed files.
+
 ## Local synthetic demo scenarios
 
 For a safe local walkthrough, an operator/developer can seed marked synthetic records with `tools/ConShield.DemoScenario` or use the safer validation wrapper `scripts/Validate-DemoScenario.ps1`. This is not a production remediation or sensor operation path; it does not touch Fedora services and does not publish RabbitMQ messages.

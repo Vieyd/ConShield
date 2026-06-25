@@ -20,6 +20,7 @@ A compact snapshot of the current project state after the implemented scan → p
 - Security Summary report/export: `/Reports/SecuritySummary` and `/Reports/SecuritySummaryMarkdown?range=24h` provide secret-safe aggregate reporting.
 - Demo scenario runner: `tools/ConShield.DemoScenario` can seed/reset clearly marked synthetic local demo data for walkthroughs.
 - Demo scenario validation: `scripts/Validate-DemoScenario.ps1` wraps the runner with dry-run defaults, explicit apply, reset safety, and optional unauthenticated Web route checks.
+- Local login diagnostics: `/Account/DemoUserDiagnostics` is Development-only and reports secret-free `DemoUsers` configuration status; `scripts/Test-LocalDemoLogin.ps1` tests the actual login form without printing the password.
 - Demo/diploma evidence docs: `docs/DEMO_EVIDENCE_PACK.md` and `docs/DIPLOMA_FEATURE_MAP.md` describe the safe demo path and feature mapping.
 
 ## Main user roles
@@ -48,6 +49,7 @@ A compact snapshot of the current project state after the implemented scan → p
 - `src/ConShield.EventConsumer`: RabbitMQ consumer, inbox receipt writer, and optional MongoDB projection.
 - `tools/ConShield.DemoScenario`: local-only scenario runner for synthetic `healthy`, `full-demo`, `lifecycle-alerts`, `runtime-incident`, and `outbox-backlog` data.
 - `scripts/Validate-DemoScenario.ps1`: local validation wrapper for dry-run, explicit apply, reset preview/apply, and optional route checks.
+- `scripts/Test-LocalDemoLogin.ps1`: local login-form validator that prompts for the demo password with `Read-Host -AsSecureString` and does not print password, cookie, or antiforgery-token values.
 
 ## Security boundaries
 
@@ -60,6 +62,7 @@ A compact snapshot of the current project state after the implemented scan → p
 - Report exports do not include raw `AdditionalDataJson`, credential plaintext, API keys, connection strings, env values, cookies, tokens, passwords, or local secrets.
 - Demo scenario writes require explicit `CONSHIELD_DEMO_CONNECTION_STRING`; the runner must not print the value and reset deletes only marked demo records.
 - Demo scenario validation defaults to no DB writes; `-Apply` is required for writes, and reset apply also requires `-Yes`.
+- Demo-user diagnostics are available only in Development and never return password values, password length, hashes, connection strings, cookies, tokens, API keys, or verifier values.
 
 ## Validation status
 
@@ -103,6 +106,14 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps
 ```
 
 After seeding, review `/Operations/Health`, `/SecurityEvents`, `/Sensors`, `/Reports/SecuritySummary`, `/Siem`, and `/Incidents`.
+
+Local login check:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
+```
+
+If login fails after local config changes, restart Web, open `/Account/DemoUserDiagnostics`, and use incognito/clear cookies before retesting.
 
 ## Known limitations / future work
 
