@@ -16,13 +16,19 @@ public class AccountController : Controller
 {
     private readonly List<DemoUserOptions> _users;
     private readonly ISecurityEventWriter _eventWriter;
+    private readonly IWebHostEnvironment _environment;
+    private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         IOptions<List<DemoUserOptions>> usersOptions,
-        ISecurityEventWriter eventWriter)
+        ISecurityEventWriter eventWriter,
+        IWebHostEnvironment environment,
+        ILogger<AccountController> logger)
     {
         _users = usersOptions.Value;
         _eventWriter = eventWriter;
+        _environment = environment;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -44,13 +50,18 @@ public class AccountController : Controller
         }
 
         var user = _users.FirstOrDefault(x =>
-            x.UserName.Equals(model.UserName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.UserName, model.UserName, StringComparison.OrdinalIgnoreCase) &&
             x.Password == model.Password);
 
         var sourceIp = HttpContext.Connection.RemoteIpAddress?.ToString();
 
         if (user is null)
         {
+            _logger.LogWarning(
+                "Demo login failed with reason {Reason} for user {UserName}.",
+                LoginFailureReason(model.UserName),
+                model.UserName);
+
             await _eventWriter.WriteAsync(new SecurityEventWriteRequest
             {
                 EventType = SecurityEventType.LoginFailure,
@@ -122,4 +133,65 @@ public class AccountController : Controller
     {
         return View();
     }
+
+    [HttpGet]
+    public IActionResult DemoUserDiagnostics()
+    {
+        if (!_environment.IsDevelopment())
+            return NotFound();
+
+        var warnings = new List<string>();
+        if (_users.Count == 0)
+            warnings.Add("no demo users configured");
+
+        warnings.AddRange(_users
+            .Where(x => string.IsNullOrWhiteSpace(x.Role))
+            .Select(x => $"missing role for user {SafeUserName(x.UserName)}"));
+
+        warnings.AddRange(_users
+            .Where(x => string.IsNullOrWhiteSpace(x.Password))
+            .Select(x => $"missing password for user {SafeUserName(x.UserName)}"));
+
+        warnings.AddRange(_users
+            .Where(x => !string.IsNullOrWhiteSpace(x.UserName))
+            .GroupBy(x => x.UserName.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Where(x => x.Count() > 1)
+            .Select(x => $"duplicate user name {SafeUserName(x.Key)}"));
+
+        var result = new DemoUserDiagnosticsViewModel
+        {
+            Environment = _environment.EnvironmentName,
+            ConfiguredDemoUserCount = _users.Count,
+            Users = _users
+                .Select(x => new DemoUserDiagnosticsUserViewModel
+                {
+                    UserName = SafeUserName(x.UserName),
+                    DisplayName = x.DisplayName,
+                    Role = x.Role,
+                    HasPassword = !string.IsNullOrWhiteSpace(x.Password)
+                })
+                .ToList(),
+            Warnings = warnings
+        };
+
+        return Json(result);
+    }
+
+    private string LoginFailureReason(string userName)
+    {
+        if (_users.Count == 0)
+            return "no_demo_users_configured";
+
+        var configuredUser = _users.FirstOrDefault(x =>
+            string.Equals(x.UserName, userName, StringComparison.OrdinalIgnoreCase));
+
+        return configuredUser is null
+            ? "username_not_found"
+            : "password_mismatch";
+    }
+
+    private static string SafeUserName(string? userName) =>
+        string.IsNullOrWhiteSpace(userName)
+            ? "missing-user-name"
+            : userName.Trim();
 }

@@ -56,6 +56,31 @@ For a compact current-state handoff, see [CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md](C
 
 Use placeholders and safe local examples only. Do not paste real API keys, generated credentials, connection strings, local passwords, or protected Fedora env file contents into the terminal, slides, screenshots, GitHub, or chat.
 
+Local login troubleshooting:
+
+ConShield Web login uses `DemoUsers` from configuration, not database users. `adminib` and `operator` are local configuration users. If login fails, restart Web after editing `appsettings.Development.json` or environment variables, then open the Development-only secret-free endpoint:
+
+```text
+http://127.0.0.1:5080/Account/DemoUserDiagnostics
+```
+
+The endpoint shows user names, roles, display names, and `HasPassword`, but never shows passwords, password length, cookies, tokens, API keys, or connection strings. To test the actual login form without printing the password:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
+```
+
+Shell-only placeholder example:
+
+```powershell
+$env:DemoUsers__0__UserName = "adminib"
+$env:DemoUsers__0__Password = "CHANGE_ME"
+$env:DemoUsers__0__DisplayName = "Администратор ИБ"
+$env:DemoUsers__0__Role = "AdminIB"
+```
+
+Use incognito/clear cookies if diagnostics are correct but browser login still fails. Do not paste passwords into chat or commit local config.
+
 Start apps:
 
 ```powershell
