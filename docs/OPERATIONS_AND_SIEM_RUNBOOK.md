@@ -83,7 +83,7 @@ To test the real login form safely:
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
 ```
 
-The script checks diagnostics, submits the real login form, and probes `/Operations/Health` with the same session. If diagnostics show `HasPassword=True` but the script returns `login_result=failed`, the entered password likely does not match the configured local password.
+The script checks diagnostics, submits the real login form, and probes `/Operations/Health` with the same session. It tolerates missing redirect headers and still relies on the authenticated health probe. If diagnostics show `HasPassword=True` but the script returns `login_result=failed`, the entered password likely does not match the configured local password.
 
 Temporary shell-only placeholder configuration:
 

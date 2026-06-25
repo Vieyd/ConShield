@@ -63,31 +63,66 @@ function Get-SafeHeaderValue {
         return $null
     }
 
-    if ($Headers -is [System.Collections.IDictionary]) {
-        if ($Headers.Contains($Name)) {
-            return $Headers[$Name]
-        }
+    try {
+        $keys = @($Headers.Keys)
+    }
+    catch {
+        $keys = @()
+    }
 
-        foreach ($key in $Headers.Keys) {
-            if ([string]::Equals([string]$key, $Name, [System.StringComparison]::OrdinalIgnoreCase)) {
+    foreach ($key in $keys) {
+        if ([string]::Equals([string]$key, $Name, [System.StringComparison]::OrdinalIgnoreCase)) {
+            try {
                 return $Headers[$key]
             }
+            catch {
+                return $null
+            }
         }
-
-        return $null
     }
 
     try {
-        $value = $Headers[$Name]
-        if ($null -ne $value) {
-            return $value
-        }
+        return $Headers[$Name]
     }
     catch {
         return $null
     }
+}
 
-    return $null
+function Invoke-WebRequestNoRedirect {
+    param(
+        [Parameter(Mandatory = $true)][string]$Uri,
+        [Parameter(Mandatory = $false)][string]$Method = 'Get',
+        [Parameter(Mandatory = $false)]$Body,
+        [Parameter(Mandatory = $true)]$WebSession,
+        [Parameter(Mandatory = $false)][int]$TimeoutSec = 10
+    )
+
+    $requestErrors = $null
+    $request = @{
+        Uri                  = $Uri
+        WebSession           = $WebSession
+        MaximumRedirection   = 0
+        SkipHttpErrorCheck   = $true
+        TimeoutSec           = $TimeoutSec
+        ErrorAction          = 'SilentlyContinue'
+        ErrorVariable        = 'requestErrors'
+    }
+
+    if ($Method -ne 'Get') {
+        $request.Method = $Method
+    }
+
+    if ($null -ne $Body) {
+        $request.Body = $Body
+    }
+
+    $response = Invoke-WebRequest @request
+    if ($null -eq $response -and $requestErrors) {
+        throw $requestErrors[0]
+    }
+
+    return $response
 }
 
 $normalizedBaseUrl = $BaseUrl.TrimEnd('/')
@@ -136,22 +171,18 @@ try {
         __RequestVerificationToken     = $token
     }
 
-    $loginPost = Invoke-WebRequest `
+    $loginPost = Invoke-WebRequestNoRedirect `
         -Uri "$normalizedBaseUrl/Account/Login" `
         -Method Post `
         -Body $form `
         -WebSession $session `
-        -MaximumRedirection 0 `
-        -SkipHttpErrorCheck `
         -TimeoutSec 10
     $loginPostStatus = [int]$loginPost.StatusCode
     $loginLocation = Get-SafeHeaderValue -Headers $loginPost.Headers -Name 'Location'
 
-    $authenticatedProbe = Invoke-WebRequest `
+    $authenticatedProbe = Invoke-WebRequestNoRedirect `
         -Uri "$normalizedBaseUrl/Operations/Health" `
         -WebSession $session `
-        -MaximumRedirection 0 `
-        -SkipHttpErrorCheck `
         -TimeoutSec 10
     $probeStatus = [int]$authenticatedProbe.StatusCode
     $probeLocation = Get-SafeHeaderValue -Headers $authenticatedProbe.Headers -Name 'Location'
