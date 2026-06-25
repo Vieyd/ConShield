@@ -113,7 +113,7 @@ Local login check:
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
 ```
 
-If login fails after local config changes, restart Web, open `/Account/DemoUserDiagnostics`, and use incognito/clear cookies before retesting.
+If login fails after local config changes, restart Web, open `/Account/DemoUserDiagnostics`, and run the script. The script submits the real login form and probes `/Operations/Health` with the same session. If diagnostics show `HasPassword=True` but the script reports `login_result=failed`, the entered password likely differs from the configured value. If the script succeeds but the browser does not, use incognito/clear cookies before retesting.
 
 ## Known limitations / future work
 

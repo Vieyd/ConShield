@@ -89,6 +89,30 @@ public class LocalDemoLoginDiagnosticsTests
     }
 
     [Fact]
+    public void LocalDemoLoginScript_UsesSafeLocationHeaderAccess()
+    {
+        var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
+
+        Assert.Contains("function Get-SafeHeaderValue", script, StringComparison.Ordinal);
+        Assert.Contains("Get-SafeHeaderValue -Headers $loginPost.Headers -Name 'Location'", script, StringComparison.Ordinal);
+        Assert.Contains("Get-SafeHeaderValue -Headers $authenticatedProbe.Headers -Name 'Location'", script, StringComparison.Ordinal);
+        Assert.DoesNotContain(".Headers.Location", script, StringComparison.Ordinal);
+        Assert.DoesNotContain(".Location", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LocalDemoLoginScript_ContinuesWhenLocationHeaderMissing()
+    {
+        var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
+
+        Assert.Contains("if ($null -eq $Headers)", script, StringComparison.Ordinal);
+        Assert.Contains("return $null", script, StringComparison.Ordinal);
+        Assert.Contains("catch", script, StringComparison.Ordinal);
+        Assert.Contains("$successByProbe = $probeStatus -eq 200", script, StringComparison.Ordinal);
+        Assert.Contains("$failedByProbeRedirect", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LocalDemoLoginScript_DoesNotPrintPasswordOrTokens()
     {
         var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
@@ -105,6 +129,19 @@ public class LocalDemoLoginDiagnosticsTests
         Assert.DoesNotContain("Write-Output $session", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Password=", script, StringComparison.Ordinal);
         Assert.DoesNotContain("ConnectionStrings", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void LocalDemoLoginScript_PrintsSafeStatusAndResult()
+    {
+        var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
+
+        Assert.Contains("login_get_status={0}", script, StringComparison.Ordinal);
+        Assert.Contains("login_post_status={0}", script, StringComparison.Ordinal);
+        Assert.Contains("authenticated_probe_status={0}", script, StringComparison.Ordinal);
+        Assert.Contains("login_result=success", script, StringComparison.Ordinal);
+        Assert.Contains("login_result=failed", script, StringComparison.Ordinal);
+        Assert.Contains("login_result=unknown", script, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -83,6 +83,8 @@ To test the real login form safely:
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
 ```
 
+The script checks diagnostics, submits the real login form, and probes `/Operations/Health` with the same session. If diagnostics show `HasPassword=True` but the script returns `login_result=failed`, the entered password likely does not match the configured local password.
+
 Temporary shell-only placeholder configuration:
 
 ```powershell
@@ -92,7 +94,7 @@ $env:DemoUsers__0__DisplayName = "Администратор ИБ"
 $env:DemoUsers__0__Role = "AdminIB"
 ```
 
-After changing config, restart Web. If diagnostics look correct but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, tickets, screenshots, logs, or committed files.
+After changing config, restart Web. If diagnostics and the script succeed but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, tickets, screenshots, logs, or committed files.
 
 ## Local synthetic demo scenarios
 

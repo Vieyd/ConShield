@@ -70,6 +70,8 @@ The endpoint shows user names, roles, display names, and `HasPassword`, but neve
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
 ```
 
+The script uses diagnostics plus an authenticated `/Operations/Health` probe with the same session. If diagnostics show `HasPassword=True` but the script returns `login_result=failed`, the entered password likely differs from the configured local value.
+
 Shell-only placeholder example:
 
 ```powershell
@@ -79,7 +81,7 @@ $env:DemoUsers__0__DisplayName = "Администратор ИБ"
 $env:DemoUsers__0__Role = "AdminIB"
 ```
 
-Use incognito/clear cookies if diagnostics are correct but browser login still fails. Do not paste passwords into chat or commit local config.
+Use incognito/clear cookies if diagnostics and the script succeed but browser login still fails. Do not paste passwords into chat or commit local config.
 
 Start apps:
 
