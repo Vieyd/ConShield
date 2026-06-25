@@ -101,6 +101,28 @@ public class LocalDemoLoginDiagnosticsTests
     }
 
     [Fact]
+    public void LocalDemoLoginScript_DoesNotUseHeaderContains()
+    {
+        var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
+
+        Assert.DoesNotContain(".Contains($Name)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain(".ContainsKey($Name)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain(".Headers.Location", script, StringComparison.Ordinal);
+        Assert.DoesNotContain(".Location", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LocalDemoLoginScript_HeaderHelperIteratesKeys()
+    {
+        var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
+
+        Assert.Contains("$Headers.Keys", script, StringComparison.Ordinal);
+        Assert.Contains("[string]::Equals", script, StringComparison.Ordinal);
+        Assert.Contains("OrdinalIgnoreCase", script, StringComparison.Ordinal);
+        Assert.Contains("return $null", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LocalDemoLoginScript_ContinuesWhenLocationHeaderMissing()
     {
         var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
@@ -113,7 +135,19 @@ public class LocalDemoLoginDiagnosticsTests
     }
 
     [Fact]
-    public void LocalDemoLoginScript_DoesNotPrintPasswordOrTokens()
+    public void LocalDemoLoginScript_NoRedirectRequestsDoNotThrowOnRedirectStatus()
+    {
+        var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
+
+        Assert.Contains("function Invoke-WebRequestNoRedirect", script, StringComparison.Ordinal);
+        Assert.Contains("MaximumRedirection", script, StringComparison.Ordinal);
+        Assert.Contains("ErrorAction", script, StringComparison.Ordinal);
+        Assert.Contains("'SilentlyContinue'", script, StringComparison.Ordinal);
+        Assert.Contains("Invoke-WebRequestNoRedirect", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LocalDemoLoginScript_DoesNotPrintPasswordCookiesTokensOrBodies()
     {
         var script = ReadRepoFile("scripts", "Test-LocalDemoLogin.ps1");
 
@@ -127,6 +161,10 @@ public class LocalDemoLoginDiagnosticsTests
         Assert.DoesNotContain("Write-Output $token", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Write-Host $session", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Write-Output $session", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $body", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $body", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $content", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $content", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Password=", script, StringComparison.Ordinal);
         Assert.DoesNotContain("ConnectionStrings", script, StringComparison.OrdinalIgnoreCase);
     }
