@@ -296,6 +296,30 @@ dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --dry-run
 dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --yes
 ```
 
+### Demo Scenario Validation
+
+`scripts/Validate-DemoScenario.ps1` is a safe local wrapper around the demo runner. It defaults to dry-run mode, can optionally check unauthenticated Web route behavior, and requires explicit `-Apply` before any demo data write.
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -Scenario full-demo -DryRun -SkipWebChecks
+```
+
+To seed local demo data, set `CONSHIELD_DEMO_CONNECTION_STRING` in your shell without printing its value and then opt in explicitly:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -Scenario full-demo -Apply
+```
+
+To preview and remove only marked synthetic demo data:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -ResetDemoData -DryRun
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -ResetDemoData -Apply -Yes
+```
+
+Do not run `-Apply` against a production database. After seeding, inspect `/Operations/Health`, `/SecurityEvents`, `/Sensors`, `/Reports/SecuritySummary`, `/Siem`, and `/Incidents`.
+
 ## Roadmap
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) and the product-level [architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md).

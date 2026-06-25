@@ -67,20 +67,31 @@ Operator actions:
 
 ## Local synthetic demo scenarios
 
-For a safe local walkthrough, an operator/developer can seed marked synthetic records with `tools/ConShield.DemoScenario`. This is not a production remediation or sensor operation path; it does not touch Fedora services and does not publish RabbitMQ messages.
+For a safe local walkthrough, an operator/developer can seed marked synthetic records with `tools/ConShield.DemoScenario` or use the safer validation wrapper `scripts/Validate-DemoScenario.ps1`. This is not a production remediation or sensor operation path; it does not touch Fedora services and does not publish RabbitMQ messages.
+
+Start with wrapper dry-run mode:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -Scenario full-demo -DryRun -SkipWebChecks
+```
+
+If the local Web app is running, omit `-SkipWebChecks` to check unauthenticated route behavior for `/`, `/Account/Login`, `/Operations/Health`, `/SecurityEvents`, and `/Reports/SecuritySummary`.
+
+Apply is explicit and local/dev/demo only:
 
 ```powershell
 $env:CONSHIELD_DEMO_CONNECTION_STRING = "Host=127.0.0.1;Port=5432;Database=conshield;Username=conshield;Password=<local-dev-password>"
-dotnet run --project tools/ConShield.DemoScenario -- --scenario lifecycle-alerts --yes
-dotnet run --project tools/ConShield.DemoScenario -- --scenario outbox-backlog --yes
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -Scenario full-demo -Apply
 ```
 
 Before cleanup, preview the marked rows and then reset only demo data:
 
 ```powershell
-dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --dry-run
-dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --yes
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -ResetDemoData -DryRun
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -ResetDemoData -Apply -Yes
 ```
+
+Do not run `-Apply` against a production database, and do not print `CONSHIELD_DEMO_CONNECTION_STRING`.
 
 ## Safe handling rules
 

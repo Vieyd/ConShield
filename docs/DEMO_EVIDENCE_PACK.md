@@ -105,6 +105,28 @@ dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --dry-run
 dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --yes
 ```
 
+Run the validation wrapper in safe dry-run mode:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -Scenario full-demo -DryRun -SkipWebChecks
+```
+
+If the local Web app is running, omit `-SkipWebChecks` to also check unauthenticated route behavior:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -Scenario full-demo -DryRun
+```
+
+Only for a local development database, seed and reset through explicit apply commands:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -Scenario full-demo -Apply
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -ResetDemoData -DryRun
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -ResetDemoData -Apply -Yes
+```
+
+`CONSHIELD_DEMO_CONNECTION_STRING` is required for write/reset-count operations but must never be printed or captured in screenshots/reports. Do not run `-Apply` against a production database.
+
 Open report:
 
 ```text
