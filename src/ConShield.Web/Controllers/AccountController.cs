@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using ConShield.Contracts.Constants;
 using ConShield.Contracts.Enums;
 using ConShield.SecurityEvents;
@@ -177,6 +178,32 @@ public class AccountController : Controller
         return Json(result);
     }
 
+    [HttpPost("/Account/DemoUserDiagnostics/VerifyPassword")]
+    public async Task<IActionResult> VerifyDemoUserPassword()
+    {
+        if (!_environment.IsDevelopment())
+            return NotFound();
+
+        var request = await ReadDemoUserPasswordVerifyRequestAsync();
+        var requestedUserName = SafeUserName(request.UserName);
+        var configuredUser = _users.FirstOrDefault(x =>
+            string.Equals(x.UserName, request.UserName, StringComparison.OrdinalIgnoreCase));
+        var hasConfiguredPassword = !string.IsNullOrWhiteSpace(configuredUser?.Password);
+        var passwordMatches = configuredUser is not null &&
+            hasConfiguredPassword &&
+            configuredUser.Password == request.Password;
+
+        return Json(new DemoUserPasswordVerifyViewModel
+        {
+            Environment = _environment.EnvironmentName,
+            UserName = requestedUserName,
+            UserFound = configuredUser is not null,
+            HasConfiguredPassword = hasConfiguredPassword,
+            PasswordMatches = passwordMatches,
+            Role = configuredUser?.Role
+        });
+    }
+
     private string LoginFailureReason(string userName)
     {
         if (_users.Count == 0)
@@ -194,4 +221,28 @@ public class AccountController : Controller
         string.IsNullOrWhiteSpace(userName)
             ? "missing-user-name"
             : userName.Trim();
+
+    private async Task<DemoUserPasswordVerifyRequestViewModel> ReadDemoUserPasswordVerifyRequestAsync()
+    {
+        if (Request.HasFormContentType)
+        {
+            var form = await Request.ReadFormAsync();
+            return new DemoUserPasswordVerifyRequestViewModel
+            {
+                UserName = form["userName"].ToString(),
+                Password = form["password"].ToString()
+            };
+        }
+
+        if (Request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var request = await JsonSerializer.DeserializeAsync<DemoUserPasswordVerifyRequestViewModel>(
+                Request.Body,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+            return request ?? new DemoUserPasswordVerifyRequestViewModel();
+        }
+
+        return new DemoUserPasswordVerifyRequestViewModel();
+    }
 }

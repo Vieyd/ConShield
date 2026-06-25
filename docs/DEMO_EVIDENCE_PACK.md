@@ -67,10 +67,18 @@ http://127.0.0.1:5080/Account/DemoUserDiagnostics
 The endpoint shows user names, roles, display names, and `HasPassword`, but never shows passwords, password length, cookies, tokens, API keys, or connection strings. To test the actual login form without printing the password:
 
 ```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoUserPassword.ps1 -UserName adminib
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
 ```
 
-The script uses diagnostics plus an authenticated `/Operations/Health` probe with the same session. It tolerates missing redirect headers and still relies on the authenticated health probe. If diagnostics show `HasPassword=True` but the script returns `login_result=failed`, the entered password likely differs from the configured local value.
+The password verification script calls `/Account/DemoUserDiagnostics/VerifyPassword` in `Development` only and prints `password_match=True/False` without printing password values, length, hashes, cookies, tokens, API keys, or connection strings. The login script uses diagnostics plus an authenticated `/Operations/Health` probe with the same session. It tolerates missing redirect headers and still relies on the authenticated health probe.
+
+Troubleshooting matrix:
+
+- Diagnostics shows `adminib` + `HasPassword=True`, `password_match=False`: the running Web process has a different configured password than the one entered.
+- `password_match=True`, `login_result=failed`: the password is correct, but login form/session flow needs investigation.
+- `password_match=True`, `login_result=success`, browser still fails: clear cookies or use incognito.
+- Diagnostics endpoint unavailable: Web is not running in `Development`, or the wrong URL/port is used.
 
 Shell-only placeholder example:
 
@@ -81,7 +89,7 @@ $env:DemoUsers__0__DisplayName = "Администратор ИБ"
 $env:DemoUsers__0__Role = "AdminIB"
 ```
 
-Use incognito/clear cookies if diagnostics and the script succeed but browser login still fails. Do not paste passwords into chat or commit local config.
+After changing `DemoUsers`, restart Web. Environment variables may override `appsettings.Development.json`. Use incognito/clear cookies if diagnostics and the scripts succeed but browser login still fails. Do not paste passwords into chat or commit local config.
 
 Start apps:
 

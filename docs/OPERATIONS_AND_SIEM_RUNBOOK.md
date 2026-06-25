@@ -80,10 +80,18 @@ The diagnostics response is secret-free and shows only environment, configured d
 To test the real login form safely:
 
 ```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoUserPassword.ps1 -UserName adminib
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
 ```
 
-The script checks diagnostics, submits the real login form, and probes `/Operations/Health` with the same session. It tolerates missing redirect headers and still relies on the authenticated health probe. If diagnostics show `HasPassword=True` but the script returns `login_result=failed`, the entered password likely does not match the configured local password.
+The password verification script calls `/Account/DemoUserDiagnostics/VerifyPassword` in `Development` only and prints `password_match=True/False` without printing password values, length, hashes, cookies, tokens, API keys, verifier values, or connection strings. The login script checks diagnostics, submits the real login form, and probes `/Operations/Health` with the same session. It tolerates missing redirect headers and still relies on the authenticated health probe.
+
+Troubleshooting matrix:
+
+- Diagnostics shows `adminib` + `HasPassword=True`, `password_match=False`: the running Web process has a different configured password than the one entered.
+- `password_match=True`, `login_result=failed`: the password is correct, but login form/session flow needs investigation.
+- `password_match=True`, `login_result=success`, browser still fails: clear cookies or use incognito.
+- Diagnostics endpoint unavailable: Web is not running in `Development`, or the wrong URL/port is used.
 
 Temporary shell-only placeholder configuration:
 
@@ -94,7 +102,7 @@ $env:DemoUsers__0__DisplayName = "Администратор ИБ"
 $env:DemoUsers__0__Role = "AdminIB"
 ```
 
-After changing config, restart Web. If diagnostics and the script succeed but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, tickets, screenshots, logs, or committed files.
+After changing config, restart Web. Environment variables may override `appsettings.Development.json`. If diagnostics and the scripts succeed but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, tickets, screenshots, logs, or committed files.
 
 ## Local synthetic demo scenarios
 

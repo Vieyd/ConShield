@@ -110,10 +110,20 @@ After seeding, review `/Operations/Health`, `/SecurityEvents`, `/Sensors`, `/Rep
 Local login check:
 
 ```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoUserPassword.ps1 -UserName adminib
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
 ```
 
-If login fails after local config changes, restart Web, open `/Account/DemoUserDiagnostics`, and run the script. The script submits the real login form, tolerates missing redirect headers, and probes `/Operations/Health` with the same session. If diagnostics show `HasPassword=True` but the script reports `login_result=failed`, the entered password likely differs from the configured value. If the script succeeds but the browser does not, use incognito/clear cookies before retesting.
+If login fails after local config changes, restart Web, open `/Account/DemoUserDiagnostics`, and run the scripts. The password verification script calls `/Account/DemoUserDiagnostics/VerifyPassword` in `Development` only and prints `password_match=True/False` without printing password values, length, hashes, cookies, tokens, API keys, verifier values, or connection strings. The login script submits the real login form, tolerates missing redirect headers, and probes `/Operations/Health` with the same session.
+
+Troubleshooting matrix:
+
+- Diagnostics shows `adminib` + `HasPassword=True`, `password_match=False`: the running Web process has a different configured password than the one entered.
+- `password_match=True`, `login_result=failed`: the password is correct, but login form/session flow needs investigation.
+- `password_match=True`, `login_result=success`, browser still fails: clear cookies or use incognito.
+- Diagnostics endpoint unavailable: Web is not running in `Development`, or the wrong URL/port is used.
+
+After changing `DemoUsers`, restart Web. Environment variables may override `appsettings.Development.json`. Do not paste passwords into chat, tickets, screenshots, logs, GitHub, or committed local config.
 
 ## Known limitations / future work
 

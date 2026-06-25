@@ -6,7 +6,9 @@ param(
 
     [string]$BaseUrl = 'http://127.0.0.1:5080',
 
-    [switch]$SkipDiagnostics
+    [switch]$SkipDiagnostics,
+
+    [switch]$SkipPasswordVerify
 )
 
 $ErrorActionPreference = 'Stop'
@@ -125,6 +127,42 @@ function Invoke-WebRequestNoRedirect {
     return $response
 }
 
+function Invoke-DemoPasswordVerify {
+    param(
+        [Parameter(Mandatory = $true)][string]$VerifyBaseUrl,
+        [Parameter(Mandatory = $true)][string]$AccountName,
+        [Parameter(Mandatory = $true)][string]$SecretValue,
+        [Parameter(Mandatory = $true)]$VerifySession
+    )
+
+    $verifyBody = @{
+        userName = $AccountName
+        password = $SecretValue
+    } | ConvertTo-Json -Compress
+
+    try {
+        $verify = Invoke-RestMethod `
+            -Uri "$VerifyBaseUrl/Account/DemoUserDiagnostics/VerifyPassword" `
+            -Method Post `
+            -ContentType 'application/json' `
+            -Body $verifyBody `
+            -WebSession $VerifySession `
+            -TimeoutSec 10
+
+        if ($null -ne $verify.passwordMatches) {
+            return [string]$verify.passwordMatches
+        }
+    }
+    catch {
+        Write-Warning ("Password verification endpoint unavailable or not Development-only enabled. Details are intentionally non-secret: {0}" -f $_.Exception.Message)
+    }
+    finally {
+        $verifyBody = $null
+    }
+
+    return 'Unknown'
+}
+
 $normalizedBaseUrl = $BaseUrl.TrimEnd('/')
 $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
 
@@ -157,6 +195,18 @@ $securePassword = Read-Host -Prompt 'Password' -AsSecureString
 $plainPassword = ConvertFrom-SecureStringForRequest -SecureValue $securePassword
 
 try {
+    if ($SkipPasswordVerify) {
+        Write-SafeInfo 'password_match=Unknown'
+    }
+    else {
+        $passwordMatch = Invoke-DemoPasswordVerify `
+            -VerifyBaseUrl $normalizedBaseUrl `
+            -AccountName $UserName `
+            -SecretValue $plainPassword `
+            -VerifySession $session
+        Write-SafeInfo ("password_match={0}" -f $passwordMatch)
+    }
+
     $loginGet = Invoke-WebRequest `
         -Uri "$normalizedBaseUrl/Account/Login" `
         -WebSession $session `

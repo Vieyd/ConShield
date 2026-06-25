@@ -281,11 +281,19 @@ It shows the environment, configured demo-user count, user names, display names,
 To test the real login form without printing the password:
 
 ```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoUserPassword.ps1 -UserName adminib
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoLogin.ps1 -UserName adminib -BaseUrl http://127.0.0.1:5080
 ```
 
-The script reads the diagnostics endpoint first, submits the real login form with an antiforgery token, and then probes `/Operations/Health` with the same session. It tolerates missing redirect headers and still relies on the authenticated health probe. If diagnostics show `HasPassword = true` but the script returns `login_result=failed`, the configured password likely differs from the one entered.
+The password verification script (`scripts/Test-LocalDemoUserPassword.ps1`) posts to `/Account/DemoUserDiagnostics/VerifyPassword` in `Development` only and prints `password_match=True/False` without returning the password, password length, hashes, cookies, tokens, API keys, or connection strings. The login script reads the diagnostics endpoint first, optionally verifies the entered password, submits the real login form with an antiforgery token, and then probes `/Operations/Health` with the same session. It tolerates missing redirect headers and still relies on the authenticated health probe.
+
+Troubleshooting matrix:
+
+- Diagnostics shows `adminib` + `HasPassword=True`, `password_match=False`: the running Web process has a different configured password than the one entered.
+- `password_match=True`, `login_result=failed`: the password is correct, but login form/session flow needs investigation.
+- `password_match=True`, `login_result=success`, browser still fails: clear cookies or use incognito.
+- Diagnostics endpoint unavailable: Web is not running in `Development`, or the wrong URL/port is used.
 
 Temporary shell-only configuration can be set with placeholders like this:
 
@@ -296,7 +304,7 @@ $env:DemoUsers__0__DisplayName = "Администратор ИБ"
 $env:DemoUsers__0__Role = "AdminIB"
 ```
 
-After changing `DemoUsers`, restart Web. If the diagnostics endpoint and script succeed but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, screenshots, logs, GitHub, or committed local config.
+After changing `DemoUsers`, restart Web. Environment variables may override `appsettings.Development.json`. If the diagnostics endpoint and scripts succeed but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, screenshots, logs, GitHub, or committed local config.
 
 ## Demo Flow
 
