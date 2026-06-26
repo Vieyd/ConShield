@@ -59,14 +59,25 @@
                             }
                         </ul>
 
-                        <span class="navbar-text me-3">
-                            @User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value
-                            (@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
-                        </span>
+                        <div class="app-topbar-actions">
+                            <button class="app-theme-toggle"
+                                    type="button"
+                                    data-theme-toggle
+                                    aria-label="Переключить тему"
+                                    aria-pressed="false">
+                                <span aria-hidden="true">◐</span>
+                                <span>Тема: <span data-theme-label>Светлая</span></span>
+                            </button>
 
-                        <form asp-controller="Account" asp-action="Logout" method="post">
-                            <button class="btn btn-outline-light btn-sm" type="submit">Выход</button>
-                        </form>
+                            <span class="navbar-text">
+                                @User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value
+                                (@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
+                            </span>
+
+                            <form asp-controller="Account" asp-action="Logout" method="post">
+                                <button class="btn btn-outline-light btn-sm" type="submit">Выход</button>
+                            </form>
+                        </div>
                     </div>
                 }
             </div>
@@ -78,6 +89,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

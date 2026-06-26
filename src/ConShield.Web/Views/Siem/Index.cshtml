@@ -70,8 +70,9 @@
     </div>
 </form>
 
-<div class="table-responsive">
-    <table class="table table-striped table-bordered align-middle app-table">
+<div class="app-table-card">
+    <div class="app-table-scroll">
+    <table class="table table-striped align-middle app-table">
         <thead>
             <tr>
                 <th>ID</th>
@@ -94,23 +95,17 @@
                 <td><code class="id-code">@item.RuleCode</code></td>
                 <td>@DisplayText.RuleName(item.RuleCode, item.RuleName)</td>
                 <td>
-                    @switch (item.Severity)
-                    {
-                        case EventSeverity.Critical:
-                            <span class="app-badge badge-danger-soft">Критический</span>
-                            break;
-                        case EventSeverity.High:
-                            <span class="app-badge text-bg-primary">Высокий</span>
-                            break;
-                        case EventSeverity.Warning:
-                            <span class="app-badge badge-attention">Предупреждение</span>
-                            break;
-                        default:
-                            <span class="app-badge badge-neutral">Информационный</span>
-                            break;
-                    }
+                    <span class="app-status @DisplayText.SeverityClass(item.Severity)">
+                        <span class="app-status-dot" aria-hidden="true"></span>
+                        <span>@DisplayText.Severity(item.Severity)</span>
+                    </span>
                 </td>
-                <td>@DisplayText.Status(item.Status)</td>
+                <td>
+                    <span class="app-status @DisplayText.StatusClass(item.Status)">
+                        <span class="app-status-dot" aria-hidden="true"></span>
+                        <span>@DisplayText.Status(item.Status)</span>
+                    </span>
+                </td>
                 <td>
                     @if (item.IncidentId.HasValue)
                     {
@@ -122,26 +117,29 @@
                     }
                 </td>
                 <td>@DisplayText.AlertDescription(item.RuleCode, item.Description)</td>
-                <td class="text-nowrap">
+                <td>
+                    <div class="app-action-group">
                     <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Открыть</a>
                     @if (User.IsInRole(AppRoles.AdminIB))
                     {
-                        <form asp-action="ChangeStatus" method="post" class="d-inline">
+                        <form asp-action="ChangeStatus" method="post">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@item.Id" />
                             <input type="hidden" name="status" value="@AlertStatuses.Acknowledged" />
                             <button class="btn btn-sm btn-outline-primary" type="submit">Подтвердить</button>
                         </form>
-                        <form asp-action="ChangeStatus" method="post" class="d-inline">
+                        <form asp-action="ChangeStatus" method="post">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@item.Id" />
                             <input type="hidden" name="status" value="@AlertStatuses.Closed" />
                             <button class="btn btn-sm btn-outline-secondary" type="submit">Закрыть</button>
                         </form>
                     }
+                    </div>
                 </td>
             </tr>
         }
         </tbody>
     </table>
+    </div>
 </div>

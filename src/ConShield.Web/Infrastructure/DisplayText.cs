@@ -21,15 +21,20 @@ public static partial class DisplayText
         "Disconnected" => "Отключено",
         "Online" => "В сети",
         "Offline" => "Нет связи",
+        "Never seen" => "Нет heartbeat",
+        "Active" => "Активно",
+        "Revoked" => "Отозвано",
         "Warning" => "Предупреждение",
         "Degraded" => "Требует внимания",
         "Attention" => "Требует внимания",
+        "Needs attention" => "Требует внимания",
         "OK" => "Норма",
         "Eligible" => "Доступно для повтора",
         "RequiresReview" => "Требует проверки",
         "NotEligible" => "Недоступно для повтора",
         "Published" => "Опубликовано",
         "Requested" => "Запрошено",
+        "unavailable" => "Недоступно",
         null or "" => "—",
         _ => status
     };
@@ -42,6 +47,46 @@ public static partial class DisplayText
         EventSeverity.Info => "Информационный",
         _ => severity.ToString()
     };
+
+    public static string EventType(SecurityEventType eventType) => eventType switch
+    {
+        SecurityEventType.LoginSuccess => "Успешный вход",
+        SecurityEventType.LoginFailure => "Неуспешный вход",
+        SecurityEventType.AccessDenied => "Отказ в доступе",
+        SecurityEventType.UserExceptionCreated => "Создано исключение доступа",
+        SecurityEventType.UserExceptionUpdated => "Изменено исключение доступа",
+        SecurityEventType.UserExceptionDeleted => "Удалено исключение доступа",
+        SecurityEventType.CorrelationAlert => "Оповещение корреляции",
+        SecurityEventType.IncidentCreated => "Создан инцидент",
+        SecurityEventType.IncidentUpdated => "Обновлен инцидент",
+        SecurityEventType.ExternalEvent => "Внешнее событие",
+        SecurityEventType.DeadLetterReplayRequested => "Запрошен повтор dead-letter",
+        SecurityEventType.DeadLetterReplayPublished => "Dead-letter опубликован повторно",
+        SecurityEventType.DeadLetterReplayRejected => "Повтор dead-letter отклонен",
+        SecurityEventType.DeadLetterReplayFailed => "Повтор dead-letter не выполнен",
+        _ => eventType.ToString()
+    };
+
+    public static string SeverityClass(EventSeverity severity) => severity switch
+    {
+        EventSeverity.Critical => "app-status-critical",
+        EventSeverity.High => "app-status-high",
+        EventSeverity.Warning => "app-status-warning",
+        _ => "app-status-info"
+    };
+
+    public static string StatusClass(string? status)
+    {
+        var normalized = status?.Trim();
+        return normalized switch
+        {
+            "OK" or "Ok" or "Connected" or "Delivered" or "Online" or "Active" or "Closed" or "Published" => "app-status-ok",
+            "Critical" or "Failed" or "DeadLetter" or "Offline" or "Revoked" or "Ошибка" => "app-status-critical",
+            "Warning" or "Degraded" or "Attention" or "Needs attention" or "NeedsAttention" or "RequiresReview" or "unavailable" or "Unavailable" => "app-status-attention",
+            "New" or "Pending" or "Processing" or "InProgress" or "Requested" or "Never seen" => "app-status-info",
+            _ => "app-status-neutral"
+        };
+    }
 
     public static string RuleName(string? ruleCode, string? fallback = null) => ruleCode switch
     {
@@ -176,7 +221,8 @@ public static partial class DisplayText
 
         return errorCode switch
         {
-            "rabbitmq_unavailable" => "rabbitmq_unavailable: временный сбой публикации в RabbitMQ.",
+            "rabbitmq_unavailable" => "RabbitMQ недоступен",
+            "unavailable" => "Недоступно",
             _ when errorCode.Contains("RabbitMQ publish failed transiently", StringComparison.OrdinalIgnoreCase)
                 => errorCode.Replace("RabbitMQ publish failed transiently.", "временный сбой публикации в RabbitMQ.", StringComparison.OrdinalIgnoreCase),
             _ => errorCode

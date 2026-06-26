@@ -14,8 +14,9 @@
     На этой странице приведен каталог встроенных правил корреляции, которые используются прототипом SIEM-подсистемы ConShield.
 </div>
 
-<div class="table-responsive">
-    <table class="table table-striped table-bordered align-middle app-table">
+<div class="app-table-card">
+    <div class="app-table-scroll">
+    <table class="table table-striped align-middle app-table">
         <thead>
             <tr>
                 <th>Код правила</th>
@@ -34,21 +35,10 @@
                 <td><code class="id-code">@item.RuleCode</code></td>
                 <td>@DisplayText.RuleName(item.RuleCode, item.RuleName)</td>
                 <td>
-                    @switch (item.Severity)
-                    {
-                        case EventSeverity.Critical:
-                            <span class="app-badge badge-danger-soft">Критический</span>
-                            break;
-                        case EventSeverity.High:
-                            <span class="app-badge text-bg-primary">Высокий</span>
-                            break;
-                        case EventSeverity.Warning:
-                            <span class="app-badge badge-attention">Предупреждение</span>
-                            break;
-                        default:
-                            <span class="app-badge badge-neutral">Информационный</span>
-                            break;
-                    }
+                    <span class="app-status @DisplayText.SeverityClass(item.Severity)">
+                        <span class="app-status-dot" aria-hidden="true"></span>
+                        <span>@DisplayText.Severity(item.Severity)</span>
+                    </span>
                 </td>
                 <td>@DisplayText.RuleCondition(item.RuleCode, item.ConditionText)</td>
                 <td>@item.WindowText</td>
@@ -58,4 +48,5 @@
         }
         </tbody>
     </table>
+    </div>
 </div>

@@ -4,7 +4,7 @@
     ViewData["Title"] = "Сенсоры";
 }
 
-<div class="d-flex justify-content-between align-items-start mb-3">
+<div class="app-page-header">
     <div>
         <h1 class="mb-1">Сенсоры</h1>
         <p class="text-muted mb-0">
@@ -24,8 +24,9 @@
 }
 else
 {
-    <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle">
+    <div class="app-table-card">
+        <div class="app-table-scroll">
+        <table class="table table-sm table-striped align-middle app-table">
             <thead>
                 <tr>
                     <th>Статус</th>
@@ -47,7 +48,10 @@ else
                 {
                     <tr>
                         <td>
-                            <span class="badge @sensor.StatusCssClass">@sensor.Status</span>
+                            <span class="app-status @DisplayText.StatusClass(sensor.Status)">
+                                <span class="app-status-dot" aria-hidden="true"></span>
+                                <span>@DisplayText.Status(sensor.Status)</span>
+                            </span>
                         </td>
                         <td>@sensor.DisplayName</td>
                         <td><code class="id-code">@sensor.SensorId</code></td>
@@ -55,7 +59,10 @@ else
                         <td>@(sensor.LastSeenAtUtc?.ToString("u") ?? "—")</td>
                         <td>@sensor.HeartbeatAgeText</td>
                         <td>
-                            <span class="badge text-bg-primary">@sensor.ActiveCredentialCount активных</span>
+                            <span class="app-status app-status-high">
+                                <span class="app-status-dot" aria-hidden="true"></span>
+                                <span>@sensor.ActiveCredentialCount активных</span>
+                            </span>
                             <span class="text-muted small">/ всего @sensor.CredentialCount</span>
                             @if (sensor.NewestCredentialCreatedAtUtc is not null)
                             {
@@ -67,18 +74,18 @@ else
                         <td>
                             @if (sensor.HasCertificateFingerprint)
                             {
-                                <span class="badge badge-ok">Есть</span>
+                                <span class="app-status app-status-ok"><span class="app-status-dot" aria-hidden="true"></span><span>Есть</span></span>
                             }
                             else
                             {
-                                <span class="badge badge-neutral">Не задан</span>
+                                <span class="app-status app-status-neutral"><span class="app-status-dot" aria-hidden="true"></span><span>Не задан</span></span>
                             }
                         </td>
                         <td>@sensor.CreatedAtUtc.ToString("u")</td>
                         <td>@sensor.UpdatedAtUtc.ToString("u")</td>
                         <td>@(sensor.RevokedAtUtc?.ToString("u") ?? "—")</td>
                         <td>
-                            <div class="action-stack">
+                            <div class="app-action-group">
                                 <a asp-controller="Sensors"
                                    asp-action="Details"
                                    asp-route-sensorId="@sensor.SensorId"
@@ -119,5 +126,6 @@ else
                 }
             </tbody>
         </table>
+        </div>
     </div>
 }

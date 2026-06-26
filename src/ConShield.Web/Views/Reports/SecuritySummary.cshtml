@@ -11,7 +11,7 @@
         <h2 class="mb-1">Сводка безопасности</h2>
         <div class="text-muted small">Отчет только для чтения для роли AdminIB на основе агрегированных данных PostgreSQL.</div>
     </div>
-    <span class="app-badge @SecuritySummaryStatus.CssClass(Model.OverallStatus)">@DisplayText.SecuritySummaryStatus(Model.OverallStatus)</span>
+    <span class="app-status @DisplayText.StatusClass(Model.OverallStatus)"><span class="app-status-dot" aria-hidden="true"></span><span>@DisplayText.SecuritySummaryStatus(Model.OverallStatus)</span></span>
 </div>
 
 <div class="alert alert-info py-2">
@@ -75,4 +75,4 @@
 </ul>
 
 <h4>Предпросмотр Markdown-экспорта</h4>
-<textarea class="form-control app-code small mb-4" rows="18" readonly>@Model.Markdown</textarea>
+<textarea class="form-control app-code app-code-panel small mb-4" rows="18" readonly>@Model.Markdown</textarea>
