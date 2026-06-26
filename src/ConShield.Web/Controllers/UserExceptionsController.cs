@@ -17,10 +17,27 @@ public class UserExceptionsController : Controller
         _userExceptionService = userExceptionService;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] int? page = null, [FromQuery] int? pageSize = null)
     {
-        var items = await _userExceptionService.GetAllAsync();
-        return View(items);
+        var (normalizedPage, normalizedPageSize) = PagingViewModel.Normalize(page, pageSize);
+        var totalCount = await _userExceptionService.CountAsync(HttpContext.RequestAborted);
+        normalizedPage = PagingViewModel.ClampPage(normalizedPage, normalizedPageSize, totalCount);
+
+        var items = await _userExceptionService.GetPageAsync(
+            (normalizedPage - 1) * normalizedPageSize,
+            normalizedPageSize,
+            HttpContext.RequestAborted);
+
+        return View(new UserExceptionIndexViewModel
+        {
+            Items = items,
+            Paging = new PagingViewModel
+            {
+                Page = normalizedPage,
+                PageSize = normalizedPageSize,
+                TotalCount = totalCount
+            }
+        });
     }
 
     public async Task<IActionResult> Details(int id)

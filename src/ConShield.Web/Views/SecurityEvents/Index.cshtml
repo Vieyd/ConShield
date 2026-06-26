@@ -37,6 +37,7 @@
        asp-route-SourceSystem="@SecuritySourceSystems.SensorLifecycle"
        asp-route-ExternalEventType="@SensorLifecycleEventTypes.SensorRevoked">Отзыв сенсоров</a>
 </div>
+
 <div class="alert alert-secondary py-2 mb-3 small">
     Lifecycle-аудит сенсоров приходит из <code>@SecuritySourceSystems.SensorLifecycle</code>:
     <code>@SensorLifecycleEventTypes.SensorCredentialRotated</code>,
@@ -163,3 +164,5 @@
         </table>
     </div>
 </div>
+
+<partial name="_Pagination" model="Model.Paging" />

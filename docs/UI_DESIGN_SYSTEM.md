@@ -53,10 +53,18 @@ Wrap data tables in:
 
 Table headers are sticky, rows have calm hover color, and wide tables scroll horizontally inside the card. Use a sticky `.app-table-actions-col` for right-side action columns when wide tables would otherwise hide controls. Numeric IDs use nowrap classes, while long GUIDs/source systems use truncated muted technical-code classes with the full value in `title`.
 
+Wide tables must keep the horizontal scrollbar discoverable in both themes. Use the shared `.app-table-scroll` scrollbar styling and subtle table-card hint instead of adding loud per-page banners.
+
+Heavy list pages must use server-side pagination or an explicit server-side cap. Apply filters before `Count`, `Skip`, and `Take`; use a stable descending date/id sort; and preserve filters in pagination links.
+
 ## Actions
 
 Row and toolbar actions should use `.app-action-group` so buttons share height, spacing, and alignment. Prefer blue primary actions, neutral secondary actions, readable amber warning actions, and readable red danger actions.
 
 ## Theme toggle
 
-Authenticated layout exposes a right-side theme toggle. It stores only `light` or `dark` in `localStorage`; it must never use cookies, tokens, passwords, or server-side state.
+Authenticated layout exposes a right-side theme toggle, and the login page exposes the same control before authentication. It stores only `light` or `dark` in `localStorage` plus the safe non-sensitive `conshield.theme` cookie used to avoid first-paint theme flash; it must never store tokens, passwords, user identifiers, or other secrets.
+
+## Login controls
+
+The login page must keep authentication semantics unchanged while providing basic UX controls: the shared theme toggle and a `type="button"` password visibility toggle that switches only the input type and updates accessible labels. Password values must never be logged, stored, or sent anywhere except the normal login form submit.

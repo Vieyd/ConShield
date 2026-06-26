@@ -26,17 +26,36 @@ public class SiemController : Controller
         _eventWriter = eventWriter;
     }
 
-    public async Task<IActionResult> Index([FromQuery] SiemAlertFilterViewModel filter, CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(
+        [FromQuery] SiemAlertFilterViewModel filter,
+        CancellationToken cancellationToken,
+        [FromQuery] int? page = null,
+        [FromQuery] int? pageSize = null)
     {
         var query = _dbContext.SiemAlerts
             .ApplySiemAlertFilters(filter.Status, filter.Severity, filter.RuleCode, filter.SearchText);
 
-        var items = await query.OrderByDescending(x => x.CreatedAtUtc).ToListAsync(cancellationToken);
+        var (normalizedPage, normalizedPageSize) = PagingViewModel.Normalize(page, pageSize);
+        var totalCount = await query.CountAsync(cancellationToken);
+        normalizedPage = PagingViewModel.ClampPage(normalizedPage, normalizedPageSize, totalCount);
+
+        var items = await query
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .ThenByDescending(x => x.Id)
+            .Skip((normalizedPage - 1) * normalizedPageSize)
+            .Take(normalizedPageSize)
+            .ToListAsync(cancellationToken);
 
         return View(new SiemAlertIndexViewModel
         {
             Filter = filter,
-            Items = items
+            Items = items,
+            Paging = new PagingViewModel
+            {
+                Page = normalizedPage,
+                PageSize = normalizedPageSize,
+                TotalCount = totalCount
+            }
         });
     }
 

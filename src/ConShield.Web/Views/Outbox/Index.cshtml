@@ -203,8 +203,8 @@
         <table class="table table-sm table-striped align-middle app-table app-table-wide">
             <thead>
                 <tr>
-                    <th>ID сообщения</th>
                     <th>ID события</th>
+                    <th>ID сообщения</th>
                     <th>Тип сообщения</th>
                     <th>Статус</th>
                     <th>Попытки</th>
@@ -218,8 +218,8 @@
             @foreach (var item in Model.LatestMessages)
             {
                 <tr>
-                    <td><code class="id-code app-code-short" title="@item.MessageId">@DisplayText.ShortTechnicalValue(item.MessageId)</code></td>
                     <td><code class="id-code app-id-nowrap">@item.SecurityEventId</code></td>
+                    <td><code class="id-code app-code-short" title="@item.MessageId">@DisplayText.ShortTechnicalValue(item.MessageId)</code></td>
                     <td>
                         <span class="app-display-primary">Событие безопасности создано</span>
                         <span class="app-display-secondary">@item.MessageType</span>

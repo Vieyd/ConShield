@@ -47,5 +47,24 @@
                 applyTheme(nextTheme);
             });
         });
+
+        document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+            const inputId = button.getAttribute("aria-controls");
+            const input = inputId
+                ? document.getElementById(inputId)
+                : button.closest(".input-group")?.querySelector("[data-password-input]");
+
+            if (!(input instanceof HTMLInputElement)) {
+                return;
+            }
+
+            button.addEventListener("click", () => {
+                const shouldShowPassword = input.type === "password";
+                input.type = shouldShowPassword ? "text" : "password";
+                button.setAttribute("aria-pressed", shouldShowPassword ? "true" : "false");
+                button.setAttribute("aria-label", shouldShowPassword ? "Скрыть пароль" : "Показать пароль");
+                button.textContent = shouldShowPassword ? "Скрыть" : "Показать";
+            });
+        });
     });
 })();

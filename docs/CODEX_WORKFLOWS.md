@@ -17,7 +17,8 @@
 2. Read the Web UI map in `docs/CONSHIELD_CODEMAP.md`.
 3. Prefer changes under `src/ConShield.Web/Views`, `src/ConShield.Web/wwwroot/css`, `src/ConShield.Web/wwwroot/js`, Web display helpers, UI tests, and docs.
 4. Keep display/localization changes separate from business logic.
-5. Do not touch SIEM correlation logic, EF schema/migrations, RabbitMQ/outbox, Mongo projection, Fedora deployment, or runtime credentials unless explicitly asked.
+5. For heavy list pages, verify server-side pagination or an explicit server-side cap before polishing tables.
+6. Do not touch SIEM correlation logic, EF schema/migrations, RabbitMQ/outbox, Mongo projection, Fedora deployment, or runtime credentials unless explicitly asked.
 
 ## 3. Login/auth diagnostics workflow
 

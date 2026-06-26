@@ -6,7 +6,17 @@
 <div class="row justify-content-center">
     <div class="col-md-5">
         <div class="card">
-            <div class="card-header">Вход в ConShield</div>
+            <div class="card-header app-login-card-header">
+                <span>Вход в ConShield</span>
+                <button class="app-theme-toggle app-theme-toggle-login"
+                        type="button"
+                        data-theme-toggle
+                        aria-label="Переключить тему"
+                        aria-pressed="false">
+                    <span aria-hidden="true">◐</span>
+                    <span>Тема: <span data-theme-label>Светлая</span></span>
+                </button>
+            </div>
             <div class="card-body">
                 <form asp-action="Login" method="post">
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
@@ -19,7 +29,17 @@
 
                     <div class="mb-3">
                         <label asp-for="Password" class="form-label"></label>
-                        <input asp-for="Password" class="form-control" autocomplete="current-password" placeholder="Введите пароль" />
+                        <div class="input-group">
+                            <input asp-for="Password" class="form-control" autocomplete="current-password" placeholder="Введите пароль" data-password-input />
+                            <button class="btn btn-outline-secondary"
+                                    type="button"
+                                    data-password-toggle
+                                    aria-controls="Password"
+                                    aria-pressed="false"
+                                    aria-label="Показать пароль">
+                                Показать
+                            </button>
+                        </div>
                         <span asp-validation-for="Password" class="text-danger"></span>
                     </div>
 

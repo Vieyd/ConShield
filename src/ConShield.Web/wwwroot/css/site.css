@@ -154,6 +154,18 @@ a:hover {
     color: var(--app-text);
 }
 
+.app-login-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+}
+
+.app-theme-toggle-login {
+    font-size: .9rem;
+    min-height: 2rem;
+}
+
 main.container {
     max-width: 1320px;
 }
@@ -333,8 +345,39 @@ main.container {
 .app-table-scroll {
     overflow-x: auto;
     position: relative;
-    scrollbar-color: var(--app-border-strong) transparent;
+    scrollbar-color: var(--app-accent) color-mix(in srgb, var(--app-border) 45%, transparent);
     scrollbar-width: thin;
+    padding-bottom: .25rem;
+}
+
+.app-table-scroll::-webkit-scrollbar {
+    height: .8rem;
+}
+
+.app-table-scroll::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--app-border) 35%, transparent);
+    border-radius: 999px;
+}
+
+.app-table-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--app-accent) 72%, var(--app-border-strong));
+    border: .18rem solid color-mix(in srgb, var(--app-border) 35%, transparent);
+    border-radius: 999px;
+}
+
+.app-scroll-hint {
+    color: var(--app-muted);
+    font-size: .82rem;
+    padding: .6rem .9rem 0;
+}
+
+.app-table-card::after {
+    content: "Прокрутите таблицу по горизонтали, чтобы увидеть все столбцы";
+    display: block;
+    color: var(--app-muted);
+    font-size: .8rem;
+    padding: .45rem .9rem .65rem;
+    border-top: 1px solid color-mix(in srgb, var(--app-border) 55%, transparent);
 }
 
 .app-table,
@@ -382,7 +425,8 @@ main.container {
     right: 0;
     z-index: 2;
     min-width: 9.5rem;
-    background: var(--app-surface);
+    background: inherit;
+    background-clip: padding-box;
     box-shadow: -.5rem 0 .8rem rgba(15, 23, 42, .06);
     border-left: 1px solid var(--app-border);
 }
@@ -393,14 +437,6 @@ main.container {
     background: var(--app-surface-muted);
 }
 
-.app-table tbody tr:nth-of-type(odd) .app-table-actions-col {
-    background: var(--app-surface-muted);
-}
-
-.app-table tbody tr:hover .app-table-actions-col {
-    background: var(--app-accent-soft);
-}
-
 .app-table-description {
     max-width: 32rem;
     display: -webkit-box;
@@ -408,6 +444,20 @@ main.container {
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.35;
+}
+
+.app-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
+    color: var(--app-muted);
+    font-size: .9rem;
+}
+
+.app-pagination-summary {
+    min-width: 0;
 }
 
 .app-metric-card,
