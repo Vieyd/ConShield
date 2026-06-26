@@ -98,22 +98,19 @@
 
 <div class="app-table-card">
     <div class="app-table-scroll">
-        <table class="table table-striped align-middle app-table">
+        <table class="table table-striped align-middle app-table app-table-compact">
             <thead>
             <tr>
                 <th>ID</th>
                 <th>Время (GMT+3)</th>
                 <th>Тип</th>
-                <th>Источник</th>
-                <th>Внешний тип</th>
                 <th>Критичность</th>
-                <th>Пользователь</th>
+                <th>Актор / источник</th>
                 <th>IP</th>
                 <th>Описание</th>
-                <th>Доп. данные</th>
                 @if (User.IsInRole(AppRoles.AdminIB))
                 {
-                    <th>Действия</th>
+                    <th class="app-table-actions-col">Действия</th>
                 }
             </tr>
             </thead>
@@ -121,27 +118,40 @@
             @foreach (var item in Model.Items)
             {
                 <tr>
-                    <td><code class="id-code">@item.Id</code></td>
+                    <td><code class="id-code app-id-nowrap">@item.Id</code></td>
                     <td>@item.OccurredAtUtc.ToMoscowDisplay()</td>
                     <td>
                         <span class="app-display-primary">@DisplayText.EventType(item.EventType)</span>
                         <span class="app-display-secondary">@item.EventType</span>
                     </td>
-                    <td><code class="id-code">@item.SourceSystem</code></td>
-                    <td><code class="id-code">@item.ExternalEventType</code></td>
                     <td>
                         <span class="app-status @DisplayText.SeverityClass(item.Severity)">
                             <span class="app-status-dot" aria-hidden="true"></span>
                             <span>@DisplayText.Severity(item.Severity)</span>
                         </span>
                     </td>
-                    <td>@item.UserName</td>
+                    <td class="app-source-summary">
+                        <span class="app-display-primary">@(string.IsNullOrWhiteSpace(item.UserName) ? "—" : item.UserName)</span>
+                        @if (!string.IsNullOrWhiteSpace(item.SourceSystem))
+                        {
+                            <span class="app-display-secondary">
+                                источник:
+                                <code class="app-technical-code app-technical-code--truncate" title="@item.SourceSystem">@DisplayText.ShortTechnicalValue(item.SourceSystem)</code>
+                            </span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(item.ExternalEventType))
+                        {
+                            <span class="app-display-secondary">
+                                тип:
+                                <code class="app-technical-code app-technical-code--truncate" title="@item.ExternalEventType">@DisplayText.ShortTechnicalValue(item.ExternalEventType)</code>
+                            </span>
+                        }
+                    </td>
                     <td>@item.SourceIp</td>
-                    <td>@item.Description</td>
-                    <td><code class="id-code">@item.AdditionalDataJson</code></td>
+                    <td><div class="app-table-description">@item.Description</div></td>
                     @if (User.IsInRole(AppRoles.AdminIB))
                     {
-                        <td>
+                        <td class="app-table-actions-col">
                             <div class="app-action-group">
                                 <a class="btn btn-sm btn-outline-primary" asp-controller="Incidents" asp-action="CreateFromEvent" asp-route-eventId="@item.Id">Создать инцидент</a>
                             </div>

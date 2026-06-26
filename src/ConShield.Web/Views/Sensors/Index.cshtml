@@ -26,7 +26,7 @@ else
 {
     <div class="app-table-card">
         <div class="app-table-scroll">
-        <table class="table table-sm table-striped align-middle app-table">
+        <table class="table table-sm table-striped align-middle app-table app-table-wide">
             <thead>
                 <tr>
                     <th>Статус</th>
@@ -40,7 +40,7 @@ else
                     <th>Создано UTC</th>
                     <th>Обновлено UTC</th>
                     <th>Отозвано UTC</th>
-                    <th>Действия</th>
+                    <th class="app-table-actions-col">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -54,8 +54,8 @@ else
                             </span>
                         </td>
                         <td>@sensor.DisplayName</td>
-                        <td><code class="id-code">@sensor.SensorId</code></td>
-                        <td><code class="id-code">@sensor.SourceSystem</code></td>
+                        <td><code class="id-code app-code-short" title="@sensor.SensorId">@DisplayText.ShortTechnicalValue(sensor.SensorId)</code></td>
+                        <td><code class="id-code app-code-short" title="@sensor.SourceSystem">@DisplayText.ShortTechnicalValue(sensor.SourceSystem)</code></td>
                         <td>@(sensor.LastSeenAtUtc?.ToString("u") ?? "—")</td>
                         <td>@sensor.HeartbeatAgeText</td>
                         <td>
@@ -84,7 +84,7 @@ else
                         <td>@sensor.CreatedAtUtc.ToString("u")</td>
                         <td>@sensor.UpdatedAtUtc.ToString("u")</td>
                         <td>@(sensor.RevokedAtUtc?.ToString("u") ?? "—")</td>
-                        <td>
+                        <td class="app-table-actions-col">
                             <div class="app-action-group">
                                 <a asp-controller="Sensors"
                                    asp-action="Details"

@@ -1,10 +1,12 @@
 (function () {
-    const storageKey = "conshield-theme";
+    const storageKey = "conshield.theme";
+    const legacyStorageKey = "conshield-theme";
+    const cookieName = "conshield.theme";
     const allowedThemes = new Set(["light", "dark"]);
 
     function getStoredTheme() {
         try {
-            const value = window.localStorage.getItem(storageKey);
+            const value = window.localStorage.getItem(storageKey) || window.localStorage.getItem(legacyStorageKey);
             return allowedThemes.has(value) ? value : null;
         } catch {
             return null;
@@ -17,10 +19,13 @@
         } catch {
             // Theme choice is cosmetic; ignore storage failures.
         }
+
+        document.cookie = `${cookieName}=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`;
     }
 
     function applyTheme(theme) {
         const normalized = allowedThemes.has(theme) ? theme : "light";
+        document.documentElement.dataset.theme = normalized;
         document.body.dataset.theme = normalized;
 
         document.querySelectorAll("[data-theme-label]").forEach((label) => {
@@ -33,7 +38,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        applyTheme(getStoredTheme() ?? "light");
+        applyTheme(getStoredTheme() ?? document.documentElement.dataset.theme ?? "light");
 
         document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
             button.addEventListener("click", () => {

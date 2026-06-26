@@ -10,6 +10,9 @@ This is a compact guide for Web UI polish tasks. It is not a full component libr
 - Green: only success/OK/security-positive states.
 - Dark theme: soft graphite surfaces, never pure black.
 - Technical values: Russian display text first, muted technical code second.
+- Responsive targets: usable at 1366×768, comfortable at 1536×864, spacious at 1920×1080+.
+- Main list pages are compact summaries. Raw JSON and long technical fields belong in details pages, detail actions, or muted/truncated secondary text.
+- Theme must be applied before CSS paint from the safe `conshield.theme` light/dark preference to avoid dark-to-light navigation flash.
 
 ## Status and severity pills
 
@@ -28,7 +31,8 @@ Rules:
 - keep the dot visible but secondary;
 - avoid text shadows, text stroke, neon colors, and raw Bootstrap badge colors;
 - long labels may wrap inside the pill and must not be cropped;
-- raw enum/status values should be muted secondary text when they are useful.
+- raw enum/status values should be muted secondary text when they are useful;
+- `Высокий` uses readable orange, distinct from slate/blue-gray `Информационный`.
 
 ## Cards and metrics
 
@@ -47,7 +51,7 @@ Wrap data tables in:
 </div>
 ```
 
-Table headers are sticky, rows have calm hover color, and wide tables scroll horizontally inside the card.
+Table headers are sticky, rows have calm hover color, and wide tables scroll horizontally inside the card. Use a sticky `.app-table-actions-col` for right-side action columns when wide tables would otherwise hide controls. Numeric IDs use nowrap classes, while long GUIDs/source systems use truncated muted technical-code classes with the full value in `title`.
 
 ## Actions
 

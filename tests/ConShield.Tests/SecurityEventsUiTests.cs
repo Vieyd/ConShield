@@ -129,7 +129,7 @@ public sealed class SecurityEventsUiTests
     }
 
     [Fact]
-    public void SecurityEventsIndex_RendersSourceSystemAndExternalEventType()
+    public void SecurityEventsIndex_RendersSourceSystemAndExternalEventTypeAsCompactSummary()
     {
         var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "SecurityEvents", "Index.cshtml");
 
@@ -139,6 +139,11 @@ public sealed class SecurityEventsUiTests
         Assert.Contains("name=\"ExternalEventType\"", viewText, StringComparison.Ordinal);
         Assert.Contains("@item.SourceSystem", viewText, StringComparison.Ordinal);
         Assert.Contains("@item.ExternalEventType", viewText, StringComparison.Ordinal);
+        Assert.Contains("Актор / источник", viewText, StringComparison.Ordinal);
+        Assert.Contains("ShortTechnicalValue(item.SourceSystem)", viewText, StringComparison.Ordinal);
+        Assert.Contains("ShortTechnicalValue(item.ExternalEventType)", viewText, StringComparison.Ordinal);
+        Assert.DoesNotContain("<th>Доп. данные</th>", viewText, StringComparison.Ordinal);
+        Assert.DoesNotContain("@item.AdditionalDataJson", viewText, StringComparison.Ordinal);
     }
 
     [Fact]

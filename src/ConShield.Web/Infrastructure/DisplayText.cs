@@ -229,6 +229,22 @@ public static partial class DisplayText
         };
     }
 
+    public static string ShortTechnicalValue(string? value, int prefixLength = 12, int suffixLength = 6)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "—";
+
+        var trimmed = value.Trim();
+        var minimumLength = prefixLength + suffixLength + 1;
+        if (trimmed.Length <= minimumLength)
+            return trimmed;
+
+        return $"{trimmed[..prefixLength]}…{trimmed[^suffixLength..]}";
+    }
+
+    public static string ShortTechnicalValue(object? value, int prefixLength = 12, int suffixLength = 6) =>
+        ShortTechnicalValue(value?.ToString(), prefixLength, suffixLength);
+
     private static string LocalizeTechnicalPhrase(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
