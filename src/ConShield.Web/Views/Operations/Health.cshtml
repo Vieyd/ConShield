@@ -5,102 +5,102 @@
     ViewData["Title"] = "Состояние системы";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="app-page-header">
     <div>
         <h2 class="mb-1">Состояние системы</h2>
-        <div class="text-muted small">Read-only сводка по существующим данным PostgreSQL. Без RabbitMQ/Mongo management API и без секретов.</div>
+        <div class="text-muted small">Сводка только для чтения по существующим данным PostgreSQL. Без RabbitMQ/Mongo management API и без секретов.</div>
     </div>
-    <span class="badge text-bg-secondary">Сформировано: @Model.GeneratedAtUtc.ToMoscowDisplay()</span>
+    <span class="app-badge badge-neutral">Сформировано: @Model.GeneratedAtUtc.ToMoscowDisplay()</span>
 </div>
 
 <div class="alert alert-info py-2">
-    Дашборд показывает только агрегированные counts и timestamps. Он не выводит AdditionalDataJson, credentials,
-    verifier values, API keys, env values или connection strings. Для workflow Состояние системы → События безопасности →
+    Дашборд показывает только агрегированные счетчики и временные метки. Он не выводит AdditionalDataJson, учетные данные,
+    verifier-значения, API-ключи, значения окружения или строки подключения. Для workflow Состояние системы → События безопасности →
     Оповещения SIEM → Сенсоры см. <code>docs/OPERATIONS_AND_SIEM_RUNBOOK.md</code> в репозитории.
 </div>
 
 <h4 class="mt-4">Сенсоры</h4>
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Статус</div><div class="fs-5"><span class="badge @OperationalHealthStatus.CssClass(Model.Sensors.StatusLabel)">@Model.Sensors.StatusLabel</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Статус</div><div class="fs-5"><span class="app-badge @OperationalHealthStatus.CssClass(Model.Sensors.StatusLabel)">@DisplayText.Status(Model.Sensors.StatusLabel)</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Всего / активных</div><div class="fs-5"><span class="badge bg-dark">@Model.Sensors.Total / @Model.Sensors.Active</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Всего / активных</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.Sensors.Total / @Model.Sensors.Active</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">В сети / предупреждение / нет связи</div><div class="fs-5"><span class="badge badge-neutral">@Model.Sensors.Online / @Model.Sensors.Warning / @Model.Sensors.Offline</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">В сети / предупреждение / нет связи</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.Sensors.Online / @Model.Sensors.Warning / @Model.Sensors.Offline</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Нет heartbeat / отозваны</div><div class="fs-5"><span class="badge badge-neutral">@Model.Sensors.NeverSeen / @Model.Sensors.Revoked</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Нет heartbeat / отозваны</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.Sensors.NeverSeen / @Model.Sensors.Revoked</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Последний heartbeat</div><div class="fs-5"><span class="badge bg-dark">@(Model.Sensors.LatestHeartbeatAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Последний heartbeat</div><div class="fs-5"><span class="app-badge badge-neutral">@(Model.Sensors.LatestHeartbeatAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
     </div>
 </div>
 
 <h4 class="mt-4">События безопасности / прием</h4>
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Статус</div><div class="fs-5"><span class="badge @OperationalHealthStatus.CssClass(Model.SecurityEvents.StatusLabel)">@Model.SecurityEvents.StatusLabel</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Статус</div><div class="fs-5"><span class="app-badge @OperationalHealthStatus.CssClass(Model.SecurityEvents.StatusLabel)">@DisplayText.Status(Model.SecurityEvents.StatusLabel)</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Всего событий</div><div class="fs-5"><span class="badge bg-dark">@Model.SecurityEvents.Total</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Всего событий</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.SecurityEvents.Total</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">За 1 час / 24 часа</div><div class="fs-5"><span class="badge bg-dark">@Model.SecurityEvents.LastHour / @Model.SecurityEvents.Last24Hours</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">За 1 час / 24 часа</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.SecurityEvents.LastHour / @Model.SecurityEvents.Last24Hours</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Lifecycle за 24 часа</div><div class="fs-5"><span class="badge bg-dark">@Model.SecurityEvents.LifecycleLast24Hours</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Lifecycle за 24 часа</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.SecurityEvents.LifecycleLast24Hours</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Последнее событие</div><div class="fs-5"><span class="badge bg-dark">@(Model.SecurityEvents.LatestEventAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Последнее событие</div><div class="fs-5"><span class="app-badge badge-neutral">@(Model.SecurityEvents.LatestEventAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
     </div>
 </div>
 
 <h4 class="mt-4">Очередь отправки</h4>
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Статус</div><div class="fs-5"><span class="badge @OperationalHealthStatus.CssClass(Model.Outbox.StatusLabel)">@Model.Outbox.StatusLabel</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Статус</div><div class="fs-5"><span class="app-badge @OperationalHealthStatus.CssClass(Model.Outbox.StatusLabel)">@DisplayText.Status(Model.Outbox.StatusLabel)</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Всего / доставлено</div><div class="fs-5"><span class="badge badge-neutral">@Model.Outbox.Total / @Model.Outbox.Delivered</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Всего / доставлено</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.Outbox.Total / @Model.Outbox.Delivered</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Ожидает / в обработке</div><div class="fs-5"><span class="badge badge-neutral">@Model.Outbox.Pending / @Model.Outbox.Processing</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Ожидает / в обработке</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.Outbox.Pending / @Model.Outbox.Processing</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Не отправлено / Dead-letter</div><div class="fs-5"><span class="badge badge-neutral">@Model.Outbox.NotDispatched / @Model.Outbox.DeadLetter</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Не отправлено / ошибки доставки</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.Outbox.NotDispatched / @Model.Outbox.DeadLetter</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Старейшее ожидание</div><div class="fs-5"><span class="badge badge-neutral">@(Model.Outbox.OldestPendingAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Старейшее ожидание</div><div class="fs-5"><span class="app-badge badge-neutral">@(Model.Outbox.OldestPendingAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Последнее создание</div><div class="fs-5"><span class="badge badge-neutral">@(Model.Outbox.LatestCreatedAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Последнее создание</div><div class="fs-5"><span class="app-badge badge-neutral">@(Model.Outbox.LatestCreatedAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
     </div>
 </div>
 
-<h4 class="mt-4">Consumer inbox / projection receipts</h4>
+<h4 class="mt-4">Подтверждения обработки</h4>
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Статус</div><div class="fs-5"><span class="badge @OperationalHealthStatus.CssClass(Model.Inbox.StatusLabel)">@Model.Inbox.StatusLabel</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Статус</div><div class="fs-5"><span class="app-badge @OperationalHealthStatus.CssClass(Model.Inbox.StatusLabel)">@DisplayText.Status(Model.Inbox.StatusLabel)</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Всего receipts</div><div class="fs-5"><span class="badge bg-dark">@Model.Inbox.Total</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Всего подтверждений</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.Inbox.Total</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">За 24 часа</div><div class="fs-5"><span class="badge bg-dark">@Model.Inbox.Last24Hours</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">За 24 часа</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.Inbox.Last24Hours</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Redelivered / delivery&gt;1</div><div class="fs-5"><span class="badge bg-dark">@Model.Inbox.Redelivered / @Model.Inbox.DeliveryCountOverOne</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Повторные доставки / delivery &gt; 1</div><div class="fs-5"><span class="app-badge badge-neutral">@Model.Inbox.Redelivered / @Model.Inbox.DeliveryCountOverOne</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Latest received</div><div class="fs-5"><span class="badge bg-dark">@(Model.Inbox.LatestReceivedAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Последнее получение</div><div class="fs-5"><span class="app-badge badge-neutral">@(Model.Inbox.LatestReceivedAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100"><div class="card-body"><div class="text-muted small">Latest processed</div><div class="fs-5"><span class="badge bg-dark">@(Model.Inbox.LatestProcessedAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
+        <div class="app-card h-100"><div class="card-body"><div class="text-muted small">Последняя обработка</div><div class="fs-5"><span class="app-badge badge-neutral">@(Model.Inbox.LatestProcessedAtUtc?.ToMoscowDisplay() ?? "—")</span></div></div></div>
     </div>
 </div>
 
 <div class="text-muted small mb-4">
-    Mapping: outbox backlog = Pending + Processing; outbox attention = DeadLetter; inbox warning = redelivery or delivery count &gt; 1.
+    Подсказка: backlog очереди = ожидает + в обработке; внимание по очереди = ошибки доставки; предупреждение inbox = повторная доставка или delivery count &gt; 1.
 </div>

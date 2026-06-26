@@ -153,7 +153,7 @@ The second command returns the same saved security event id and does not create 
 
 Prefer `CONSHIELD_API_KEY` over `--api-key` so the key is not left in shell history or process listings. The Collector accepts only `http` and `https` base URLs.
 
-Ingested external events are saved as `SecurityEventType.ExternalEvent`. The current SIEM rules do not interpret arbitrary `externalEventType` values: `BF-001` and `UE-001` are still based on built-in ConShield event types. `CR-001` can match an external critical event when the normal source-IP conditions are met. Full mapping from external event types to SIEM rules is planned as a separate future stage.
+Ingested external events are saved as `SecurityEventType.ExternalEvent`. The current Правила SIEM do not interpret arbitrary `externalEventType` values: `BF-001` and `UE-001` are still based on built-in ConShield event types. `CR-001` can match an external critical event when the normal source-IP conditions are met. Full mapping from external event types to Правила SIEM is planned as a separate future stage.
 
 Implemented now:
 
@@ -236,7 +236,7 @@ dotnet run --project src/ConShield.ImageScanner -- gate --image alpine:3.20 --po
 
 The gate reserves three source systems for one operation: `conshield.image-scanner` for the scan event, `conshield.container-guard` for the policy event, and `conshield.container-runtime` for the launch result event. Records share one `externalEventId`; ingestion idempotency stays safe because `sourceSystem` values differ. For `--execute`, the policy event is the at-most-once launch reservation: a retry that finds an existing policy event does not run Docker again. `--source-system` remains supported only by the `scan` command.
 
-## Security Event Outbox
+## Очередь отправки событий
 
 Security events are written atomically with a PostgreSQL outbox message. A background dispatcher delivers those messages to the local JSONL sink with at-least-once semantics:
 
@@ -433,4 +433,4 @@ The deployment keeps SELinux enforcing, reuses Podman, runs RuntimeCollector as 
 
 Enrolled sensor credentials are created with the local operator-only `ConShield.SensorProvisioning` tool. Follow [`docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md`](docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md) for protected credential transfer, heartbeat and event verification, legacy fallback disablement, and rollback.
 
-Credential rotation and revocation should follow the design in [`docs/SENSOR_CREDENTIAL_LIFECYCLE.md`](docs/SENSOR_CREDENTIAL_LIFECYCLE.md). Operators can interpret lifecycle audit events with [`docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md`](docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md), and use [`docs/OPERATIONS_AND_SIEM_RUNBOOK.md`](docs/OPERATIONS_AND_SIEM_RUNBOOK.md) for the Operations Health, Security Events, SIEM alerts, and Sensor Fleet workflow.
+Credential rotation and revocation should follow the design in [`docs/SENSOR_CREDENTIAL_LIFECYCLE.md`](docs/SENSOR_CREDENTIAL_LIFECYCLE.md). Operators can interpret lifecycle audit events with [`docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md`](docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md), and use [`docs/OPERATIONS_AND_SIEM_RUNBOOK.md`](docs/OPERATIONS_AND_SIEM_RUNBOOK.md) for the Состояние системы, Security Events, Оповещения SIEM, and Сенсоры workflow.

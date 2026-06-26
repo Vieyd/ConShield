@@ -6,9 +6,9 @@
     ViewData["Title"] = "Карточка SIEM-оповещения";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="app-page-header">
     <h1 class="mb-0">Карточка SIEM-оповещения</h1>
-    <div class="d-flex gap-2">
+    <div class="app-actions">
         @if (Model.Incident is not null)
         {
             <a asp-controller="Incidents" asp-action="Details" asp-route-id="@Model.Incident.Id" class="btn btn-outline-primary">Открыть инцидент</a>
@@ -19,7 +19,7 @@
 
 <div class="row g-4">
     <div class="col-lg-5">
-        <div class="card">
+        <div class="app-card">
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-sm-5">ID</dt>
@@ -32,29 +32,29 @@
                     <dd class="col-sm-7"><code class="id-code">@Model.Alert.RuleCode</code></dd>
 
                     <dt class="col-sm-5">Правило</dt>
-                    <dd class="col-sm-7">@Model.Alert.RuleName</dd>
+                    <dd class="col-sm-7">@DisplayText.RuleName(Model.Alert.RuleCode, Model.Alert.RuleName)</dd>
 
                     <dt class="col-sm-5">Ключ срабатывания</dt>
                     <dd class="col-sm-7"><code class="id-code">@Model.Alert.TriggerKey</code></dd>
 
                     <dt class="col-sm-5">Критичность</dt>
-                    <dd class="col-sm-7">@Model.Alert.Severity</dd>
+                    <dd class="col-sm-7">@DisplayText.Severity(Model.Alert.Severity)</dd>
 
                     <dt class="col-sm-5">Статус</dt>
-                    <dd class="col-sm-7">@Model.Alert.Status</dd>
+                    <dd class="col-sm-7">@DisplayText.Status(Model.Alert.Status)</dd>
 
                     <dt class="col-sm-5">ID инцидента</dt>
                     <dd class="col-sm-7">@(Model.Alert.IncidentId?.ToString() ?? "—")</dd>
 
                     <dt class="col-sm-5">Описание</dt>
-                    <dd class="col-sm-7">@Model.Alert.Description</dd>
+                    <dd class="col-sm-7">@DisplayText.AlertDescription(Model.Alert.RuleCode, Model.Alert.Description)</dd>
                 </dl>
             </div>
         </div>
 
         @if (User.IsInRole(AppRoles.AdminIB))
         {
-            <div class="card mt-3">
+            <div class="app-card mt-3">
                 <div class="card-body">
                     <div class="fw-semibold mb-2">Изменить статус</div>
                     <form asp-action="ChangeStatus" method="post" class="d-inline">
@@ -75,7 +75,7 @@
     </div>
 
     <div class="col-lg-7">
-        <div class="card mb-3">
+        <div class="app-card mb-3">
             <div class="card-header">Связанный инцидент</div>
             <div class="card-body">
                 @if (Model.Incident is null)
@@ -88,21 +88,21 @@
                         <dt class="col-sm-4">ID</dt>
                         <dd class="col-sm-8">@Model.Incident.Id</dd>
                         <dt class="col-sm-4">Название</dt>
-                        <dd class="col-sm-8">@Model.Incident.Name</dd>
+                        <dd class="col-sm-8">@DisplayText.IncidentTitle(Model.Incident.Name)</dd>
                         <dt class="col-sm-4">Статус</dt>
-                        <dd class="col-sm-8">@Model.Incident.Status</dd>
+                        <dd class="col-sm-8">@DisplayText.Status(Model.Incident.Status)</dd>
                         <dt class="col-sm-4">Критичность</dt>
-                        <dd class="col-sm-8">@Model.Incident.Severity</dd>
+                        <dd class="col-sm-8">@DisplayText.Severity(Model.Incident.Severity)</dd>
                     </dl>
                 }
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header">События-источники (@Model.SourceEventIds.Count)</div>
+        <div class="app-card">
+            <div class="card-header">Исходные события (@Model.SourceEventIds.Count)</div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-striped mb-0 align-middle">
+                    <table class="table table-striped mb-0 align-middle app-table">
                         <thead>
                             <tr>
                                 <th>ID</th>

@@ -167,9 +167,9 @@ public sealed class SecuritySummaryReportTests
 
         Assert.StartsWith("text/markdown", file.ContentType, StringComparison.Ordinal);
         Assert.Matches(@"^conshield-security-summary-\d{8}-\d{4}\.md$", file.FileDownloadName);
-        Assert.Contains("# ConShield Security Summary", markdown, StringComparison.Ordinal);
-        Assert.Contains("Lifecycle SIEM alerts: 2", markdown, StringComparison.Ordinal);
-        Assert.Contains("Outbox pending: 1", markdown, StringComparison.Ordinal);
+        Assert.Contains("# ConShield — сводка безопасности", markdown, StringComparison.Ordinal);
+        Assert.Contains("Lifecycle-оповещения SIEM: 2", markdown, StringComparison.Ordinal);
+        Assert.Contains("Очередь: ожидает: 1", markdown, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -187,6 +187,9 @@ public sealed class SecuritySummaryReportTests
         Assert.DoesNotContain("AdditionalDataJson", markdown, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Password=", markdown, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("CONSHIELD_RUNTIME_COLLECTOR_API_KEY", markdown, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw event JSON", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("API keys", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("connection strings", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

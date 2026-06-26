@@ -13,15 +13,20 @@
 
     <div class="mb-3">
         <label asp-for="Severity" class="form-label"></label>
-        <select asp-for="Severity" class="form-select" asp-items="Html.GetEnumSelectList<EventSeverity>()"></select>
+        <select asp-for="Severity" class="form-select">
+            <option value="@EventSeverity.Info">Информационный</option>
+            <option value="@EventSeverity.Warning">Предупреждение</option>
+            <option value="@EventSeverity.High">Высокий</option>
+            <option value="@EventSeverity.Critical">Критический</option>
+        </select>
     </div>
 
     <div class="mb-3">
         <label asp-for="Status" class="form-label"></label>
         <select asp-for="Status" class="form-select">
-            <option value="@IncidentStatuses.New">New</option>
-            <option value="@IncidentStatuses.InProgress">InProgress</option>
-            <option value="@IncidentStatuses.Closed">Closed</option>
+            <option value="@IncidentStatuses.New">Новый</option>
+            <option value="@IncidentStatuses.InProgress">В работе</option>
+            <option value="@IncidentStatuses.Closed">Закрыто</option>
         </select>
     </div>
 

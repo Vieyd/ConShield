@@ -89,7 +89,7 @@ public sealed class SecurityEventsUiTests
 
         Assert.Contains("Lifecycle сенсоров", viewText, StringComparison.Ordinal);
         Assert.Contains("Ротации", viewText, StringComparison.Ordinal);
-        Assert.Contains("Отзыв credentials", viewText, StringComparison.Ordinal);
+        Assert.Contains("Отзыв учетных данных", viewText, StringComparison.Ordinal);
         Assert.Contains("Отзыв сенсоров", viewText, StringComparison.Ordinal);
         Assert.Contains("asp-route-SourceSystem", viewText, StringComparison.Ordinal);
         Assert.Contains("asp-route-ExternalEventType", viewText, StringComparison.Ordinal);
@@ -110,7 +110,7 @@ public sealed class SecurityEventsUiTests
         Assert.Contains(nameof(SensorLifecycleEventTypes.SensorRevoked), viewText, StringComparison.Ordinal);
         Assert.Contains("docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md", viewText, StringComparison.Ordinal);
         Assert.Contains("docs/OPERATIONS_AND_SIEM_RUNBOOK.md", viewText, StringComparison.Ordinal);
-        Assert.Contains("не вставляйте credentials", viewText, StringComparison.Ordinal);
+        Assert.Contains("не вставляйте учетные данные", viewText, StringComparison.Ordinal);
     }
 
     [Fact]

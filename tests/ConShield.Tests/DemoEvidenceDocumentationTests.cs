@@ -49,8 +49,9 @@ public sealed class DemoEvidenceDocumentationTests
         Assert.Contains("ConShield Final Handoff Snapshot", snapshot, StringComparison.Ordinal);
         Assert.Contains("/Reports/SecuritySummary", snapshot, StringComparison.Ordinal);
         Assert.Contains("/Operations/Health", snapshot, StringComparison.Ordinal);
-        Assert.Contains("Security Summary", snapshot, StringComparison.Ordinal);
-        Assert.Contains("lifecycle SIEM", snapshot, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Сводка безопасности", snapshot, StringComparison.Ordinal);
+        Assert.Contains("Lifecycle", snapshot, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Оповещения SIEM", snapshot, StringComparison.Ordinal);
         Assert.Contains("RabbitMQ", snapshot, StringComparison.Ordinal);
         Assert.Contains("VerifierSha256", snapshot, StringComparison.Ordinal);
     }
