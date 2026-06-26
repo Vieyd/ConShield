@@ -117,6 +117,28 @@ $env:DemoUsers__0__DisplayName = "Администратор ИБ"
 $env:DemoUsers__0__Role = "AdminIB"
 ```
 
+Persistent local-only Windows user environment variables avoid retyping demo credentials for every run. Store only your private local value; never commit it and never paste it into chat, tickets, screenshots, logs, or GitHub:
+
+```powershell
+[Environment]::SetEnvironmentVariable("DemoUsers__0__UserName", "adminib", "User")
+[Environment]::SetEnvironmentVariable("DemoUsers__0__Password", "<your-local-demo-password>", "User")
+[Environment]::SetEnvironmentVariable("DemoUsers__0__DisplayName", "Администратор ИБ", "User")
+[Environment]::SetEnvironmentVariable("DemoUsers__0__Role", "AdminIB", "User")
+
+[Environment]::SetEnvironmentVariable("DemoUsers__1__UserName", "operator", "User")
+[Environment]::SetEnvironmentVariable("DemoUsers__1__Password", "<your-local-demo-password>", "User")
+[Environment]::SetEnvironmentVariable("DemoUsers__1__DisplayName", "Оператор", "User")
+[Environment]::SetEnvironmentVariable("DemoUsers__1__Role", "Operator", "User")
+```
+
+Open a new PowerShell session after setting user-level environment variables, or set `$env:DemoUsers__...` in the current session as a temporary override. Stop old Web processes before retesting because a running `ConShield.Web` process keeps its previous configuration:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StopApps
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoUserPassword.ps1 -UserName adminib
+```
+
 After changing config, restart Web. Environment variables may override `appsettings.Development.json`. If diagnostics and the scripts succeed but browser login still fails, use an incognito window or clear ConShield cookies. Do not paste passwords into chat, tickets, screenshots, logs, or committed files.
 
 ## Local synthetic demo scenarios

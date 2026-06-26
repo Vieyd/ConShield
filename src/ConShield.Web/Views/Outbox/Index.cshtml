@@ -15,7 +15,7 @@
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="app-card">
+        <div class="app-card app-metric-card">
             <div class="card-body">
                 <div class="text-muted small">Ожидает</div>
                 <div class="fs-3">@Model.PendingCount</div>
@@ -23,7 +23,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="app-card">
+        <div class="app-card app-metric-card">
             <div class="card-body">
                 <div class="text-muted small">В обработке</div>
                 <div class="fs-3">@Model.ProcessingCount</div>
@@ -31,7 +31,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="app-card">
+        <div class="app-card app-metric-card">
             <div class="card-body">
                 <div class="text-muted small">Доставлено</div>
                 <div class="fs-3">@Model.DeliveredCount</div>
@@ -39,7 +39,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="app-card">
+        <div class="app-card app-metric-card">
             <div class="card-body">
                 <div class="text-muted small">Ошибка доставки</div>
                 <div class="fs-3">@Model.DeadLetterCount</div>
@@ -49,8 +49,9 @@
 </div>
 
 <div class="mb-3">
-    <span class="app-badge @(Model.IsDegraded ? "badge-attention" : "badge-ok")">
-        @(Model.IsDegraded ? "Требует внимания" : "Норма")
+    <span class="app-status @(Model.IsDegraded ? "app-status-attention" : "app-status-ok")">
+        <span class="app-status-dot" aria-hidden="true"></span>
+        <span>@(Model.IsDegraded ? "Требует внимания" : "Норма")</span>
     </span>
     <span class="ms-3">Транспорт: <strong>@Model.Transport</strong></span>
     <span class="ms-3">Старейшее ожидание: @(Model.OldestPendingAge?.ToString(@"hh\:mm\:ss") ?? "-")</span>
@@ -61,7 +62,7 @@
 {
     <div class="row g-3 mb-4">
         <div class="col-md-2">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Изолировано в DLQ</div>
                     <div class="fs-5">@deadLetters.QuarantinedCount</div>
@@ -69,7 +70,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Доступно для повтора</div>
                     <div class="fs-5">@deadLetters.EligibleCount</div>
@@ -77,7 +78,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Недоступно для повтора</div>
                     <div class="fs-5">@deadLetters.NotEligibleCount</div>
@@ -85,7 +86,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Ожидает повтора</div>
                     <div class="fs-5">@deadLetters.PendingReplayRequests</div>
@@ -93,7 +94,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Повтор не выполнен</div>
                     <div class="fs-5">@deadLetters.FailedReplayRequests</div>
@@ -101,7 +102,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Последний повтор UTC</div>
                     <div class="fs-6">@(deadLetters.LastReplayPublishedAtUtc?.ToString("u") ?? "-")</div>
@@ -115,15 +116,20 @@
 {
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">RabbitMQ</div>
-                    <div class="fs-5">@(Model.RabbitMq.Connected ? "Подключено" : DisplayText.RabbitMqError(Model.RabbitMq.ErrorCode ?? "Отключено"))</div>
+                    <div class="fs-5">
+                        <span class="app-status @(Model.RabbitMq.Connected ? "app-status-ok" : "app-status-attention")">
+                            <span class="app-status-dot" aria-hidden="true"></span>
+                            <span>@(Model.RabbitMq.Connected ? "Подключено" : DisplayText.RabbitMqError(Model.RabbitMq.ErrorCode ?? "unavailable"))</span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Основная очередь</div>
                     <div class="fs-5">@(Model.RabbitMq.MainQueueCount?.ToString() ?? "-")</div>
@@ -131,7 +137,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">DLQ</div>
                     <div class="fs-5">@(Model.RabbitMq.DeadLetterQueueCount?.ToString() ?? "-")</div>
@@ -139,7 +145,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Подтверждения получения</div>
                     <div class="fs-5">@Model.RabbitMq.InboxReceiptCount</div>
@@ -153,15 +159,20 @@
 {
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Проекция MongoDB</div>
-                    <div class="fs-5">@(mongo.Enabled ? (mongo.Connected ? "Подключено" : DisplayText.Status(mongo.ErrorCode ?? "Unavailable")) : "Отключено")</div>
+                    <div class="fs-5">
+                        <span class="app-status @(mongo.Enabled && mongo.Connected ? "app-status-ok" : "app-status-attention")">
+                            <span class="app-status-dot" aria-hidden="true"></span>
+                            <span>@(mongo.Enabled ? (mongo.Connected ? "Подключено" : DisplayText.Status(mongo.ErrorCode ?? "unavailable")) : "Отключено")</span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Коллекция</div>
                     <div class="fs-6">@mongo.DatabaseName / @mongo.CollectionName</div>
@@ -169,7 +180,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Документы</div>
                     <div class="fs-5">@(mongo.EstimatedDocumentCount?.ToString() ?? "-")</div>
@@ -177,7 +188,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="app-card">
+            <div class="app-card app-metric-card">
                 <div class="card-body">
                     <div class="text-muted small">Хранение / последний UTC</div>
                     <div class="fs-6">@mongo.RetentionDays дн. / @(mongo.LastProjectedAtUtc?.ToString("u") ?? "-")</div>
@@ -187,34 +198,61 @@
     </div>
 }
 
-<table class="table table-sm table-striped align-middle app-table">
-    <thead>
-        <tr>
-            <th>ID сообщения</th>
-            <th>ID события</th>
-            <th>Тип сообщения</th>
-            <th>Статус</th>
-            <th>Попытки</th>
-            <th>Создано UTC</th>
-            <th>Доступно UTC</th>
-            <th>Доставлено UTC</th>
-            <th>Ошибка</th>
-        </tr>
-    </thead>
-    <tbody>
-    @foreach (var item in Model.LatestMessages)
-    {
-        <tr>
-            <td><code class="id-code">@item.MessageId</code></td>
-            <td>@item.SecurityEventId</td>
-            <td><code class="id-code">@item.MessageType</code></td>
-            <td>@DisplayText.Status(item.Status.ToString())</td>
-            <td>@item.AttemptCount</td>
-            <td>@item.CreatedAtUtc.ToString("u")</td>
-            <td>@item.AvailableAtUtc.ToString("u")</td>
-            <td>@(item.DeliveredAtUtc?.ToString("u") ?? "-")</td>
-            <td>@(string.IsNullOrWhiteSpace(item.LastErrorCode) ? "-" : DisplayText.RabbitMqError($"{item.LastErrorCode}: {item.LastErrorSummary}"))</td>
-        </tr>
-    }
-    </tbody>
-</table>
+<div class="app-table-card">
+    <div class="app-table-scroll-wrap" data-table-scroll-sync>
+        <div class="app-table-scrollbar-top" aria-hidden="true">
+            <div class="app-table-scrollbar-inner"></div>
+        </div>
+        <div class="app-table-scroll">
+        <table class="table table-sm table-striped align-middle app-table app-table-wide">
+            <thead>
+                <tr>
+                    <th>ID события</th>
+                    <th>ID сообщения</th>
+                    <th>Тип сообщения</th>
+                    <th>Статус</th>
+                    <th>Попытки</th>
+                    <th>Создано UTC</th>
+                    <th>Доступно UTC</th>
+                    <th>Доставлено UTC</th>
+                    <th>Ошибка</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.LatestMessages)
+            {
+                <tr>
+                    <td><code class="id-code app-id-nowrap">@item.SecurityEventId</code></td>
+                    <td><code class="id-code app-code-short" title="@item.MessageId">@DisplayText.ShortTechnicalValue(item.MessageId)</code></td>
+                    <td>
+                        <span class="app-display-primary">Событие безопасности создано</span>
+                        <span class="app-display-secondary">@item.MessageType</span>
+                    </td>
+                    <td>
+                        <span class="app-status @DisplayText.StatusClass(item.Status.ToString())">
+                            <span class="app-status-dot" aria-hidden="true"></span>
+                            <span>@DisplayText.Status(item.Status.ToString())</span>
+                        </span>
+                    </td>
+                    <td>@item.AttemptCount</td>
+                    <td>@item.CreatedAtUtc.ToString("u")</td>
+                    <td>@item.AvailableAtUtc.ToString("u")</td>
+                    <td>@(item.DeliveredAtUtc?.ToString("u") ?? "-")</td>
+                    <td>
+                        @if (string.IsNullOrWhiteSpace(item.LastErrorCode))
+                        {
+                            <span>—</span>
+                        }
+                        else
+                        {
+                            <span class="app-display-primary">@DisplayText.RabbitMqError(item.LastErrorCode)</span>
+                            <span class="app-display-secondary">@item.LastErrorCode: @item.LastErrorSummary</span>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>

@@ -1,47 +1,65 @@
-@model IEnumerable<UserExceptionDto>
+@model UserExceptionIndexViewModel
 @{
     ViewData["Title"] = "Пользовательские исключения";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Пользовательские исключения</h2>
+<div class="app-page-header">
+    <h2 class="mb-0">Пользовательские исключения</h2>
     @if (User.IsInRole("AdminIB"))
     {
         <a asp-action="Create" class="btn btn-primary">Создать запись</a>
     }
 </div>
 
-<table class="table table-bordered table-striped">
-    <thead>
-        <tr>
-            <th>Id</th>
-            <th>Логин</th>
-            <th>Система</th>
-            <th>Тип</th>
-            <th>Активно</th>
-            <th>Создано</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-    @foreach (var item in Model)
-    {
-        <tr>
-            <td>@item.Id</td>
-            <td>@item.UserLogin</td>
-            <td>@item.SourceSystem</td>
-            <td>@item.ExceptionType</td>
-            <td>@(item.IsActive ? "Да" : "Нет")</td>
-            <td>@item.CreatedAtUtc.ToMoscowDisplay()</td>
-            <td class="text-nowrap">
-                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Открыть</a>
-                @if (User.IsInRole("AdminIB"))
-                {
-                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Изменить</a>
-                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Удалить</a>
-                }
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+<div class="app-table-card">
+    <div class="app-table-scroll-wrap" data-table-scroll-sync>
+        <div class="app-table-scrollbar-top" aria-hidden="true">
+            <div class="app-table-scrollbar-inner"></div>
+        </div>
+        <div class="app-table-scroll">
+        <table class="table table-striped align-middle app-table app-table-compact">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Логин</th>
+                    <th>Система</th>
+                    <th>Тип</th>
+                    <th>Активно</th>
+                    <th>Создано</th>
+                    <th class="app-table-actions-col">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td><code class="id-code app-id-nowrap">@item.Id</code></td>
+                    <td>@item.UserLogin</td>
+                    <td><code class="app-technical-code app-technical-code--truncate" title="@item.SourceSystem">@DisplayText.ShortTechnicalValue(item.SourceSystem)</code></td>
+                    <td>@item.ExceptionType</td>
+                    <td>
+                        <span class="app-status @(item.IsActive ? "app-status-ok" : "app-status-neutral")">
+                            <span class="app-status-dot" aria-hidden="true"></span>
+                            <span>@(item.IsActive ? "Да" : "Нет")</span>
+                        </span>
+                    </td>
+                    <td>@item.CreatedAtUtc.ToMoscowDisplay()</td>
+                    <td class="app-table-actions-col">
+                        <div class="app-action-group">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Открыть</a>
+                            @if (User.IsInRole("AdminIB"))
+                            {
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Изменить</a>
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Удалить</a>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" model="Model.Paging" />

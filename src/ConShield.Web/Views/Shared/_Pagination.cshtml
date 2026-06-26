@@ -1,0 +1,46 @@
+@using System.Globalization
+@using Microsoft.AspNetCore.WebUtilities
+@model PagingViewModel
+
+@{
+    var currentQuery = Context.Request.Query
+        .Where(x => !string.Equals(x.Key, "page", StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(x.Value.ToString()))
+        .ToDictionary(x => x.Key, x => (string?)x.Value.ToString(), StringComparer.OrdinalIgnoreCase);
+
+    string PageUrl(int page)
+    {
+        var values = new Dictionary<string, string?>(currentQuery, StringComparer.OrdinalIgnoreCase);
+        values["page"] = page.ToString(CultureInfo.InvariantCulture);
+
+        if (!values.ContainsKey("pageSize"))
+            values["pageSize"] = Model.PageSize.ToString(CultureInfo.InvariantCulture);
+
+        return QueryHelpers.AddQueryString(Context.Request.Path.ToString(), values);
+    }
+}
+
+<nav class="app-pagination" aria-label="Пагинация">
+    <div class="app-pagination-summary">
+        Страница @Model.Page из @Model.TotalPages · всего записей: @Model.TotalCount · на странице: @Model.PageSize
+    </div>
+    <div class="app-action-group">
+        @if (Model.HasPreviousPage)
+        {
+            <a class="btn btn-sm btn-outline-secondary" href="@PageUrl(Model.Page - 1)">Назад</a>
+        }
+        else
+        {
+            <span class="btn btn-sm btn-outline-secondary disabled" aria-disabled="true">Назад</span>
+        }
+
+        @if (Model.HasNextPage)
+        {
+            <a class="btn btn-sm btn-outline-secondary" href="@PageUrl(Model.Page + 1)">Вперёд</a>
+        }
+        else
+        {
+            <span class="btn btn-sm btn-outline-secondary disabled" aria-disabled="true">Вперёд</span>
+        }
+    </div>
+</nav>

@@ -35,14 +35,27 @@
 
 @if (sourceEvent is not null)
 {
-    <div class="app-card mb-3">
-        <div class="card-header">Связанное событие безопасности</div>
-        <div class="card-body">
-            <div><strong>ID:</strong> @sourceEvent.Id</div>
-            <div><strong>Время:</strong> @sourceEvent.OccurredAtUtc.ToMoscowDisplay()</div>
-            <div><strong>Тип:</strong> @sourceEvent.EventType</div>
-            <div><strong>Критичность:</strong> @DisplayText.Severity(sourceEvent.Severity)</div>
-            <div><strong>Описание:</strong> @sourceEvent.Description</div>
+    <div class="app-card app-related-event-card mb-3">
+        <div class="card-header app-card-header">
+            <h3 class="app-section-title mb-0">Связанное событие безопасности</h3>
+        </div>
+        <div class="card-body app-related-event-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">ID</dt>
+                <dd class="col-sm-9">@sourceEvent.Id</dd>
+
+                <dt class="col-sm-3">Время</dt>
+                <dd class="col-sm-9">@sourceEvent.OccurredAtUtc.ToMoscowDisplay()</dd>
+
+                <dt class="col-sm-3">Тип</dt>
+                <dd class="col-sm-9">@sourceEvent.EventType</dd>
+
+                <dt class="col-sm-3">Критичность</dt>
+                <dd class="col-sm-9">@DisplayText.Severity(sourceEvent.Severity)</dd>
+
+                <dt class="col-sm-3">Описание</dt>
+                <dd class="col-sm-9">@sourceEvent.Description</dd>
+            </dl>
         </div>
     </div>
 }

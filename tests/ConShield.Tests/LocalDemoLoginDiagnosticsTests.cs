@@ -463,6 +463,11 @@ public class LocalDemoLoginDiagnosticsTests
         Assert.Contains("Start-ConShield.ps1 -StopApps", combinedDocs, StringComparison.Ordinal);
         Assert.Contains("restart", combinedDocs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("do not paste passwords", combinedDocs, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[Environment]::SetEnvironmentVariable", combinedDocs, StringComparison.Ordinal);
+        Assert.Contains("\"User\"", combinedDocs, StringComparison.Ordinal);
+        Assert.Contains("Start-ConShield.ps1 -StopApps", combinedDocs, StringComparison.Ordinal);
+        Assert.Contains("<your-local-demo-password>", combinedDocs, StringComparison.Ordinal);
+        Assert.DoesNotContain("123456", combinedDocs, StringComparison.Ordinal);
     }
 
     private static AccountController CreateController(

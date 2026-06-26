@@ -28,6 +28,66 @@ public sealed class SecurityEventsUiTests
 
         Assert.Equal(3, model.Items.Count);
         Assert.All(model.Items, item => Assert.Equal(SecuritySourceSystems.SensorLifecycle, item.SourceSystem));
+        Assert.Equal(3, model.Paging.TotalCount);
+    }
+
+    [Fact]
+    public async Task SecurityEventsIndex_DefaultPageSizeIsCappedAndReportsTotalCount()
+    {
+        await using var db = CreateDbContext();
+        var now = DateTime.UtcNow;
+        for (var index = 0; index < 60; index++)
+        {
+            db.SecurityEvents.Add(new SecurityEventEntry
+            {
+                OccurredAtUtc = now.AddSeconds(-index),
+                EventType = SecurityEventType.LoginFailure,
+                Severity = EventSeverity.Warning,
+                UserName = "operator",
+                Description = $"event {index}"
+            });
+        }
+
+        await db.SaveChangesAsync();
+        var controller = new SecurityEventsController(db);
+
+        var model = await IndexModelAsync(controller, new SecurityEventFilterViewModel());
+
+        Assert.Equal(PagingViewModel.DefaultPageSize, model.Items.Count);
+        Assert.Equal(60, model.Paging.TotalCount);
+        Assert.Equal(1, model.Paging.Page);
+        Assert.Equal(PagingViewModel.DefaultPageSize, model.Paging.PageSize);
+        Assert.True(model.Paging.HasNextPage);
+    }
+
+    [Fact]
+    public async Task SecurityEventsIndex_NormalizesInvalidPagingAndCapsPageSize()
+    {
+        await using var db = CreateDbContext();
+        var now = DateTime.UtcNow;
+        for (var index = 0; index < 130; index++)
+        {
+            db.SecurityEvents.Add(new SecurityEventEntry
+            {
+                OccurredAtUtc = now.AddSeconds(-index),
+                EventType = SecurityEventType.AccessDenied,
+                Severity = EventSeverity.Critical,
+                UserName = "runtime-agent",
+                Description = $"runtime event {index}"
+            });
+        }
+
+        await db.SaveChangesAsync();
+        var controller = new SecurityEventsController(db);
+
+        var result = await controller.Index(new SecurityEventFilterViewModel(), CancellationToken.None, page: -10, pageSize: 500);
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<SecurityEventIndexViewModel>(view.Model);
+
+        Assert.Equal(PagingViewModel.MaxPageSize, model.Items.Count);
+        Assert.Equal(1, model.Paging.Page);
+        Assert.Equal(PagingViewModel.MaxPageSize, model.Paging.PageSize);
+        Assert.Equal(130, model.Paging.TotalCount);
     }
 
     [Fact]
@@ -129,7 +189,7 @@ public sealed class SecurityEventsUiTests
     }
 
     [Fact]
-    public void SecurityEventsIndex_RendersSourceSystemAndExternalEventType()
+    public void SecurityEventsIndex_RendersSourceSystemAndExternalEventTypeAsCompactSummary()
     {
         var viewText = ReadRepoFile("src", "ConShield.Web", "Views", "SecurityEvents", "Index.cshtml");
 
@@ -139,6 +199,11 @@ public sealed class SecurityEventsUiTests
         Assert.Contains("name=\"ExternalEventType\"", viewText, StringComparison.Ordinal);
         Assert.Contains("@item.SourceSystem", viewText, StringComparison.Ordinal);
         Assert.Contains("@item.ExternalEventType", viewText, StringComparison.Ordinal);
+        Assert.Contains("Актор / источник", viewText, StringComparison.Ordinal);
+        Assert.Contains("ShortTechnicalValue(item.SourceSystem)", viewText, StringComparison.Ordinal);
+        Assert.Contains("ShortTechnicalValue(item.ExternalEventType)", viewText, StringComparison.Ordinal);
+        Assert.DoesNotContain("<th>Доп. данные</th>", viewText, StringComparison.Ordinal);
+        Assert.DoesNotContain("@item.AdditionalDataJson", viewText, StringComparison.Ordinal);
     }
 
     [Fact]
