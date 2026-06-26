@@ -15,9 +15,9 @@ A compact snapshot of the current project state after the implemented scan → p
 - Sensor inventory and heartbeat: `/Sensors` and heartbeat APIs track sensor freshness and revocation state.
 - Credential lifecycle: provisioning, rotation, credential revocation, and sensor revocation workflows exist for AdminIB operators.
 - Lifecycle audit events: credential/sensor lifecycle actions produce filterable security events.
-- Lifecycle SIEM rules: `LIFE-001` and `LIFE-002` detect sensor identity revocation and repeated lifecycle changes.
-- Operations Health: `/Operations/Health` provides AdminIB-only aggregate health information.
-- Security Summary report/export: `/Reports/SecuritySummary` and `/Reports/SecuritySummaryMarkdown?range=24h` provide secret-safe aggregate reporting.
+- Оповещения SIEM и lifecycle-правила: `LIFE-001` and `LIFE-002` detect sensor identity revocation and repeated lifecycle changes.
+- Состояние системы: `/Operations/Health` provides AdminIB-only aggregate health information.
+- Сводка безопасности / экспорт: `/Reports/SecuritySummary` and `/Reports/SecuritySummaryMarkdown?range=24h` provide secret-safe aggregate reporting.
 - Demo scenario runner: `tools/ConShield.DemoScenario` can seed/reset clearly marked synthetic local demo data for walkthroughs.
 - Demo scenario validation: `scripts/Validate-DemoScenario.ps1` wraps the runner with dry-run defaults, explicit apply, reset safety, and optional unauthenticated Web route checks.
 - Local login diagnostics: `/Account/DemoUserDiagnostics` is Development-only and reports secret-free `DemoUsers` configuration status; `scripts/Test-LocalDemoLogin.ps1` tests the actual login form without printing the password.
@@ -58,7 +58,7 @@ A compact snapshot of the current project state after the implemented scan → p
 - Reserved runtime source events require sensor-bound runtime authentication.
 - Legacy runtime fallback remains disabled for enrolled-sensor-only operation.
 - Lifecycle actions such as rotation/revocation are AdminIB-only.
-- Security Summary reports and Markdown exports are aggregate/read-only and secret-safe.
+- Сводки безопасности and Markdown exports are aggregate/read-only and secret-safe.
 - Report exports do not include raw `AdditionalDataJson`, credential plaintext, API keys, connection strings, env values, cookies, tokens, passwords, or local secrets.
 - Demo scenario writes require explicit `CONSHIELD_DEMO_CONNECTION_STRING`; the runner must not print the value and reset deletes only marked demo records.
 - Demo scenario validation defaults to no DB writes; `-Apply` is required for writes, and reset apply also requires `-Yes`.

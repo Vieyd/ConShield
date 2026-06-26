@@ -20,7 +20,7 @@ public static class SiemRuleCatalog
         new SiemRuleDefinition
         {
             RuleCode = "UE-001",
-            RuleName = "Массовые изменения записей UserExceptions",
+            RuleName = "Массовые изменения исключений доступа",
             Severity = EventSeverity.Critical,
             Description = "Правило выявляет подозрительную серию операций изменения или удаления исключений доступа.",
             ConditionText = "5 и более операций изменения/удаления",
@@ -30,7 +30,7 @@ public static class SiemRuleCatalog
         new SiemRuleDefinition
         {
             RuleCode = "CR-001",
-            RuleName = "Повторные критические события с одного источника",
+            RuleName = "Повторные критические события от одного источника",
             Severity = EventSeverity.Critical,
             Description = "Правило выявляет повторение критических событий с одного источника и инициирует эскалацию.",
             ConditionText = "2 и более критических события",
@@ -43,7 +43,7 @@ public static class SiemRuleCatalog
             RuleName = "Критические уязвимости в контейнерном образе",
             Severity = EventSeverity.Critical,
             Description = "Правило выявляет результаты Trivy-сканирования контейнерного образа с критическими уязвимостями.",
-            ConditionText = "criticalCount >= 1",
+            ConditionText = "критических уязвимостей >= 1",
             WindowText = "24 часа",
             TriggerEntityText = "Digest или reference контейнерного образа"
         },
@@ -52,40 +52,40 @@ public static class SiemRuleCatalog
             RuleCode = "POL-001",
             RuleName = "Блокировка контейнерного образа политикой",
             Severity = EventSeverity.Critical,
-            Description = "Правило выявляет решения Container Policy Gate с результатом Block.",
-            ConditionText = "decision == Block",
+            Description = "Правило выявляет решения Container Policy Gate с результатом «блокировка».",
+            ConditionText = "решение = блокировка",
             WindowText = "24 часа",
-            TriggerEntityText = "Policy + digest или reference контейнерного образа"
+            TriggerEntityText = "Политика + digest/reference образа"
         },
         new SiemRuleDefinition
         {
             RuleCode = "RTE-001",
-            RuleName = "Container runtime threat detected",
+            RuleName = "Угроза во время выполнения контейнера",
             Severity = EventSeverity.High,
-            Description = "Правило выявляет подтвержденные Falco-compatible runtime события для контейнеров.",
-            ConditionText = "mapped runtime event, correlate == true, severity High/Critical",
+            Description = "Правило выявляет подтвержденные Falco-compatible runtime-события для контейнеров.",
+            ConditionText = "сопоставленное runtime-событие, корреляция включена, критичность высокая/критическая",
             WindowText = "10 минут",
-            TriggerEntityText = "Container identity + mapping + process"
+            TriggerEntityText = "Контейнер + сопоставление + процесс"
         },
         new SiemRuleDefinition
         {
             RuleCode = "LIFE-001",
-            RuleName = "Sensor identity revoked",
+            RuleName = "Отзыв идентификатора сенсора",
             Severity = EventSeverity.Warning,
-            Description = "Правило выявляет отзыв sensor identity как чувствительное lifecycle-действие.",
-            ConditionText = "SourceSystem == conshield.sensor-lifecycle и ExternalEventType == sensor.revoked",
+            Description = "Правило выявляет отзыв идентификатора сенсора как чувствительное lifecycle-действие.",
+            ConditionText = "система-источник = conshield.sensor-lifecycle и внешний тип события = sensor.revoked",
             WindowText = "24 часа",
-            TriggerEntityText = "Публичный sensor id"
+            TriggerEntityText = "Публичный ID сенсора"
         },
         new SiemRuleDefinition
         {
             RuleCode = "LIFE-002",
-            RuleName = "Repeated sensor credential lifecycle changes",
+            RuleName = "Повторные изменения учетных данных сенсора",
             Severity = EventSeverity.Warning,
-            Description = "Правило выявляет повторные ротации или отзывы credentials одного sensor за короткий интервал.",
-            ConditionText = "3 и более sensor.credential.rotated/sensor.credential.revoked для одного sensor",
+            Description = "Правило выявляет повторные ротации или отзывы учетных данных одного сенсора за короткий интервал.",
+            ConditionText = "3 и более событий sensor.credential.rotated/sensor.credential.revoked для одного сенсора",
             WindowText = "15 минут",
-            TriggerEntityText = "Публичный sensor id"
+            TriggerEntityText = "Публичный ID сенсора"
         }
     ];
 }

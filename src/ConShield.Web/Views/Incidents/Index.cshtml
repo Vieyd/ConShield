@@ -14,7 +14,7 @@
     };
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="app-page-header">
     <h2 class="mb-0">Инциденты</h2>
     @if (User.IsInRole(AppRoles.AdminIB))
     {
@@ -22,9 +22,9 @@
     }
 </div>
 
-<form method="get" class="row g-2 mb-4">
+<form method="get" class="app-filter-panel row g-2 mb-4">
     <div class="col-md-4">
-        <input name="SearchText" value="@Model.Filter.SearchText" class="form-control" placeholder="Поиск по названию, примечанию или SourceEventId" />
+        <input name="SearchText" value="@Model.Filter.SearchText" class="form-control" placeholder="Поиск по названию, примечанию или ID события-источника" />
     </div>
     <div class="col-md-3">
         <select name="Severity" class="form-select">
@@ -33,11 +33,11 @@
             {
                 if (Model.Filter.Severity == severity)
                 {
-                    <option value="@severity" selected>@severity</option>
+                    <option value="@severity" selected>@DisplayText.Severity(severity)</option>
                 }
                 else
                 {
-                    <option value="@severity">@severity</option>
+                    <option value="@severity">@DisplayText.Severity(severity)</option>
                 }
             }
         </select>
@@ -47,27 +47,27 @@
             <option value="">Все статусы</option>
             @if (Model.Filter.Status == IncidentStatuses.New)
             {
-                <option value="@IncidentStatuses.New" selected>New</option>
+                <option value="@IncidentStatuses.New" selected>Новый</option>
             }
             else
             {
-                <option value="@IncidentStatuses.New">New</option>
+                <option value="@IncidentStatuses.New">Новый</option>
             }
             @if (Model.Filter.Status == IncidentStatuses.InProgress)
             {
-                <option value="@IncidentStatuses.InProgress" selected>InProgress</option>
+                <option value="@IncidentStatuses.InProgress" selected>В работе</option>
             }
             else
             {
-                <option value="@IncidentStatuses.InProgress">InProgress</option>
+                <option value="@IncidentStatuses.InProgress">В работе</option>
             }
             @if (Model.Filter.Status == IncidentStatuses.Closed)
             {
-                <option value="@IncidentStatuses.Closed" selected>Closed</option>
+                <option value="@IncidentStatuses.Closed" selected>Закрыто</option>
             }
             else
             {
-                <option value="@IncidentStatuses.Closed">Closed</option>
+                <option value="@IncidentStatuses.Closed">Закрыто</option>
             }
         </select>
     </div>
@@ -76,7 +76,7 @@
     </div>
 </form>
 
-<table class="table table-striped table-bordered align-middle">
+<table class="table table-striped table-bordered align-middle app-table">
     <thead>
     <tr>
         <th>ID</th>
@@ -94,25 +94,25 @@
         <tr>
             <td>@item.Id</td>
             <td>@item.CreatedAtUtc.ToMoscowDisplay()</td>
-            <td>@item.Name</td>
+            <td>@DisplayText.IncidentTitle(item.Name)</td>
             <td>
                 @switch (item.Severity)
                 {
                     case EventSeverity.Critical:
-                        <span class="badge text-bg-danger">Critical</span>
+                        <span class="app-badge badge-danger-soft">Критический</span>
                         break;
                     case EventSeverity.High:
-                        <span class="badge text-bg-primary">High</span>
+                        <span class="app-badge text-bg-primary">Высокий</span>
                         break;
                     case EventSeverity.Warning:
-                        <span class="badge text-bg-warning">Warning</span>
+                        <span class="app-badge badge-attention">Предупреждение</span>
                         break;
                     default:
-                        <span class="badge text-bg-info">Info</span>
+                        <span class="app-badge badge-neutral">Информационный</span>
                         break;
                 }
             </td>
-            <td><span class="badge @GetStatusClass(item.Status)">@item.Status</span></td>
+            <td><span class="app-badge @GetStatusClass(item.Status)">@DisplayText.Status(item.Status)</span></td>
             <td>@item.SourceEventId</td>
             <td class="text-nowrap">
                 <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Открыть</a>

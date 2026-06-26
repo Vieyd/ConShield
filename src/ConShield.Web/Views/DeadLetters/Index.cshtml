@@ -1,25 +1,28 @@
 @model ConShield.Web.ViewModels.DeadLetterIndexViewModel
 
 @{
-    ViewData["Title"] = "Dead Letters";
+    ViewData["Title"] = "Ошибки доставки";
 }
 
-<h1 class="mb-3">Dead Letters</h1>
+<div class="app-page-header">
+    <h1 class="mb-1">Ошибки доставки</h1>
+    <div class="text-muted small">Изолированные DLQ-сообщения и статус безопасного повтора.</div>
+</div>
 
-<form method="get" class="row g-2 mb-3">
+<form method="get" class="app-filter-panel row g-2 mb-3">
     <div class="col-md-2">
         <select name="eligibility" class="form-select">
-            <option value="">Eligibility</option>
-            <option selected="@(Model.Eligibility == "Eligible")">Eligible</option>
-            <option selected="@(Model.Eligibility == "RequiresReview")">RequiresReview</option>
-            <option selected="@(Model.Eligibility == "NotEligible")">NotEligible</option>
+            <option value="">Доступность повтора</option>
+            <option value="Eligible" selected="@(Model.Eligibility == "Eligible")">Доступно для повтора</option>
+            <option value="RequiresReview" selected="@(Model.Eligibility == "RequiresReview")">Требует проверки</option>
+            <option value="NotEligible" selected="@(Model.Eligibility == "NotEligible")">Недоступно для повтора</option>
         </select>
     </div>
     <div class="col-md-2">
-        <input name="reason" value="@Model.Reason" class="form-control" placeholder="Reason" />
+        <input name="reason" value="@Model.Reason" class="form-control" placeholder="Причина" />
     </div>
     <div class="col-md-2">
-        <input name="replayStatus" value="@Model.ReplayStatus" class="form-control" placeholder="Replay status" />
+        <input name="replayStatus" value="@Model.ReplayStatus" class="form-control" placeholder="Статус повтора" />
     </div>
     <div class="col-md-2">
         <input name="capturedFromUtc" value="@(Model.CapturedFromUtc?.ToString("yyyy-MM-ddTHH:mm"))" class="form-control" type="datetime-local" />
@@ -28,22 +31,22 @@
         <input name="capturedToUtc" value="@(Model.CapturedToUtc?.ToString("yyyy-MM-ddTHH:mm"))" class="form-control" type="datetime-local" />
     </div>
     <div class="col-md-2">
-        <button class="btn btn-primary w-100" type="submit">Filter</button>
+        <button class="btn btn-primary w-100" type="submit">Фильтровать</button>
     </div>
 </form>
 
-<table class="table table-sm table-striped align-middle">
+<table class="table table-sm table-striped align-middle app-table">
     <thead>
         <tr>
-            <th>QuarantineId</th>
-            <th>MessageId</th>
+            <th>ID карантина</th>
+            <th>ID сообщения</th>
             <th>Payload SHA-256</th>
-            <th>Type</th>
-            <th>Reason</th>
-            <th>Eligibility</th>
-            <th>Captured UTC</th>
-            <th>Captures</th>
-            <th>Replay</th>
+            <th>Тип</th>
+            <th>Причина</th>
+            <th>Доступность повтора</th>
+            <th>Получено UTC</th>
+            <th>Получений</th>
+            <th>Повтор</th>
             <th></th>
         </tr>
     </thead>
@@ -51,29 +54,29 @@
     @foreach (var item in Model.Items)
     {
         <tr>
-            <td><code>@item.QuarantineId</code></td>
-            <td><code>@(item.OriginalMessageId?.ToString() ?? "-")</code></td>
-            <td><code>@item.PayloadSha256</code></td>
+            <td><code class="id-code">@item.QuarantineId</code></td>
+            <td><code class="id-code">@(item.OriginalMessageId?.ToString() ?? "-")</code></td>
+            <td><code class="id-code">@item.PayloadSha256</code></td>
             <td>@(item.MessageType ?? "-")</td>
             <td>@item.DeadLetterReason</td>
-            <td>@item.ReplayEligibility</td>
+            <td>@DisplayText.Status(item.ReplayEligibility.ToString())</td>
             <td>@item.CapturedAtUtc.ToString("u")</td>
             <td>@item.CaptureCount</td>
             <td>@(item.LatestReplayStatus ?? "-")</td>
-            <td><a asp-action="Details" asp-route-id="@item.QuarantineId">Details</a></td>
+            <td><a asp-action="Details" asp-route-id="@item.QuarantineId">Открыть</a></td>
         </tr>
     }
     </tbody>
 </table>
 
 <nav>
-    <span>Page @Model.Page of @Model.TotalPages</span>
+    <span>Страница @Model.Page из @Model.TotalPages</span>
     @if (Model.Page > 1)
     {
-        <a class="ms-3" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-eligibility="@Model.Eligibility" asp-route-reason="@Model.Reason" asp-route-replayStatus="@Model.ReplayStatus">Previous</a>
+        <a class="ms-3" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-eligibility="@Model.Eligibility" asp-route-reason="@Model.Reason" asp-route-replayStatus="@Model.ReplayStatus">Назад</a>
     }
     @if (Model.Page < Model.TotalPages)
     {
-        <a class="ms-3" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-eligibility="@Model.Eligibility" asp-route-reason="@Model.Reason" asp-route-replayStatus="@Model.ReplayStatus">Next</a>
+        <a class="ms-3" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-eligibility="@Model.Eligibility" asp-route-reason="@Model.Reason" asp-route-replayStatus="@Model.ReplayStatus">Вперед</a>
     }
 </nav>

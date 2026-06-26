@@ -6,7 +6,7 @@
     ViewData["Title"] = "События безопасности";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="app-page-header">
     <h2 class="mb-0">События безопасности</h2>
     @if (User.IsInRole(AppRoles.AdminIB))
     {
@@ -28,7 +28,7 @@
        asp-controller="SecurityEvents"
        asp-action="Index"
        asp-route-SourceSystem="@SecuritySourceSystems.SensorLifecycle"
-       asp-route-ExternalEventType="@SensorLifecycleEventTypes.SensorCredentialRevoked">Отзыв credentials</a>
+        asp-route-ExternalEventType="@SensorLifecycleEventTypes.SensorCredentialRevoked">Отзыв учетных данных</a>
     <a class="btn btn-sm btn-outline-info"
        asp-controller="SecurityEvents"
        asp-action="Index"
@@ -41,10 +41,10 @@
     <code>@SensorLifecycleEventTypes.SensorCredentialRevoked</code>,
     <code>@SensorLifecycleEventTypes.SensorRevoked</code>.
     См. <code>docs/SENSOR_LIFECYCLE_AUDIT_PLAYBOOK.md</code> и <code>docs/OPERATIONS_AND_SIEM_RUNBOOK.md</code> в репозитории;
-    не вставляйте credentials, API keys или env values в заметки расследования.
+    не вставляйте учетные данные, API keys или значения окружения в заметки расследования.
 </div>
 
-<form method="get" class="row g-2 mb-4">
+<form method="get" class="app-filter-panel row g-2 mb-4">
     <div class="col-md-3">
         <input name="UserName" value="@Model.Filter.UserName" class="form-control" placeholder="Пользователь" />
     </div>
@@ -55,11 +55,11 @@
             {
                 if (Model.Filter.Severity == severity)
                 {
-                    <option value="@severity" selected>@severity</option>
+                    <option value="@severity" selected>@DisplayText.Severity(severity)</option>
                 }
                 else
                 {
-                    <option value="@severity">@severity</option>
+                    <option value="@severity">@DisplayText.Severity(severity)</option>
                 }
             }
         </select>
@@ -94,7 +94,7 @@
     </div>
 </form>
 
-<table class="table table-striped table-bordered align-middle">
+<table class="table table-striped table-bordered align-middle app-table">
     <thead>
     <tr>
         <th>ID</th>
@@ -120,29 +120,29 @@
             <td>@item.Id</td>
             <td>@item.OccurredAtUtc.ToMoscowDisplay()</td>
             <td>@item.EventType</td>
-            <td><code>@item.SourceSystem</code></td>
-            <td><code>@item.ExternalEventType</code></td>
+            <td><code class="id-code">@item.SourceSystem</code></td>
+            <td><code class="id-code">@item.ExternalEventType</code></td>
             <td>
                 @switch (item.Severity)
                 {
                     case EventSeverity.Critical:
-                        <span class="badge text-bg-danger">Critical</span>
+                        <span class="app-badge badge-danger-soft">Критический</span>
                         break;
                     case EventSeverity.High:
-                        <span class="badge text-bg-primary">High</span>
+                        <span class="app-badge text-bg-primary">Высокий</span>
                         break;
                     case EventSeverity.Warning:
-                        <span class="badge text-bg-warning">Warning</span>
+                        <span class="app-badge badge-attention">Предупреждение</span>
                         break;
                     default:
-                        <span class="badge text-bg-info">Info</span>
+                        <span class="app-badge badge-neutral">Информационный</span>
                         break;
                 }
             </td>
             <td>@item.UserName</td>
             <td>@item.SourceIp</td>
             <td>@item.Description</td>
-            <td><code>@item.AdditionalDataJson</code></td>
+            <td><code class="id-code">@item.AdditionalDataJson</code></td>
             @if (User.IsInRole(AppRoles.AdminIB))
             {
                 <td>

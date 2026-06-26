@@ -6,40 +6,42 @@
     var sourceEvent = ViewBag.SourceEvent as ConShield.Data.Entities.SecurityEventEntry;
 }
 
-<h2>Карточка инцидента</h2>
+<div class="app-page-header">
+    <h2 class="mb-0">Карточка инцидента</h2>
+</div>
 
 <dl class="row">
-    <dt class="col-sm-3">Id</dt>
+    <dt class="col-sm-3">ID</dt>
     <dd class="col-sm-9">@Model.Id</dd>
 
     <dt class="col-sm-3">Создан</dt>
     <dd class="col-sm-9">@Model.CreatedAtUtc.ToMoscowDisplay()</dd>
 
     <dt class="col-sm-3">Название</dt>
-    <dd class="col-sm-9">@Model.Name</dd>
+    <dd class="col-sm-9">@DisplayText.IncidentTitle(Model.Name)</dd>
 
     <dt class="col-sm-3">Критичность</dt>
-    <dd class="col-sm-9">@Model.Severity</dd>
+    <dd class="col-sm-9">@DisplayText.Severity(Model.Severity)</dd>
 
     <dt class="col-sm-3">Статус</dt>
-    <dd class="col-sm-9">@Model.Status</dd>
+    <dd class="col-sm-9">@DisplayText.Status(Model.Status)</dd>
 
-    <dt class="col-sm-3">SourceEventId</dt>
+    <dt class="col-sm-3">ID события-источника</dt>
     <dd class="col-sm-9">@Model.SourceEventId</dd>
 
     <dt class="col-sm-3">Примечание</dt>
-    <dd class="col-sm-9">@Model.Notes</dd>
+    <dd class="col-sm-9">@DisplayText.IncidentNotes(Model.Notes)</dd>
 </dl>
 
 @if (sourceEvent is not null)
 {
-    <div class="card mb-3">
+    <div class="app-card mb-3">
         <div class="card-header">Связанное событие безопасности</div>
         <div class="card-body">
             <div><strong>ID:</strong> @sourceEvent.Id</div>
             <div><strong>Время:</strong> @sourceEvent.OccurredAtUtc.ToMoscowDisplay()</div>
             <div><strong>Тип:</strong> @sourceEvent.EventType</div>
-            <div><strong>Критичность:</strong> @sourceEvent.Severity</div>
+            <div><strong>Критичность:</strong> @DisplayText.Severity(sourceEvent.Severity)</div>
             <div><strong>Описание:</strong> @sourceEvent.Description</div>
         </div>
     </div>

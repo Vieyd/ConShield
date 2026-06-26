@@ -1,11 +1,14 @@
 @model ConShield.Web.ViewModels.DeadLetterDetailsViewModel
 
 @{
-    ViewData["Title"] = "Dead Letter Details";
+    ViewData["Title"] = "Детали ошибки доставки";
     var canReplay = Model.ReplayEligibility != ConShield.Data.Entities.DeadLetterReplayEligibility.NotEligible;
 }
 
-<h1 class="mb-3">Dead Letter Details</h1>
+<div class="app-page-header">
+    <h1 class="mb-1">Детали ошибки доставки</h1>
+    <div class="text-muted small">Технические идентификаторы сохранены для расследования, секреты не отображаются.</div>
+</div>
 
 @if (TempData["StatusMessage"] is string statusMessage)
 {
@@ -18,67 +21,67 @@
 
 <div class="row g-3 mb-4">
     <div class="col-md-6">
-        <table class="table table-sm">
+        <table class="table table-sm app-table">
             <tbody>
-                <tr><th>QuarantineId</th><td><code>@Model.QuarantineId</code></td></tr>
-                <tr><th>MessageId</th><td><code>@(Model.OriginalMessageId?.ToString() ?? "-")</code></td></tr>
-                <tr><th>Payload SHA-256</th><td><code>@Model.PayloadSha256</code></td></tr>
-                <tr><th>Message type</th><td>@(Model.MessageType ?? "-")</td></tr>
+                <tr><th>ID карантина</th><td><code class="id-code">@Model.QuarantineId</code></td></tr>
+                <tr><th>ID сообщения</th><td><code class="id-code">@(Model.OriginalMessageId?.ToString() ?? "-")</code></td></tr>
+                <tr><th>Payload SHA-256</th><td><code class="id-code">@Model.PayloadSha256</code></td></tr>
+                <tr><th>Тип сообщения</th><td>@(Model.MessageType ?? "-")</td></tr>
                 <tr><th>Schema</th><td>@(Model.SchemaVersion?.ToString() ?? "-")</td></tr>
-                <tr><th>SecurityEventId</th><td>@(Model.SecurityEventId?.ToString() ?? "-")</td></tr>
-                <tr><th>Payload length</th><td>@Model.PayloadLength</td></tr>
-                <tr><th>Capture count</th><td>@Model.CaptureCount</td></tr>
+                <tr><th>ID события</th><td>@(Model.SecurityEventId?.ToString() ?? "-")</td></tr>
+                <tr><th>Размер payload</th><td>@Model.PayloadLength</td></tr>
+                <tr><th>Количество получений</th><td>@Model.CaptureCount</td></tr>
             </tbody>
         </table>
     </div>
     <div class="col-md-6">
-        <table class="table table-sm">
+        <table class="table table-sm app-table">
             <tbody>
-                <tr><th>Original route</th><td>@Model.OriginalExchange / @Model.OriginalRoutingKey</td></tr>
-                <tr><th>Dead-letter route</th><td>@Model.DeadLetterExchange / @Model.DeadLetterQueue</td></tr>
-                <tr><th>Content type</th><td>@(Model.ContentType ?? "-")</td></tr>
-                <tr><th>Dead-letter reason</th><td>@Model.DeadLetterReason</td></tr>
-                <tr><th>Validation</th><td>@Model.ValidationCategory</td></tr>
-                <tr><th>Eligibility</th><td>@Model.ReplayEligibility</td></tr>
-                <tr><th>Explanation</th><td>@Model.EligibilityExplanation</td></tr>
-                <tr><th>Captured UTC</th><td>@Model.CapturedAtUtc.ToString("u")</td></tr>
+                <tr><th>Исходный маршрут</th><td>@Model.OriginalExchange / @Model.OriginalRoutingKey</td></tr>
+                <tr><th>Маршрут DLQ</th><td>@Model.DeadLetterExchange / @Model.DeadLetterQueue</td></tr>
+                <tr><th>Content-Type</th><td>@(Model.ContentType ?? "-")</td></tr>
+                <tr><th>Причина DLQ</th><td>@Model.DeadLetterReason</td></tr>
+                <tr><th>Валидация</th><td>@Model.ValidationCategory</td></tr>
+                <tr><th>Доступность повтора</th><td>@DisplayText.Status(Model.ReplayEligibility.ToString())</td></tr>
+                <tr><th>Пояснение</th><td>@Model.EligibilityExplanation</td></tr>
+                <tr><th>Получено UTC</th><td>@Model.CapturedAtUtc.ToString("u")</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
-<h2 class="h5">x-death summary</h2>
-<pre class="border rounded p-2 bg-light">@Model.HeaderSummaryJson</pre>
+<h2 class="h5">Сводка x-death</h2>
+<pre class="border rounded p-2 bg-light app-code">@Model.HeaderSummaryJson</pre>
 
-<h2 class="h5 mt-4">Replay request</h2>
+<h2 class="h5 mt-4">Запрос повтора</h2>
 <form asp-action="Replay" asp-route-id="@Model.QuarantineId" method="post" class="mb-4">
     @Html.AntiForgeryToken()
     <div class="mb-2">
-        <textarea name="reason" class="form-control" maxlength="500" rows="3" required disabled="@(!canReplay)" placeholder="AdminIB reason"></textarea>
+        <textarea name="reason" class="form-control" maxlength="500" rows="3" required disabled="@(!canReplay)" placeholder="Причина от AdminIB"></textarea>
     </div>
-    <button type="submit" class="btn btn-primary" disabled="@(!canReplay)">Request replay</button>
+    <button type="submit" class="btn btn-primary" disabled="@(!canReplay)">Запросить повтор</button>
 </form>
 
-<h2 class="h5">Replay history</h2>
-<table class="table table-sm table-striped align-middle">
+<h2 class="h5">История повторов</h2>
+<table class="table table-sm table-striped align-middle app-table">
     <thead>
         <tr>
-            <th>RequestId</th>
-            <th>Status</th>
-            <th>Sequence</th>
-            <th>RequestedBy</th>
-            <th>Requested UTC</th>
-            <th>Published UTC</th>
-            <th>Attempts</th>
-            <th>Error</th>
+            <th>ID запроса</th>
+            <th>Статус</th>
+            <th>Последовательность</th>
+            <th>Запросил</th>
+            <th>Запрошено UTC</th>
+            <th>Опубликовано UTC</th>
+            <th>Попытки</th>
+            <th>Ошибка</th>
         </tr>
     </thead>
     <tbody>
     @foreach (var item in Model.ReplayHistory)
     {
         <tr>
-            <td><code>@item.ReplayRequestId</code></td>
-            <td>@item.Status</td>
+            <td><code class="id-code">@item.ReplayRequestId</code></td>
+            <td>@DisplayText.Status(item.Status.ToString())</td>
             <td>@item.ReplaySequence</td>
             <td>@item.RequestedBy</td>
             <td>@item.RequestedAtUtc.ToString("u")</td>

@@ -17,9 +17,9 @@ For a compact current-state handoff, see [CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md](C
 7. Sensor inventory and heartbeat: `/Sensors` and the heartbeat API show enrolled sensor freshness and revocation state.
 8. Credential lifecycle: local provisioning, rotation, revocation, and sensor revocation workflows exist without exposing stored verifiers.
 9. Lifecycle audit events: lifecycle actions write filterable audit events into Security Events.
-10. SIEM rules and alerts: rules include image, policy, runtime, and lifecycle detections such as `LIFE-001` and `LIFE-002`.
-11. Operations Health: `/Operations/Health` provides an AdminIB-only aggregate health view.
-12. Security Summary report/export: `/Reports/SecuritySummary` and the Markdown export provide a safe read-only handoff.
+10. Правила SIEM and alerts: rules include image, policy, runtime, and lifecycle detections such as `LIFE-001` and `LIFE-002`.
+11. Состояние системы: `/Operations/Health` provides an AdminIB-only aggregate health view.
+12. Сводка безопасности / экспорт: `/Reports/SecuritySummary` and the Markdown export provide a safe read-only handoff.
 13. Demo scenario runner: `tools/ConShield.DemoScenario` seeds local-only synthetic evidence for safe walkthroughs.
 
 ## Mapping to diploma goals
@@ -33,7 +33,7 @@ For a compact current-state handoff, see [CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md](C
 | Secure ingestion | API key validation and sensor-bound runtime authentication |
 | Event processing pipeline | PostgreSQL outbox, RabbitMQ, EventConsumer, inbox receipts, and optional MongoDB projection |
 | SIEM detection | Correlation rules including `LIFE-001` and `LIFE-002` lifecycle alerts |
-| Operator workflow | `/Operations/Health`, `/SecurityEvents`, `/Sensors`, SIEM alerts/incidents, and reports |
+| Operator workflow | `/Operations/Health`, `/SecurityEvents`, `/Sensors`, Оповещения SIEM/incidents, and reports |
 | Reporting | `/Reports/SecuritySummary` and safe Markdown export |
 | Safe demo data | `tools/ConShield.DemoScenario` marked synthetic scenarios and marked-only reset |
 
@@ -180,11 +180,11 @@ Optional Fedora status evidence should be limited to service state and file perm
 
 ## Evidence checklist
 
-- [ ] Operations Health page opens for AdminIB.
-- [ ] Security Summary report opens for AdminIB.
+- [ ] Состояние системы page opens for AdminIB.
+- [ ] Сводка безопасности opens for AdminIB.
 - [ ] Unauthenticated user is redirected to login.
 - [ ] Security Events lifecycle filters are visible.
-- [ ] Sensor Fleet shows sensor status.
+- [ ] Сенсоры shows sensor status.
 - [ ] Lifecycle audit events are filterable.
 - [ ] `LIFE-001` and `LIFE-002` rules are documented.
 - [ ] Markdown report export contains no raw JSON/secrets.
@@ -217,7 +217,7 @@ Optional Fedora status evidence should be limited to service state and file perm
 1. Minute 0-1: explain the problem and show the architecture chain: Scan → Policy → Runtime Detection → Event Ingestion → Correlation → Alert/Incident → Report.
 2. Minute 1-2: show `/Operations/Health` as the operator starting point.
 3. Minute 2-3: show `/Sensors` and `/SecurityEvents`, including lifecycle filters.
-4. Minute 3-4: explain SIEM rules and show lifecycle alert documentation for `LIFE-001`/`LIFE-002`.
+4. Minute 3-4: explain Правила SIEM and show lifecycle alert documentation for `LIFE-001`/`LIFE-002`.
 5. Minute 4-5: show `/Reports/SecuritySummary` and the Markdown export.
 6. Minute 5-6: show safe CLI examples for image scanning or policy gate in no-submit mode.
 7. Minute 6-7: close with limitations and future work: mTLS, Kubernetes admission control, centralized secret management, observability, and configurable rules.

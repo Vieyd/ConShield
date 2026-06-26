@@ -8,23 +8,23 @@ For a safe diploma/demo walkthrough, use [DEMO_EVIDENCE_PACK.md](DEMO_EVIDENCE_P
 
 ## Main screens
 
-- Operations Health: `/Operations/Health`
-- Security Summary Report: `/Reports/SecuritySummary`
+- Состояние системы: `/Operations/Health`
+- Сводка безопасности: `/Reports/SecuritySummary`
 - Security Events: `/SecurityEvents`
-- Sensor Fleet: `/Sensors`
-- Alerts / Incidents: use the existing SIEM alerts and incident registry pages in the app
+- Сенсоры: `/Sensors`
+- Alerts / Incidents: use the existing Оповещения SIEM and incident registry pages in the app
 
 ## Normal daily check
 
-1. Open Operations Health.
+1. Open Состояние системы.
 2. Check sensor heartbeat state.
 3. Check Security Events freshness.
 4. Check outbox/inbox health.
 5. Check lifecycle audit activity.
-6. Open Security Summary Report and export the Markdown handoff if the check needs to be attached to an incident or shift note.
+6. Open Сводка безопасности and export the Markdown handoff if the check needs to be attached to an incident or shift note.
 7. Open Security Events using lifecycle quick filters if needed.
 
-## Lifecycle SIEM alerts
+## Lifecycle Оповещения SIEM
 
 ### LIFE-001 — Sensor identity revoked
 
@@ -36,7 +36,7 @@ Meaning:
 Operator actions:
 
 1. Check whether the revocation was planned.
-2. Open Sensor Fleet and confirm sensor status.
+2. Open Сенсоры and confirm sensor status.
 3. Open Security Events filtered by `conshield.sensor-lifecycle`.
 4. Check the actor/requestedBy and affected public sensorId.
 5. Create or update an incident if the action was not planned.
@@ -57,11 +57,11 @@ Operator actions:
 
 ## Investigation flow
 
-1. Start from Operations Health.
+1. Start from Состояние системы.
 2. Open related Security Events.
 3. Filter by SourceSystem = `conshield.sensor-lifecycle`.
 4. Use ExternalEventType to narrow the event.
-5. Check Sensor Fleet/details.
+5. Check Сенсоры/details.
 6. Create an incident from a relevant security event or alert when needed.
 7. Document the operator conclusion.
 
@@ -145,7 +145,7 @@ Do not run `-Apply` against a production database, and do not print `CONSHIELD_D
 
 ## Current limitations
 
-- Operations Health is DB-backed and not a Prometheus/Grafana replacement.
+- Состояние системы is DB-backed and not a Prometheus/Grafana replacement.
 - SIEM lifecycle alerts are deterministic prototype rules.
 - No automatic remediation is performed.
 - No centralized secret manager integration yet.

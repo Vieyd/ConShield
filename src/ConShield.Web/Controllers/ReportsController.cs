@@ -76,9 +76,9 @@ public sealed class ReportsController : Controller
     private static (string RangeKey, string RangeLabel, DateTime RangeStartUtc) ResolveRange(string? range, DateTime nowUtc)
     {
         if (string.Equals(range, Range7Days, StringComparison.OrdinalIgnoreCase))
-            return (Range7Days, "7 days", nowUtc.AddDays(-7));
+            return (Range7Days, "7 дней", nowUtc.AddDays(-7));
 
-        return (Range24Hours, "24 hours", nowUtc.AddHours(-24));
+        return (Range24Hours, "24 часа", nowUtc.AddHours(-24));
     }
 
     private static SecuritySummarySensorSection BuildSensorSection(IReadOnlyCollection<SensorSummaryRow> sensors, DateTime nowUtc)
@@ -243,79 +243,79 @@ public sealed class ReportsController : Controller
         var checklist = new List<string>();
 
         if (sensors.Offline > 0 || sensors.NeverSeen > 0)
-            checklist.Add("Open Sensor Fleet and verify offline or never-seen enrolled sensors.");
+            checklist.Add("Откройте раздел «Сенсоры» и проверьте сенсоры без связи или без heartbeat.");
         if (securityEvents.EventsInRange == 0)
-            checklist.Add("Confirm runtime collector ingestion and external event flow for the selected range.");
+            checklist.Add("Проверьте прием событий RuntimeCollector и внешний поток событий за выбранный период.");
         if (securityEvents.LifecycleAuditEvents > 0)
-            checklist.Add("Review lifecycle audit events and confirm they match planned maintenance.");
+            checklist.Add("Проверьте lifecycle-события и убедитесь, что они соответствуют плановым действиям.");
         if (siem.LifecycleAlertsInRange > 0)
-            checklist.Add("Open SIEM alerts for LIFE-001 and LIFE-002 and link unexpected changes to incidents.");
+            checklist.Add("Откройте оповещения SIEM по правилам LIFE-001 и LIFE-002 и свяжите неожиданные изменения с инцидентами.");
         if (siem.ActiveAlerts > 0 || siem.IncidentsInRange > 0)
-            checklist.Add("Review active alerts and incidents before closing the daily check.");
+            checklist.Add("Проверьте активные оповещения и инциденты перед закрытием ежедневной проверки.");
         if (pipeline.OutboxPending > 0 || pipeline.OutboxProcessing > 0 || pipeline.OutboxDeadLetter > 0)
-            checklist.Add("Check outbox backlog and dead-letter records before relying on downstream projections.");
+            checklist.Add("Проверьте очередь отправки и ошибки доставки перед тем, как полагаться на downstream-проекции.");
         if (pipeline.InboxRedelivered > 0 || pipeline.InboxDeliveryCountOverOne > 0)
-            checklist.Add("Check consumer inbox redelivery patterns for duplicate or delayed processing.");
+            checklist.Add("Проверьте повторные доставки inbox на признаки дублей или задержанной обработки.");
         if (checklist.Count == 0)
-            checklist.Add("Continue the daily Operations Health, Security Events, SIEM alerts, and Sensor Fleet review.");
+            checklist.Add("Продолжайте ежедневную проверку разделов «Состояние системы», «События», «Оповещения SIEM» и «Сенсоры».");
 
-        checklist.Add("Document the operator conclusion in the operations runbook or the related incident.");
+        checklist.Add("Зафиксируйте вывод оператора в runbook или связанном инциденте.");
         return checklist;
     }
 
     private static string BuildMarkdown(SecuritySummaryReportViewModel model)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("# ConShield Security Summary");
+        builder.AppendLine("# ConShield — сводка безопасности");
         builder.AppendLine();
-        builder.AppendLine($"- Generated: {model.GeneratedAtUtc:yyyy-MM-dd HH:mm:ss} UTC ({model.GeneratedAtUtc.ToMoscowDisplay()} MSK)");
-        builder.AppendLine($"- Range: {model.RangeLabel} ({model.RangeStartUtc:yyyy-MM-dd HH:mm:ss} UTC - {model.RangeEndUtc:yyyy-MM-dd HH:mm:ss} UTC)");
-        builder.AppendLine($"- Overall status: {model.OverallStatus}");
+        builder.AppendLine($"- Сформировано: {model.GeneratedAtUtc:yyyy-MM-dd HH:mm:ss} UTC ({model.GeneratedAtUtc.ToMoscowDisplay()} MSK)");
+        builder.AppendLine($"- Период: {model.RangeLabel} ({model.RangeStartUtc:yyyy-MM-dd HH:mm:ss} UTC — {model.RangeEndUtc:yyyy-MM-dd HH:mm:ss} UTC)");
+        builder.AppendLine($"- Общий статус: {DisplayText.SecuritySummaryStatus(model.OverallStatus)}");
         builder.AppendLine();
-        builder.AppendLine("## Sensors");
+        builder.AppendLine("## Сенсоры");
         builder.AppendLine();
-        builder.AppendLine($"- Total: {model.Sensors.Total}");
-        builder.AppendLine($"- Active: {model.Sensors.Active}");
-        builder.AppendLine($"- Revoked: {model.Sensors.Revoked}");
-        builder.AppendLine($"- Online / warning / offline: {model.Sensors.Online} / {model.Sensors.Warning} / {model.Sensors.Offline}");
-        builder.AppendLine($"- Never seen: {model.Sensors.NeverSeen}");
-        builder.AppendLine($"- Latest heartbeat: {FormatUtc(model.Sensors.LatestHeartbeatAtUtc)}");
+        builder.AppendLine($"- Всего: {model.Sensors.Total}");
+        builder.AppendLine($"- Активных: {model.Sensors.Active}");
+        builder.AppendLine($"- Отозваны: {model.Sensors.Revoked}");
+        builder.AppendLine($"- В сети / предупреждение / нет связи: {model.Sensors.Online} / {model.Sensors.Warning} / {model.Sensors.Offline}");
+        builder.AppendLine($"- Без heartbeat: {model.Sensors.NeverSeen}");
+        builder.AppendLine($"- Последний heartbeat: {FormatUtc(model.Sensors.LatestHeartbeatAtUtc)}");
         builder.AppendLine();
-        builder.AppendLine("## Security events");
+        builder.AppendLine("## События безопасности");
         builder.AppendLine();
-        builder.AppendLine($"- Events in range: {model.SecurityEvents.EventsInRange}");
-        builder.AppendLine($"- Latest event: {FormatUtc(model.SecurityEvents.LatestEventAtUtc)}");
-        builder.AppendLine("- Count by severity:");
+        builder.AppendLine($"- Событий за период: {model.SecurityEvents.EventsInRange}");
+        builder.AppendLine($"- Последнее событие: {FormatUtc(model.SecurityEvents.LatestEventAtUtc)}");
+        builder.AppendLine("- Распределение по критичности:");
         foreach (var severity in Enum.GetValues<EventSeverity>())
-            builder.AppendLine($"  - {severity}: {model.SecurityEvents.SeverityCounts.GetValueOrDefault(severity)}");
-        builder.AppendLine($"- Lifecycle audit events: {model.SecurityEvents.LifecycleAuditEvents}");
+            builder.AppendLine($"  - {DisplayText.Severity(severity)}: {model.SecurityEvents.SeverityCounts.GetValueOrDefault(severity)}");
+        builder.AppendLine($"- Lifecycle-аудит: {model.SecurityEvents.LifecycleAuditEvents}");
         builder.AppendLine();
         builder.AppendLine("## SIEM");
         builder.AppendLine();
-        builder.AppendLine($"- Active alerts: {model.Siem.ActiveAlerts}");
-        builder.AppendLine($"- Lifecycle SIEM alerts: {model.Siem.LifecycleAlertsInRange}");
-        builder.AppendLine($"- LIFE-001 alerts: {model.Siem.Life001AlertsInRange}");
-        builder.AppendLine($"- LIFE-002 alerts: {model.Siem.Life002AlertsInRange}");
-        builder.AppendLine($"- Incidents in range: {model.Siem.IncidentsInRange}");
+        builder.AppendLine($"- Активные оповещения: {model.Siem.ActiveAlerts}");
+        builder.AppendLine($"- Lifecycle-оповещения SIEM: {model.Siem.LifecycleAlertsInRange}");
+        builder.AppendLine($"- Оповещения LIFE-001: {model.Siem.Life001AlertsInRange}");
+        builder.AppendLine($"- Оповещения LIFE-002: {model.Siem.Life002AlertsInRange}");
+        builder.AppendLine($"- Инцидентов за период: {model.Siem.IncidentsInRange}");
         builder.AppendLine();
-        builder.AppendLine("## Pipeline");
+        builder.AppendLine("## Пайплайн доставки");
         builder.AppendLine();
-        builder.AppendLine($"- Outbox pending: {model.Pipeline.OutboxPending}");
-        builder.AppendLine($"- Outbox processing: {model.Pipeline.OutboxProcessing}");
-        builder.AppendLine($"- Outbox dead-letter: {model.Pipeline.OutboxDeadLetter}");
-        builder.AppendLine($"- Inbox total: {model.Pipeline.InboxTotal}");
-        builder.AppendLine($"- Inbox in range: {model.Pipeline.InboxInRange}");
-        builder.AppendLine($"- Inbox redelivered: {model.Pipeline.InboxRedelivered}");
-        builder.AppendLine($"- Inbox delivery count over one: {model.Pipeline.InboxDeliveryCountOverOne}");
-        builder.AppendLine($"- Latest inbox received: {FormatUtc(model.Pipeline.LatestInboxReceivedAtUtc)}");
-        builder.AppendLine($"- Latest inbox processed: {FormatUtc(model.Pipeline.LatestInboxProcessedAtUtc)}");
+        builder.AppendLine($"- Очередь: ожидает: {model.Pipeline.OutboxPending}");
+        builder.AppendLine($"- Очередь: в обработке: {model.Pipeline.OutboxProcessing}");
+        builder.AppendLine($"- Ошибки доставки: {model.Pipeline.OutboxDeadLetter}");
+        builder.AppendLine($"- Подтверждения: всего: {model.Pipeline.InboxTotal}");
+        builder.AppendLine($"- Подтверждения за период: {model.Pipeline.InboxInRange}");
+        builder.AppendLine($"- Повторные доставки: {model.Pipeline.InboxRedelivered}");
+        builder.AppendLine($"- Delivery count > 1: {model.Pipeline.InboxDeliveryCountOverOne}");
+        builder.AppendLine($"- Последнее получение inbox: {FormatUtc(model.Pipeline.LatestInboxReceivedAtUtc)}");
+        builder.AppendLine($"- Последняя обработка inbox: {FormatUtc(model.Pipeline.LatestInboxProcessedAtUtc)}");
         builder.AppendLine();
-        builder.AppendLine("## Operator checklist");
+        builder.AppendLine("## Чек-лист оператора");
         builder.AppendLine();
         foreach (var item in model.OperatorChecklist)
             builder.AppendLine($"- {item}");
         builder.AppendLine();
-        builder.AppendLine("_This read-only summary contains aggregate counts and timestamps only._");
+        builder.AppendLine("_Этот отчет только для чтения содержит только агрегированные счетчики и временные метки._");
 
         return builder.ToString();
     }
@@ -333,7 +333,7 @@ public sealed class ReportsController : Controller
     }
 
     private static string FormatUtc(DateTime? value) => value is null
-        ? "n/a"
+        ? "—"
         : $"{value.Value:yyyy-MM-dd HH:mm:ss} UTC";
 
     private sealed record SensorSummaryRow(DateTime? LastSeenAtUtc, DateTime? RevokedAtUtc);

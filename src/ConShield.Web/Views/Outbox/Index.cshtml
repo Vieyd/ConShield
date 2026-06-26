@@ -1,16 +1,21 @@
 @model ConShield.EventPipeline.SecurityEventOutboxStatusSnapshot
 
 @{
-    ViewData["Title"] = "Очередь отправки";
+    ViewData["Title"] = "Очередь отправки событий";
     var mongo = ViewBag.MongoProjection as ConShield.MongoProjection.MongoProjectionStatusSnapshot;
     var deadLetters = ViewBag.DeadLetters as ConShield.EventPipeline.DeadLetterStatusSnapshot;
 }
 
-<h1 class="mb-3">Очередь отправки событий</h1>
+<div class="app-page-header">
+    <div>
+        <h1 class="mb-1">Очередь отправки событий</h1>
+        <div class="text-muted small">Состояние доставки событий в RabbitMQ, MongoDB-проекцию и inbox-подтверждения.</div>
+    </div>
+</div>
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card">
+        <div class="app-card">
             <div class="card-body">
                 <div class="text-muted small">Ожидает</div>
                 <div class="fs-3">@Model.PendingCount</div>
@@ -18,7 +23,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card">
+        <div class="app-card">
             <div class="card-body">
                 <div class="text-muted small">В обработке</div>
                 <div class="fs-3">@Model.ProcessingCount</div>
@@ -26,7 +31,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card">
+        <div class="app-card">
             <div class="card-body">
                 <div class="text-muted small">Доставлено</div>
                 <div class="fs-3">@Model.DeliveredCount</div>
@@ -34,9 +39,9 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card">
+        <div class="app-card">
             <div class="card-body">
-                <div class="text-muted small">Ошибка доставки / Dead-letter</div>
+                <div class="text-muted small">Ошибка доставки</div>
                 <div class="fs-3">@Model.DeadLetterCount</div>
             </div>
         </div>
@@ -44,10 +49,10 @@
 </div>
 
 <div class="mb-3">
-    <span class="badge @(Model.IsDegraded ? "bg-warning text-dark" : "bg-success")">
+    <span class="app-badge @(Model.IsDegraded ? "badge-attention" : "badge-ok")">
         @(Model.IsDegraded ? "Требует внимания" : "Норма")
     </span>
-    <span class="ms-3">Transport: <strong>@Model.Transport</strong></span>
+    <span class="ms-3">Транспорт: <strong>@Model.Transport</strong></span>
     <span class="ms-3">Старейшее ожидание: @(Model.OldestPendingAge?.ToString(@"hh\:mm\:ss") ?? "-")</span>
     <span class="ms-3">Последняя доставка UTC: @(Model.LastDeliveredAtUtc?.ToString("u") ?? "-")</span>
 </div>
@@ -56,49 +61,49 @@
 {
     <div class="row g-3 mb-4">
         <div class="col-md-2">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">DLQ quarantined</div>
+                    <div class="text-muted small">Изолировано в DLQ</div>
                     <div class="fs-5">@deadLetters.QuarantinedCount</div>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">Eligible</div>
+                    <div class="text-muted small">Доступно для повтора</div>
                     <div class="fs-5">@deadLetters.EligibleCount</div>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">NotEligible</div>
+                    <div class="text-muted small">Недоступно для повтора</div>
                     <div class="fs-5">@deadLetters.NotEligibleCount</div>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">Replay pending</div>
+                    <div class="text-muted small">Ожидает повтора</div>
                     <div class="fs-5">@deadLetters.PendingReplayRequests</div>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">Replay failed</div>
+                    <div class="text-muted small">Повтор не выполнен</div>
                     <div class="fs-5">@deadLetters.FailedReplayRequests</div>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">Last replay UTC</div>
+                    <div class="text-muted small">Последний повтор UTC</div>
                     <div class="fs-6">@(deadLetters.LastReplayPublishedAtUtc?.ToString("u") ?? "-")</div>
                 </div>
             </div>
@@ -110,23 +115,23 @@
 {
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
                     <div class="text-muted small">RabbitMQ</div>
-                    <div class="fs-5">@(Model.RabbitMq.Connected ? "Connected" : Model.RabbitMq.ErrorCode ?? "Disabled")</div>
+                    <div class="fs-5">@(Model.RabbitMq.Connected ? "Подключено" : DisplayText.RabbitMqError(Model.RabbitMq.ErrorCode ?? "Отключено"))</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">Main queue</div>
+                    <div class="text-muted small">Основная очередь</div>
                     <div class="fs-5">@(Model.RabbitMq.MainQueueCount?.ToString() ?? "-")</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
                     <div class="text-muted small">DLQ</div>
                     <div class="fs-5">@(Model.RabbitMq.DeadLetterQueueCount?.ToString() ?? "-")</div>
@@ -134,7 +139,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
                     <div class="text-muted small">Подтверждения получения</div>
                     <div class="fs-5">@Model.RabbitMq.InboxReceiptCount</div>
@@ -148,48 +153,48 @@
 {
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">Mongo projection</div>
-                    <div class="fs-5">@(mongo.Enabled ? (mongo.Connected ? "Connected" : mongo.ErrorCode ?? "Unavailable") : "Disabled")</div>
+                    <div class="text-muted small">Проекция MongoDB</div>
+                    <div class="fs-5">@(mongo.Enabled ? (mongo.Connected ? "Подключено" : DisplayText.Status(mongo.ErrorCode ?? "Unavailable")) : "Отключено")</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">Collection</div>
+                    <div class="text-muted small">Коллекция</div>
                     <div class="fs-6">@mongo.DatabaseName / @mongo.CollectionName</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">Documents</div>
+                    <div class="text-muted small">Документы</div>
                     <div class="fs-5">@(mongo.EstimatedDocumentCount?.ToString() ?? "-")</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="app-card">
                 <div class="card-body">
-                    <div class="text-muted small">Retention / last UTC</div>
-                    <div class="fs-6">@mongo.RetentionDays d / @(mongo.LastProjectedAtUtc?.ToString("u") ?? "-")</div>
+                    <div class="text-muted small">Хранение / последний UTC</div>
+                    <div class="fs-6">@mongo.RetentionDays дн. / @(mongo.LastProjectedAtUtc?.ToString("u") ?? "-")</div>
                 </div>
             </div>
         </div>
     </div>
 }
 
-<table class="table table-sm table-striped align-middle">
+<table class="table table-sm table-striped align-middle app-table">
     <thead>
         <tr>
-            <th>MessageId</th>
-            <th>SecurityEventId</th>
-            <th>MessageType</th>
+            <th>ID сообщения</th>
+            <th>ID события</th>
+            <th>Тип сообщения</th>
             <th>Статус</th>
-            <th>Attempts</th>
+            <th>Попытки</th>
             <th>Создано UTC</th>
             <th>Доступно UTC</th>
             <th>Доставлено UTC</th>
@@ -200,15 +205,15 @@
     @foreach (var item in Model.LatestMessages)
     {
         <tr>
-            <td><code>@item.MessageId</code></td>
+            <td><code class="id-code">@item.MessageId</code></td>
             <td>@item.SecurityEventId</td>
-            <td>@item.MessageType</td>
-            <td>@item.Status</td>
+            <td><code class="id-code">@item.MessageType</code></td>
+            <td>@DisplayText.Status(item.Status.ToString())</td>
             <td>@item.AttemptCount</td>
             <td>@item.CreatedAtUtc.ToString("u")</td>
             <td>@item.AvailableAtUtc.ToString("u")</td>
             <td>@(item.DeliveredAtUtc?.ToString("u") ?? "-")</td>
-            <td>@(string.IsNullOrWhiteSpace(item.LastErrorCode) ? "-" : $"{item.LastErrorCode}: {item.LastErrorSummary}")</td>
+            <td>@(string.IsNullOrWhiteSpace(item.LastErrorCode) ? "-" : DisplayText.RabbitMqError($"{item.LastErrorCode}: {item.LastErrorSummary}"))</td>
         </tr>
     }
     </tbody>
