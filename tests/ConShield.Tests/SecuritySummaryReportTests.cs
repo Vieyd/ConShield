@@ -138,6 +138,37 @@ public sealed class SecuritySummaryReportTests
     }
 
     [Fact]
+    public async Task SecuritySummaryReport_Range2dWorks()
+    {
+        await using var db = CreateDbContext();
+        var nowUtc = DateTime.UtcNow;
+        SeedReportData(db, nowUtc);
+        db.SecurityEvents.Add(SecurityEvent(nowUtc.AddHours(-36), EventSeverity.Info));
+        db.SecurityEvents.Add(SecurityEvent(nowUtc.AddDays(-3), EventSeverity.Info));
+        await db.SaveChangesAsync();
+
+        var model = await ReportModelAsync(db, "2d");
+
+        Assert.Equal("2d", model.RangeKey);
+        Assert.Equal("2 дня", model.RangeLabel);
+        Assert.Equal(6, model.SecurityEvents.EventsInRange);
+    }
+
+    [Fact]
+    public async Task SecuritySummaryReport_ViewExposesSupportedRanges()
+    {
+        await using var db = CreateDbContext();
+        SeedReportData(db, DateTime.UtcNow);
+        var view = ReadRepoFile("src", "ConShield.Web", "Views", "Reports", "SecuritySummary.cshtml");
+        var model = await ReportModelAsync(db, "2d");
+
+        Assert.Contains("asp-route-range=\"24h\"", view, StringComparison.Ordinal);
+        Assert.Contains("asp-route-range=\"2d\"", view, StringComparison.Ordinal);
+        Assert.Contains("asp-route-range=\"7d\"", view, StringComparison.Ordinal);
+        Assert.Equal("2d", model.RangeKey);
+    }
+
+    [Fact]
     public async Task SecuritySummaryReport_DoesNotRenderSecretsOrRawJson()
     {
         await using var db = CreateDbContext();
@@ -190,6 +221,40 @@ public sealed class SecuritySummaryReportTests
         Assert.DoesNotContain("raw event JSON", markdown, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("API keys", markdown, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("connection strings", markdown, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SecuritySummaryMarkdown_RangesShareConsistentRussianHeadingsAndLabels()
+    {
+        await using var db = CreateDbContext();
+        SeedReportData(db, DateTime.UtcNow);
+        var expectedHeadings = new[]
+        {
+            "# ConShield — сводка безопасности",
+            "## Сенсоры",
+            "## События безопасности",
+            "## SIEM",
+            "## Пайплайн доставки",
+            "## Чек-лист оператора",
+            "- Общий статус:",
+            "- Событий за период:",
+            "- Инцидентов за период:",
+            "- Подтверждения за период:"
+        };
+
+        foreach (var range in new[] { "24h", "2d", "7d" })
+        {
+            var result = await new ReportsController(db).SecuritySummaryMarkdown(range, CancellationToken.None);
+            var file = Assert.IsType<FileContentResult>(result);
+            var markdown = Encoding.UTF8.GetString(file.FileContents);
+
+            foreach (var expected in expectedHeadings)
+                Assert.Contains(expected, markdown, StringComparison.Ordinal);
+
+            Assert.DoesNotContain("Needs attention", markdown, StringComparison.Ordinal);
+            Assert.DoesNotContain("No data", markdown, StringComparison.Ordinal);
+            Assert.DoesNotContain("OK", markdown, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

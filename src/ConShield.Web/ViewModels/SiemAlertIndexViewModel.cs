@@ -6,4 +6,5 @@ public class SiemAlertIndexViewModel
 {
     public SiemAlertFilterViewModel Filter { get; set; } = new();
     public IReadOnlyCollection<SiemAlertRecord> Items { get; set; } = Array.Empty<SiemAlertRecord>();
+    public PagingViewModel Paging { get; set; } = new();
 }

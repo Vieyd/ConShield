@@ -4,11 +4,11 @@
     ViewData["Title"] = "Детали сенсора";
 }
 
-<div class="d-flex justify-content-between align-items-start mb-3">
+<div class="app-page-header">
     <div>
         <h1 class="mb-1">Детали сенсора</h1>
         <p class="text-muted mb-0">
-            Public lifecycle metadata only. Credential plaintext and secret validation material are never displayed.
+            Отображаются только публичные lifecycle-метаданные. Plaintext credential и secret validation material никогда не выводятся.
         </p>
     </div>
     <a asp-controller="Sensors" asp-action="Index" class="btn btn-outline-secondary">Назад к сенсорам</a>
@@ -18,13 +18,18 @@
     <div class="card-body">
         <h2 class="h5">@Model.DisplayName</h2>
         <dl class="row mb-0">
-            <dt class="col-sm-3">Status</dt>
-            <dd class="col-sm-9"><span class="badge @Model.StatusCssClass">@Model.Status</span></dd>
+            <dt class="col-sm-3">Статус</dt>
+            <dd class="col-sm-9">
+                <span class="app-status @DisplayText.StatusClass(Model.Status)">
+                    <span class="app-status-dot" aria-hidden="true"></span>
+                    <span>@DisplayText.Status(Model.Status)</span>
+                </span>
+            </dd>
 
             <dt class="col-sm-3">Sensor ID</dt>
             <dd class="col-sm-9"><code>@Model.SensorId</code></dd>
 
-            <dt class="col-sm-3">Source system</dt>
+            <dt class="col-sm-3">Система-источник</dt>
             <dd class="col-sm-9"><code>@Model.SourceSystem</code></dd>
 
             <dt class="col-sm-3">Последняя активность UTC</dt>
@@ -33,8 +38,8 @@
             <dt class="col-sm-3">Давность heartbeat</dt>
             <dd class="col-sm-9">@Model.HeartbeatAgeText</dd>
 
-            <dt class="col-sm-3">Certificate</dt>
-            <dd class="col-sm-9">@(Model.HasCertificateFingerprint ? "present" : "not set")</dd>
+            <dt class="col-sm-3">Сертификат</dt>
+            <dd class="col-sm-9">@(Model.HasCertificateFingerprint ? "Есть" : "Не задан")</dd>
 
             <dt class="col-sm-3">Создано UTC</dt>
             <dd class="col-sm-9">@Model.CreatedAtUtc.ToString("u")</dd>
@@ -42,7 +47,7 @@
             <dt class="col-sm-3">Обновлено UTC</dt>
             <dd class="col-sm-9">@Model.UpdatedAtUtc.ToString("u")</dd>
 
-            <dt class="col-sm-3">Revoked UTC</dt>
+            <dt class="col-sm-3">Отозвано UTC</dt>
             <dd class="col-sm-9">@(Model.RevokedAtUtc?.ToString("u") ?? "—")</dd>
         </dl>
 
@@ -63,7 +68,7 @@
     </div>
 </div>
 
-<h2 class="h4">Credentials</h2>
+<h2 class="h4">Учетные данные</h2>
 
 @if (Model.Credentials.Count == 0)
 {
@@ -71,23 +76,33 @@
 }
 else
 {
-    <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle">
+    <div class="app-table-card">
+        <div class="app-table-scroll-wrap" data-table-scroll-sync>
+            <div class="app-table-scrollbar-top" aria-hidden="true">
+                <div class="app-table-scrollbar-inner"></div>
+            </div>
+            <div class="app-table-scroll">
+        <table class="table table-sm table-striped align-middle app-table">
             <thead>
                 <tr>
                     <th>Статус</th>
                     <th>Credential ID</th>
                     <th>Создано UTC</th>
-                    <th>Rotated UTC</th>
-                    <th>Revoked UTC</th>
-                    <th>Actions</th>
+                    <th>Ротировано UTC</th>
+                    <th>Отозвано UTC</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var credential in Model.Credentials)
                 {
                     <tr>
-                        <td><span class="badge @credential.StatusCssClass">@credential.Status</span></td>
+                        <td>
+                            <span class="app-status @DisplayText.StatusClass(credential.Status)">
+                                <span class="app-status-dot" aria-hidden="true"></span>
+                                <span>@DisplayText.Status(credential.Status)</span>
+                            </span>
+                        </td>
                         <td><code>@credential.CredentialId</code></td>
                         <td>@credential.CreatedAtUtc.ToString("u")</td>
                         <td>@(credential.RotatedAtUtc?.ToString("u") ?? "—")</td>
@@ -115,5 +130,7 @@ else
                 }
             </tbody>
         </table>
+            </div>
+        </div>
     </div>
 }

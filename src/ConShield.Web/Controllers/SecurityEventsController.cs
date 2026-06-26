@@ -17,7 +17,11 @@ public class SecurityEventsController : Controller
         _dbContext = dbContext;
     }
 
-    public async Task<IActionResult> Index([FromQuery] SecurityEventFilterViewModel filter, CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(
+        [FromQuery] SecurityEventFilterViewModel filter,
+        CancellationToken cancellationToken,
+        [FromQuery] int? page = null,
+        [FromQuery] int? pageSize = null)
     {
         var query = _dbContext.SecurityEvents
             .ApplySecurityEventFilters(
@@ -28,15 +32,27 @@ public class SecurityEventsController : Controller
                 filter.SourceSystem,
                 filter.ExternalEventType);
 
+        var (normalizedPage, normalizedPageSize) = PagingViewModel.Normalize(page, pageSize);
+        var totalCount = await query.CountAsync(cancellationToken);
+        normalizedPage = PagingViewModel.ClampPage(normalizedPage, normalizedPageSize, totalCount);
+
         var events = await query
             .OrderByDescending(x => x.OccurredAtUtc)
-            .Take(300)
+            .ThenByDescending(x => x.Id)
+            .Skip((normalizedPage - 1) * normalizedPageSize)
+            .Take(normalizedPageSize)
             .ToListAsync(cancellationToken);
 
         return View(new SecurityEventIndexViewModel
         {
             Filter = filter,
-            Items = events
+            Items = events,
+            Paging = new PagingViewModel
+            {
+                Page = normalizedPage,
+                PageSize = normalizedPageSize,
+                TotalCount = totalCount
+            }
         });
     }
 

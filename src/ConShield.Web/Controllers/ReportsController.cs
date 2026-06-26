@@ -15,6 +15,7 @@ namespace ConShield.Web.Controllers;
 public sealed class ReportsController : Controller
 {
     private const string Range24Hours = "24h";
+    private const string Range2Days = "2d";
     private const string Range7Days = "7d";
 
     private readonly ApplicationDbContext _dbContext;
@@ -75,6 +76,9 @@ public sealed class ReportsController : Controller
 
     private static (string RangeKey, string RangeLabel, DateTime RangeStartUtc) ResolveRange(string? range, DateTime nowUtc)
     {
+        if (string.Equals(range, Range2Days, StringComparison.OrdinalIgnoreCase))
+            return (Range2Days, "2 дня", nowUtc.AddDays(-2));
+
         if (string.Equals(range, Range7Days, StringComparison.OrdinalIgnoreCase))
             return (Range7Days, "7 дней", nowUtc.AddDays(-7));
 

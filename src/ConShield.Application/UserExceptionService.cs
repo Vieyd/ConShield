@@ -24,6 +24,7 @@ public class UserExceptionService : IUserExceptionService
     {
         return await _dbContext.UserExceptions
             .OrderByDescending(x => x.CreatedAtUtc)
+            .ThenByDescending(x => x.Id)
             .Select(x => new UserExceptionDto
             {
                 Id = x.Id,
@@ -37,6 +38,33 @@ public class UserExceptionService : IUserExceptionService
                 CreatedBy = x.CreatedBy
             })
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<UserExceptionDto>> GetPageAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.UserExceptions
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .ThenByDescending(x => x.Id)
+            .Skip(skip)
+            .Take(take)
+            .Select(x => new UserExceptionDto
+            {
+                Id = x.Id,
+                UserLogin = x.UserLogin,
+                SourceSystem = x.SourceSystem,
+                ExceptionType = x.ExceptionType,
+                Description = x.Description,
+                IsActive = x.IsActive,
+                CreatedAtUtc = x.CreatedAtUtc,
+                ExpiresAtUtc = x.ExpiresAtUtc,
+                CreatedBy = x.CreatedBy
+            })
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        return _dbContext.UserExceptions.CountAsync(cancellationToken);
     }
 
     public async Task<UserExceptionDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)

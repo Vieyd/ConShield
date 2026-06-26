@@ -1,13 +1,37 @@
+@{
+    var requestedTheme = Context.Request.Cookies["conshield.theme"];
+    var initialTheme = string.Equals(requestedTheme, "dark", StringComparison.Ordinal) ? "dark" : "light";
+}
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="@initialTheme">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - ConShield</title>
+    <script>
+        (function () {
+            const allowedThemes = new Set(["light", "dark"]);
+            const storageKey = "conshield.theme";
+            const legacyStorageKey = "conshield-theme";
+            let theme = document.documentElement.dataset.theme;
+            try {
+                const storedTheme = window.localStorage.getItem(storageKey) || window.localStorage.getItem(legacyStorageKey);
+                if (allowedThemes.has(storedTheme)) {
+                    theme = storedTheme;
+                }
+            } catch {
+                // Theme choice is cosmetic; ignore storage failures.
+            }
+            if (!allowedThemes.has(theme)) {
+                theme = "light";
+            }
+            document.documentElement.dataset.theme = theme;
+        })();
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
-<body>
+<body data-theme="@initialTheme">
     @{
         string IsActive(string controller, string? action = null)
         {
@@ -59,14 +83,25 @@
                             }
                         </ul>
 
-                        <span class="navbar-text me-3">
-                            @User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value
-                            (@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
-                        </span>
+                        <div class="app-topbar-actions">
+                            <button class="app-theme-toggle"
+                                    type="button"
+                                    data-theme-toggle
+                                    aria-label="Переключить тему"
+                                    aria-pressed="false">
+                                <span aria-hidden="true">◐</span>
+                                <span>Тема: <span data-theme-label>Светлая</span></span>
+                            </button>
 
-                        <form asp-controller="Account" asp-action="Logout" method="post">
-                            <button class="btn btn-outline-light btn-sm" type="submit">Выход</button>
-                        </form>
+                            <span class="navbar-text">
+                                @User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value
+                                (@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
+                            </span>
+
+                            <form asp-controller="Account" asp-action="Logout" method="post">
+                                <button class="btn btn-outline-light btn-sm" type="submit">Выход</button>
+                            </form>
+                        </div>
                     </div>
                 }
             </div>
@@ -78,6 +113,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

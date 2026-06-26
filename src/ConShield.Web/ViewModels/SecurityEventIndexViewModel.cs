@@ -6,4 +6,5 @@ public class SecurityEventIndexViewModel
 {
     public SecurityEventFilterViewModel Filter { get; set; } = new();
     public IReadOnlyList<SecurityEventEntry> Items { get; set; } = [];
+    public PagingViewModel Paging { get; set; } = new();
 }
