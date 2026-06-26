@@ -95,6 +95,19 @@ Troubleshooting matrix:
 - `password_match=True`, `login_result=success`, browser still fails: clear cookies or use incognito.
 - Diagnostics endpoint unavailable: Web is not running in `Development`, or the wrong URL/port is used.
 
+Stable local demo-user setup:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Set-LocalDemoUsers.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StopApps
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-LocalDemoUserPassword.ps1 -UserName adminib
+```
+
+The helper prompts for demo passwords and stores them in Windows User/current-process environment variables only. It does not write repository files and does not print password values. `Start-ConShield.ps1` then passes `DemoUsers__*`, `ASPNETCORE_ENVIRONMENT=Development`, `ASPNETCORE_URLS=http://127.0.0.1:5080`, and `ConnectionStrings__DefaultConnection` explicitly to the Web child process.
+
+After startup, trust the reported `Web port owner PID` as the real serving process. A different `Web launcher PID` is possible when `dotnet run` creates a child process; use `-StopApps` after config changes so stale Web/EventConsumer processes cannot keep old environment values.
+
 Temporary shell-only placeholder configuration:
 
 ```powershell

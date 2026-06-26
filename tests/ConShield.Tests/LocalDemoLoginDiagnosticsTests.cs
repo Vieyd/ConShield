@@ -364,6 +364,84 @@ public class LocalDemoLoginDiagnosticsTests
     }
 
     [Fact]
+    public void StartConShield_DoesNotPrintSecrets()
+    {
+        var script = ReadRepoFile("Start-ConShield.ps1");
+        var helper = ReadRepoFile("scripts", "Set-LocalDemoUsers.ps1");
+        var combined = script + Environment.NewLine + helper;
+
+        Assert.DoesNotContain("123456", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("Write-Host $postgresPassword", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $adminPassword", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Host $operatorPassword", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $postgresPassword", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $adminPassword", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Write-Output $operatorPassword", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("password present:", script, StringComparison.Ordinal);
+        Assert.Contains("Password values are not printed", helper, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StartConShield_HasExplicitWebEnvironment()
+    {
+        var script = ReadRepoFile("Start-ConShield.ps1");
+
+        Assert.Contains("\"ASPNETCORE_ENVIRONMENT\" = \"Development\"", script, StringComparison.Ordinal);
+        Assert.Contains("\"ASPNETCORE_URLS\" = $WebUrl", script, StringComparison.Ordinal);
+        Assert.Contains("\"ConnectionStrings__DefaultConnection\" = $env:ConnectionStrings__DefaultConnection", script, StringComparison.Ordinal);
+        Assert.Contains("CONSHIELD_POSTGRES_HOST", script, StringComparison.Ordinal);
+        Assert.Contains("CONSHIELD_POSTGRES_PORT", script, StringComparison.Ordinal);
+        Assert.Contains("CONSHIELD_POSTGRES_DATABASE", script, StringComparison.Ordinal);
+        Assert.Contains("CONSHIELD_POSTGRES_USER", script, StringComparison.Ordinal);
+        Assert.Contains("CONSHIELD_POSTGRES_PASSWORD", script, StringComparison.Ordinal);
+        Assert.Contains("Read-Host -Prompt \"Local PostgreSQL password\" -AsSecureString", script, StringComparison.Ordinal);
+        Assert.Contains("-Environment $appEnvironment", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StartConShield_HandlesDemoUsersEnvironment()
+    {
+        var script = ReadRepoFile("Start-ConShield.ps1");
+
+        Assert.Contains("$DemoUserVariables", script, StringComparison.Ordinal);
+        Assert.Contains("Get-EffectiveEnvValue -Name $demoVariable", script, StringComparison.Ordinal);
+        Assert.Contains("[Environment]::GetEnvironmentVariable($Name, \"User\")", script, StringComparison.Ordinal);
+        Assert.Contains("Show-DemoUserEnvironmentSummary", script, StringComparison.Ordinal);
+        Assert.Contains("DemoUsers__{0} configured:", script, StringComparison.Ordinal);
+        Assert.Contains("DemoUsers__{0} password present:", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StartConShield_ChecksPortOwner()
+    {
+        var script = ReadRepoFile("Start-ConShield.ps1");
+
+        Assert.Contains("function Get-WebPortOwner", script, StringComparison.Ordinal);
+        Assert.Contains("Get-NetTCPConnection -LocalPort 5080 -State Listen", script, StringComparison.Ordinal);
+        Assert.Contains("Assert-WebPortOwner", script, StringComparison.Ordinal);
+        Assert.Contains("Web launcher PID:", script, StringComparison.Ordinal);
+        Assert.Contains("Web port owner PID:", script, StringComparison.Ordinal);
+        Assert.Contains("ForceStopPortOwners", script, StringComparison.Ordinal);
+        Assert.Contains("does not clearly look like ConShield.Web", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SetLocalDemoUsers_IsSecretSafe()
+    {
+        var helper = ReadRepoFile("scripts", "Set-LocalDemoUsers.ps1");
+
+        Assert.Contains("Read-Host -Prompt 'AdminIB demo password' -AsSecureString", helper, StringComparison.Ordinal);
+        Assert.Contains("Read-Host -Prompt 'Operator demo password' -AsSecureString", helper, StringComparison.Ordinal);
+        Assert.Contains("[Environment]::SetEnvironmentVariable($Name, $Value, 'User')", helper, StringComparison.Ordinal);
+        Assert.Contains("[Environment]::SetEnvironmentVariable($Name, $Value, 'Process')", helper, StringComparison.Ordinal);
+        Assert.Contains("No repository files are written", helper, StringComparison.Ordinal);
+        Assert.Contains("password present:", helper, StringComparison.Ordinal);
+        Assert.DoesNotContain("Set-Content", helper, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Add-Content", helper, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("123456", helper, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LocalLoginTroubleshootingDocs_ExplainDemoUsersConfig()
     {
         var combinedDocs = string.Join(
@@ -380,6 +458,9 @@ public class LocalDemoLoginDiagnosticsTests
         Assert.Contains("password_match=True", combinedDocs, StringComparison.Ordinal);
         Assert.Contains("scripts/Test-LocalDemoLogin.ps1", combinedDocs, StringComparison.Ordinal);
         Assert.Contains("scripts/Test-LocalDemoUserPassword.ps1", combinedDocs, StringComparison.Ordinal);
+        Assert.Contains("scripts\\Set-LocalDemoUsers.ps1", combinedDocs, StringComparison.Ordinal);
+        Assert.Contains("Web port owner PID", combinedDocs, StringComparison.Ordinal);
+        Assert.Contains("Start-ConShield.ps1 -StopApps", combinedDocs, StringComparison.Ordinal);
         Assert.Contains("restart", combinedDocs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("do not paste passwords", combinedDocs, StringComparison.OrdinalIgnoreCase);
     }
