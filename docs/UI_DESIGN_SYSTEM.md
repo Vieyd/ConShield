@@ -44,16 +44,21 @@ Wrap data tables in:
 
 ```html
 <div class="app-table-card">
-  <div class="app-table-scroll">
-    <table class="table table-striped align-middle app-table">
-    </table>
+  <div class="app-table-scroll-wrap" data-table-scroll-sync>
+    <div class="app-table-scrollbar-top" aria-hidden="true">
+      <div class="app-table-scrollbar-inner"></div>
+    </div>
+    <div class="app-table-scroll">
+      <table class="table table-striped align-middle app-table">
+      </table>
+    </div>
   </div>
 </div>
 ```
 
-Table headers are sticky, rows have calm hover color, and wide tables scroll horizontally inside the card. Use a sticky `.app-table-actions-col` for right-side action columns when wide tables would otherwise hide controls. Numeric IDs use nowrap classes, while long GUIDs/source systems use truncated muted technical-code classes with the full value in `title`.
+Table headers are sticky, rows have calm hover color, and wide tables scroll horizontally inside the card. The mirrored top scrollbar is a visual affordance for long pages; if JavaScript is unavailable, the real bottom scroll container remains usable. Use a sticky `.app-table-actions-col` for right-side action columns when wide tables would otherwise hide controls. Numeric IDs use nowrap classes, while long GUIDs/source systems use truncated muted technical-code classes with the full value in `title`.
 
-Wide tables must keep the horizontal scrollbar discoverable in both themes. Use the shared `.app-table-scroll` scrollbar styling and subtle table-card hint instead of adding loud per-page banners.
+Wide tables must keep the horizontal scrollbar discoverable in both themes. Use the shared `.app-table-scroll-wrap` / `.app-table-scrollbar-top` pattern instead of adding visible text hints or per-page banners.
 
 Heavy list pages must use server-side pagination or an explicit server-side cap. Apply filters before `Count`, `Skip`, and `Take`; use a stable descending date/id sort; and preserve filters in pagination links.
 

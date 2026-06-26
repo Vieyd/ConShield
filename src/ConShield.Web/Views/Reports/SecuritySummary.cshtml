@@ -23,6 +23,8 @@
 <div class="d-flex gap-2 mb-3">
     <a class="btn btn-sm @(Model.RangeKey == "24h" ? "btn-primary" : "btn-outline-primary")"
        asp-controller="Reports" asp-action="SecuritySummary" asp-route-range="24h">24h</a>
+    <a class="btn btn-sm @(Model.RangeKey == "2d" ? "btn-primary" : "btn-outline-primary")"
+       asp-controller="Reports" asp-action="SecuritySummary" asp-route-range="2d">2d</a>
     <a class="btn btn-sm @(Model.RangeKey == "7d" ? "btn-primary" : "btn-outline-primary")"
        asp-controller="Reports" asp-action="SecuritySummary" asp-route-range="7d">7d</a>
     <a class="btn btn-sm btn-outline-secondary"

@@ -25,7 +25,11 @@
 else
 {
     <div class="app-table-card">
-        <div class="app-table-scroll">
+        <div class="app-table-scroll-wrap" data-table-scroll-sync>
+            <div class="app-table-scrollbar-top" aria-hidden="true">
+                <div class="app-table-scrollbar-inner"></div>
+            </div>
+            <div class="app-table-scroll">
         <table class="table table-sm table-striped align-middle app-table app-table-wide">
             <thead>
                 <tr>
@@ -126,6 +130,7 @@ else
                 }
             </tbody>
         </table>
+            </div>
         </div>
     </div>
 }

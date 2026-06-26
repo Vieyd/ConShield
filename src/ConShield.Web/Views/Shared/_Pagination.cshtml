@@ -5,17 +5,16 @@
 @{
     var currentQuery = Context.Request.Query
         .Where(x => !string.Equals(x.Key, "page", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(x.Key, "pageSize", StringComparison.OrdinalIgnoreCase)
                     && !string.IsNullOrWhiteSpace(x.Value.ToString()))
         .ToDictionary(x => x.Key, x => (string?)x.Value.ToString(), StringComparer.OrdinalIgnoreCase);
 
     string PageUrl(int page)
     {
-        var values = new Dictionary<string, string?>(currentQuery, StringComparer.OrdinalIgnoreCase)
-        {
-            ["page"] = page.ToString(CultureInfo.InvariantCulture),
-            ["pageSize"] = Model.PageSize.ToString(CultureInfo.InvariantCulture)
-        };
+        var values = new Dictionary<string, string?>(currentQuery, StringComparer.OrdinalIgnoreCase);
+        values["page"] = page.ToString(CultureInfo.InvariantCulture);
+
+        if (!values.ContainsKey("pageSize"))
+            values["pageSize"] = Model.PageSize.ToString(CultureInfo.InvariantCulture);
 
         return QueryHelpers.AddQueryString(Context.Request.Path.ToString(), values);
     }

@@ -162,11 +162,16 @@ public sealed class WebUiReadabilityStatusPolishTests
             ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "Index.cshtml"),
             ReadRepoFile("src", "ConShield.Web", "Views", "UserExceptions", "Index.cshtml"));
         var css = ReadRepoFile("src", "ConShield.Web", "wwwroot", "css", "site.css");
+        var script = ReadRepoFile("src", "ConShield.Web", "wwwroot", "js", "site.js");
 
         Assert.Contains("app-table-scroll", combined, StringComparison.Ordinal);
+        Assert.Contains("data-table-scroll-sync", combined, StringComparison.Ordinal);
+        Assert.Contains("app-table-scrollbar-top", combined, StringComparison.Ordinal);
+        Assert.Contains("app-table-scrollbar-inner", combined, StringComparison.Ordinal);
         Assert.Contains("app-table-actions-col", combined, StringComparison.Ordinal);
         Assert.Contains("position: sticky", css, StringComparison.Ordinal);
         Assert.Contains("right: 0", css, StringComparison.Ordinal);
+        Assert.Contains("ResizeObserver", script, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -186,11 +191,39 @@ public sealed class WebUiReadabilityStatusPolishTests
     public void WideTableScrollbars_AreDiscoverableInCss()
     {
         var css = ReadRepoFile("src", "ConShield.Web", "wwwroot", "css", "site.css");
+        var script = ReadRepoFile("src", "ConShield.Web", "wwwroot", "js", "site.js");
 
         Assert.Contains(".app-table-scroll::-webkit-scrollbar", css, StringComparison.Ordinal);
         Assert.Contains(".app-table-scroll::-webkit-scrollbar-thumb", css, StringComparison.Ordinal);
+        Assert.Contains(".app-table-scrollbar-top::-webkit-scrollbar", css, StringComparison.Ordinal);
+        Assert.Contains(".app-table-scrollbar-inner", css, StringComparison.Ordinal);
         Assert.Contains("scrollbar-color: var(--app-accent)", css, StringComparison.Ordinal);
-        Assert.Contains("Прокрутите таблицу по горизонтали", css, StringComparison.Ordinal);
+        Assert.Contains("setupTableScrollSync", script, StringComparison.Ordinal);
+        Assert.Contains("topScrollbar.scrollLeft", script, StringComparison.Ordinal);
+        Assert.Contains("tableScroll.scrollLeft", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Прокрутите таблицу по горизонтали", css, StringComparison.Ordinal);
+        Assert.DoesNotContain("Прокрутите текст по горизонтали", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WideTableViews_UseSharedSynchronizedScrollWrapper()
+    {
+        var combinedViews = string.Join(
+            Environment.NewLine,
+            ReadRepoFile("src", "ConShield.Web", "Views", "SecurityEvents", "Index.cshtml"),
+            ReadRepoFile("src", "ConShield.Web", "Views", "Incidents", "Index.cshtml"),
+            ReadRepoFile("src", "ConShield.Web", "Views", "Siem", "Index.cshtml"),
+            ReadRepoFile("src", "ConShield.Web", "Views", "Siem", "Rules.cshtml"),
+            ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "Index.cshtml"),
+            ReadRepoFile("src", "ConShield.Web", "Views", "Sensors", "Details.cshtml"),
+            ReadRepoFile("src", "ConShield.Web", "Views", "Outbox", "Index.cshtml"),
+            ReadRepoFile("src", "ConShield.Web", "Views", "UserExceptions", "Index.cshtml"));
+
+        Assert.Equal(8, CountOccurrences(combinedViews, "data-table-scroll-sync"));
+        Assert.Equal(8, CountOccurrences(combinedViews, "app-table-scrollbar-top"));
+        Assert.Equal(8, CountOccurrences(combinedViews, "app-table-scrollbar-inner"));
+        Assert.DoesNotContain("Прокрутите таблицу по горизонтали", combinedViews, StringComparison.Ordinal);
+        Assert.DoesNotContain("Прокрутите текст по горизонтали", combinedViews, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -260,6 +293,24 @@ public sealed class WebUiReadabilityStatusPolishTests
         Assert.Contains("Context.Request.Query", partial, StringComparison.Ordinal);
         Assert.Contains("pageSize", partial, StringComparison.Ordinal);
         Assert.Contains("QueryHelpers.AddQueryString", partial, StringComparison.Ordinal);
+        Assert.Contains("!string.Equals(x.Key, \"page\"", partial, StringComparison.Ordinal);
+        Assert.DoesNotContain("!string.Equals(x.Key, \"pageSize\"", partial, StringComparison.Ordinal);
+        Assert.Contains("if (!values.ContainsKey(\"pageSize\"))", partial, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IncidentDetails_RelatedEventUsesNormalCardStructure()
+    {
+        var view = ReadRepoFile("src", "ConShield.Web", "Views", "Incidents", "Details.cshtml");
+        var css = ReadRepoFile("src", "ConShield.Web", "wwwroot", "css", "site.css");
+
+        Assert.Contains("app-related-event-card", view, StringComparison.Ordinal);
+        Assert.Contains("app-card-header", view, StringComparison.Ordinal);
+        Assert.Contains("app-related-event-body", view, StringComparison.Ordinal);
+        Assert.Contains("app-section-title", view, StringComparison.Ordinal);
+        Assert.Contains("overflow-wrap: anywhere", css, StringComparison.Ordinal);
+        Assert.DoesNotContain("<fieldset", view, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<legend", view, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

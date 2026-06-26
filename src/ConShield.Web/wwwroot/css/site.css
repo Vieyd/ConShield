@@ -342,6 +342,29 @@ main.container {
     overflow: hidden;
 }
 
+.app-table-scroll-wrap {
+    position: relative;
+}
+
+.app-table-scrollbar-top {
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: .85rem;
+    background: var(--app-surface-muted);
+    border-bottom: 1px solid color-mix(in srgb, var(--app-border) 65%, transparent);
+    scrollbar-color: var(--app-accent) color-mix(in srgb, var(--app-border) 45%, transparent);
+    scrollbar-width: thin;
+}
+
+.app-table-scrollbar-top[hidden] {
+    display: none;
+}
+
+.app-table-scrollbar-inner {
+    height: 1px;
+    min-width: 100%;
+}
+
 .app-table-scroll {
     overflow-x: auto;
     position: relative;
@@ -354,30 +377,21 @@ main.container {
     height: .8rem;
 }
 
-.app-table-scroll::-webkit-scrollbar-track {
+.app-table-scrollbar-top::-webkit-scrollbar {
+    height: .75rem;
+}
+
+.app-table-scroll::-webkit-scrollbar-track,
+.app-table-scrollbar-top::-webkit-scrollbar-track {
     background: color-mix(in srgb, var(--app-border) 35%, transparent);
     border-radius: 999px;
 }
 
-.app-table-scroll::-webkit-scrollbar-thumb {
+.app-table-scroll::-webkit-scrollbar-thumb,
+.app-table-scrollbar-top::-webkit-scrollbar-thumb {
     background: color-mix(in srgb, var(--app-accent) 72%, var(--app-border-strong));
     border: .18rem solid color-mix(in srgb, var(--app-border) 35%, transparent);
     border-radius: 999px;
-}
-
-.app-scroll-hint {
-    color: var(--app-muted);
-    font-size: .82rem;
-    padding: .6rem .9rem 0;
-}
-
-.app-table-card::after {
-    content: "Прокрутите таблицу по горизонтали, чтобы увидеть все столбцы";
-    display: block;
-    color: var(--app-muted);
-    font-size: .8rem;
-    padding: .45rem .9rem .65rem;
-    border-top: 1px solid color-mix(in srgb, var(--app-border) 55%, transparent);
 }
 
 .app-table,
@@ -640,6 +654,22 @@ dd code {
 
 .app-markdown-preview {
     margin-top: 1rem;
+}
+
+.app-card-header {
+    padding: .9rem 1.1rem;
+    border-bottom: 1px solid var(--app-border);
+    background: var(--app-surface-muted);
+    overflow-wrap: anywhere;
+}
+
+.app-related-event-card,
+.app-related-event-body {
+    min-width: 0;
+}
+
+.app-related-event-body {
+    overflow-wrap: anywhere;
 }
 
 .app-display-primary {

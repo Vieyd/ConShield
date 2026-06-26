@@ -37,6 +37,62 @@
         });
     }
 
+    function setupTableScrollSync() {
+        document.querySelectorAll("[data-table-scroll-sync]").forEach((wrapper) => {
+            const topScrollbar = wrapper.querySelector(".app-table-scrollbar-top");
+            const topInner = wrapper.querySelector(".app-table-scrollbar-inner");
+            const tableScroll = wrapper.querySelector(".app-table-scroll");
+            const table = tableScroll?.querySelector("table");
+
+            if (!(topScrollbar instanceof HTMLElement)
+                || !(topInner instanceof HTMLElement)
+                || !(tableScroll instanceof HTMLElement)) {
+                return;
+            }
+
+            let isSyncing = false;
+
+            const refresh = () => {
+                topInner.style.width = `${tableScroll.scrollWidth}px`;
+                topScrollbar.hidden = tableScroll.scrollWidth <= tableScroll.clientWidth + 1;
+                topScrollbar.scrollLeft = tableScroll.scrollLeft;
+            };
+
+            topScrollbar.addEventListener("scroll", () => {
+                if (isSyncing) {
+                    return;
+                }
+
+                isSyncing = true;
+                tableScroll.scrollLeft = topScrollbar.scrollLeft;
+                isSyncing = false;
+            }, { passive: true });
+
+            tableScroll.addEventListener("scroll", () => {
+                if (isSyncing) {
+                    return;
+                }
+
+                isSyncing = true;
+                topScrollbar.scrollLeft = tableScroll.scrollLeft;
+                isSyncing = false;
+            }, { passive: true });
+
+            refresh();
+
+            if ("ResizeObserver" in window) {
+                const resizeObserver = new ResizeObserver(refresh);
+                resizeObserver.observe(tableScroll);
+
+                if (table instanceof HTMLElement) {
+                    resizeObserver.observe(table);
+                }
+            } else {
+                window.addEventListener("resize", refresh);
+            }
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         applyTheme(getStoredTheme() ?? document.documentElement.dataset.theme ?? "light");
 
@@ -66,5 +122,7 @@
                 button.textContent = shouldShowPassword ? "Скрыть" : "Показать";
             });
         });
+
+        setupTableScrollSync();
     });
 })();
