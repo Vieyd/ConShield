@@ -155,7 +155,22 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScen
 
 The runner checks Web, PostgreSQL, RabbitMQ/EventConsumer/Mongo projection availability, then uses synthetic image-scan, policy-gate, runtime, and lifecycle signals to demonstrate `IMG-001`, `POL-001`, `RTE-001`, `LIFE-001`, and `LIFE-002`. PASS/WARN/FAIL interpretation: `PASS` means the required local evidence was demonstrated; `WARN` means the core evidence exists but an optional local service is missing/degraded; `FAIL` means the evidence could not be produced. Optional Markdown evidence can be written with `-OutputMarkdownPath .\artifacts\local\defense-scenario.md`; do not commit generated evidence, logs, screenshots, `.env` files, or local config.
 
-After the runner finishes, open `/Operations/Health`, `/SecurityEvents`, `/Sensors`, `/SiemAlerts`, `/Incidents`, and `/Reports/SecuritySummary`. The runner and report output intentionally avoid raw JSON, `AdditionalDataJson`, connection strings, API keys, tokens, cookies, credentials, verifier values, and Fedora protected env contents.
+After the runner finishes, open `/Operations/Health`, `/SecurityEvents`, `/Sensors`, `/RuntimeSensors`, `/SiemAlerts`, `/Incidents`, and `/Reports/SecuritySummary`. The runner and report output intentionally avoid raw JSON, `AdditionalDataJson`, connection strings, API keys, tokens, cookies, credentials, verifier values, and Fedora protected env contents.
+
+## Runtime Sensor Health
+
+Runtime Sensor Health is a read-only UI/evidence view derived from ingested runtime/Falco-compatible security events. It shows SourceSystem, last seen time, event count, latest event metadata, related `RTE-001` alerts, related incidents, and `Active` / `Stale` / `NoData` status. It does not require a real Fedora VM for local validation.
+
+Safe local validation:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseEvidence.ps1 `
+  -OutputMarkdownPath .\artifacts\local\defense-evidence.md
+```
+
+Then open `/RuntimeSensors` and confirm the `conshield.falco-linux-sensor` source appears as active or present. Keep generated Markdown under `artifacts/local/`; do not commit generated evidence, logs, screenshots, `.env` files, API keys, passwords, tokens, or connection strings.
 
 ## Operator workflow demo
 

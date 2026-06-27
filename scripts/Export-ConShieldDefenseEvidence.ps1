@@ -296,6 +296,7 @@ $tables = @{
     OperatorClosedIncidents = @()
     RuntimeSensorSummary = @()
     RuntimeSensorRules = @()
+    RuntimeSensorHealth = @()
 }
 
 if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
@@ -322,8 +323,9 @@ if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
         $tables.OperatorIncidentCounts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Status", count(*)::int as "Count" from "Incidents" group by "Status" order by "Status";')
         $tables.OperatorAcknowledgedAlerts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "RuleCode", "Status", "AcknowledgedAtUtc", coalesce("AcknowledgedBy", '''') as "AcknowledgedBy", coalesce("IncidentId", 0) as "IncidentId" from "SiemAlerts" where "Status" = ''Acknowledged'' or "AcknowledgedAtUtc" is not null order by coalesce("AcknowledgedAtUtc", "CreatedAtUtc") desc limit 10;')
         $tables.OperatorClosedIncidents = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "Status", "ClosedAtUtc", coalesce("SourceEventId", 0) as "SourceEventId", "Conclusion" from "Incidents" where "Status" = ''Closed'' order by coalesce("ClosedAtUtc", "CreatedAtUtc") desc limit 10;')
-        $tables.RuntimeSensorSummary = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", count(*)::int as "Count", max("OccurredAtUtc") as "LatestOccurredAtUtc" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.falco-runtime-collector'' or coalesce("ExternalEventType", '''') like ''container.runtime.%'' group by coalesce("SourceSystem", ''''), coalesce("ExternalEventType", '''') order by max("OccurredAtUtc") desc limit 10;')
-        $tables.RuntimeSensorRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select case when position(''rule='' in "Description") > 0 then split_part(split_part("Description", ''rule='', 2), '','', 1) else ''-'' end as "FalcoRule", count(*)::int as "Count", max("OccurredAtUtc") as "LatestOccurredAtUtc" from "SecurityEvents" where (coalesce("SourceSystem", '''') = ''conshield.falco-runtime-collector'' or coalesce("ExternalEventType", '''') like ''container.runtime.%'') group by case when position(''rule='' in "Description") > 0 then split_part(split_part("Description", ''rule='', 2), '','', 1) else ''-'' end order by max("OccurredAtUtc") desc limit 10;')
+        $tables.RuntimeSensorSummary = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", count(*)::int as "Count", max("OccurredAtUtc") as "LatestOccurredAtUtc" from "SecurityEvents" where coalesce("SourceSystem", '''') in (''conshield.falco-linux-sensor'', ''conshield.falco-runtime-collector'', ''conshield.container-runtime'') or coalesce("ExternalEventType", '''') like ''container.runtime.%'' group by coalesce("SourceSystem", ''''), coalesce("ExternalEventType", '''') order by max("OccurredAtUtc") desc limit 10;')
+        $tables.RuntimeSensorRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select case when position(''rule='' in "Description") > 0 then split_part(split_part("Description", ''rule='', 2), '','', 1) else ''-'' end as "FalcoRule", count(*)::int as "Count", max("OccurredAtUtc") as "LatestOccurredAtUtc" from "SecurityEvents" where (coalesce("SourceSystem", '''') in (''conshield.falco-linux-sensor'', ''conshield.falco-runtime-collector'', ''conshield.container-runtime'') or coalesce("ExternalEventType", '''') like ''container.runtime.%'') group by case when position(''rule='' in "Description") > 0 then split_part(split_part("Description", ''rule='', 2), '','', 1) else ''-'' end order by max("OccurredAtUtc") desc limit 10;')
+        $tables.RuntimeSensorHealth = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'with runtime_sources("SourceSystem") as (values (''conshield.falco-linux-sensor''), (''conshield.falco-runtime-collector''), (''conshield.container-runtime'') union select distinct coalesce("SourceSystem", ''unknown-runtime-source'') from "SecurityEvents" where coalesce("SourceSystem", '''') ilike ''%runtime%'' or coalesce("SourceSystem", '''') ilike ''%falco%'' or coalesce("ExternalEventType", '''') ilike ''%runtime%'' or coalesce("ExternalEventType", '''') ilike ''%falco%''), runtime_events as (select se.* from "SecurityEvents" se join runtime_sources rs on coalesce(se."SourceSystem", ''unknown-runtime-source'') = rs."SourceSystem" where coalesce(se."SourceSystem", '''') ilike ''%runtime%'' or coalesce(se."SourceSystem", '''') ilike ''%falco%'' or coalesce(se."ExternalEventType", '''') ilike ''%runtime%'' or coalesce(se."ExternalEventType", '''') ilike ''%falco%''), latest as (select distinct on (coalesce("SourceSystem", ''unknown-runtime-source'')) coalesce("SourceSystem", ''unknown-runtime-source'') as "SourceSystem", "OccurredAtUtc" as "LastSeenUtc", "Id" as "LatestEventId", coalesce("ExternalEventType", '''') as "LatestEventType", "Severity"::text as "LatestSeverity" from runtime_events order by coalesce("SourceSystem", ''unknown-runtime-source''), "OccurredAtUtc" desc, "Id" desc), grouped as (select coalesce("SourceSystem", ''unknown-runtime-source'') as "SourceSystem", count(*)::int as "EventCount" from runtime_events group by coalesce("SourceSystem", ''unknown-runtime-source'')) select rs."SourceSystem", case when latest."LastSeenUtc" is null then ''NoData'' when latest."LastSeenUtc" >= ((now() at time zone ''utc'') - interval ''24 hours'') then ''Active'' else ''Stale'' end as "Status", latest."LastSeenUtc", coalesce(grouped."EventCount", 0)::int as "EventCount", latest."LatestEventType", (select count(distinct alert."Id")::int from "SiemAlerts" alert where alert."RuleCode" = ''RTE-001'' and exists (select 1 from runtime_events se where coalesce(se."SourceSystem", ''unknown-runtime-source'') = rs."SourceSystem" and position(''Source event #'' || se."Id"::text in alert."Description") > 0)) as "RelatedRteAlertCount", (select count(distinct incident."Id")::int from "Incidents" incident join runtime_events se on incident."SourceEventId" = se."Id" where coalesce(se."SourceSystem", ''unknown-runtime-source'') = rs."SourceSystem") as "RelatedIncidentCount" from runtime_sources rs left join grouped on grouped."SourceSystem" = rs."SourceSystem" left join latest on latest."SourceSystem" = rs."SourceSystem" order by case when latest."LastSeenUtc" is null then 1 else 0 end, latest."LastSeenUtc" desc nulls last, rs."SourceSystem";')
     }
     catch {
         $queryError = ConvertTo-SafeCell -Value $_.Exception.Message -MaxLength 180
@@ -436,6 +438,16 @@ else {
 }
 $lines.Add('') | Out-Null
 
+$lines.Add('## Runtime Sensor Health') | Out-Null
+$lines.Add('') | Out-Null
+if (@($tables.RuntimeSensorHealth).Count -eq 0 -or @($tables.RuntimeSensorHealth | Where-Object { [int]$_.EventCount -gt 0 }).Count -eq 0) {
+    $lines.Add('No runtime sensor activity was found in the current evidence window.') | Out-Null
+}
+else {
+    Add-MarkdownTable -Lines $lines -Headers @('SourceSystem', 'Status', 'LastSeenUtc', 'EventCount', 'LatestEventType', 'RelatedRteAlertCount', 'RelatedIncidentCount') -Rows $tables.RuntimeSensorHealth
+}
+$lines.Add('') | Out-Null
+
 $lines.Add('## Outbox and inbox summary') | Out-Null
 $lines.Add('') | Out-Null
 $lines.Add('### Outbox') | Out-Null
@@ -478,7 +490,7 @@ $lines.Add('') | Out-Null
 
 $lines.Add('## Demo navigation checklist') | Out-Null
 $lines.Add('') | Out-Null
-foreach ($route in @('/Operations/Health', '/SecurityEvents', '/Sensors', '/Siem', '/Incidents', '/Reports/SecuritySummary', '/Outbox')) {
+foreach ($route in @('/Operations/Health', '/SecurityEvents', '/Sensors', '/RuntimeSensors', '/Siem', '/Incidents', '/Reports/SecuritySummary', '/Outbox')) {
     $lines.Add(("- [ ] Open `{0}{1}` and confirm the screen matches the counts above." -f $BaseUrl.TrimEnd('/'), $route)) | Out-Null
 }
 $lines.Add('') | Out-Null

@@ -39,6 +39,32 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRun
 
 The script prints only a safe summary: Web status, fixture name, mapped runtime event type, source system, a short hash identifier, ingestion status, expected SIEM rule, and result. It does not print API keys, sensor credentials, connection strings, environment values, raw Falco payload JSON, raw `AdditionalDataJson`, logs, screenshots, or generated evidence artifacts.
 
+## Runtime Sensor Health
+
+Open `/RuntimeSensors` after replay to verify Runtime Sensor Health. The page derives health from stored security events, SIEM alerts, and incidents; it does not require Fedora for local validation and does not read raw payload JSON.
+
+The page shows:
+
+- source system and display name;
+- last seen UTC/Moscow time;
+- runtime event count and latest event metadata;
+- related `RTE-001` alert count;
+- related incident count;
+- status: `Active` for events seen within 24 hours, `Stale` for older events, or `NoData` for known runtime sources without activity.
+
+Useful local verification flow:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1
+```
+
+Then open:
+
+```text
+http://127.0.0.1:5080/RuntimeSensors
+```
+
 ## Credentials and source system
 
 Local replay uses the non-reserved source system `conshield.falco-linux-sensor` with the normal local external ingestion key. This keeps the Windows-only verification path available without Fedora, Falco, or enrolled sensor headers.
@@ -57,8 +83,8 @@ Submit mode validates `/etc/conshield/runtime-collector.env` ownership and permi
 
 ## Evidence export
 
-`scripts/Export-ConShieldDefenseEvidence.ps1` includes a `Runtime Sensor Evidence` section. It reports safe aggregates and latest Falco-compatible rule names only. If no events are present, it writes:
+`scripts/Export-ConShieldDefenseEvidence.ps1` includes `Runtime Sensor Evidence` and `Runtime Sensor Health` sections. They report safe aggregates, latest Falco-compatible rule names, source status, last seen time, event counts, and related `RTE-001`/incident counts only. If no events are present, the health section writes:
 
 ```text
-No Falco-compatible runtime events were found in the current evidence window.
+No runtime sensor activity was found in the current evidence window.
 ```

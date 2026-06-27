@@ -23,6 +23,8 @@ public static partial class DisplayText
         "Offline" => "Нет связи",
         "Never seen" => "Нет heartbeat",
         "Active" => "Активно",
+        "Stale" => "Устарело",
+        "NoData" => "Нет данных",
         "Revoked" => "Отозвано",
         "Warning" => "Предупреждение",
         "Degraded" => "Требует внимания",
@@ -82,8 +84,8 @@ public static partial class DisplayText
         {
             "OK" or "Ok" or "Connected" or "Delivered" or "Online" or "Active" or "Closed" or "Published" => "app-status-ok",
             "Critical" or "Failed" or "DeadLetter" or "Offline" or "Revoked" or "Ошибка" => "app-status-critical",
-            "Warning" or "Degraded" or "Attention" or "Needs attention" or "NeedsAttention" or "RequiresReview" or "unavailable" or "Unavailable" => "app-status-attention",
-            "New" or "Pending" or "Processing" or "InProgress" or "Requested" or "Never seen" => "app-status-info",
+            "Warning" or "Degraded" or "Attention" or "Needs attention" or "NeedsAttention" or "RequiresReview" or "unavailable" or "Unavailable" or "Stale" => "app-status-attention",
+            "New" or "Pending" or "Processing" or "InProgress" or "Requested" or "Never seen" or "NoData" => "app-status-info",
             _ => "app-status-neutral"
         };
     }

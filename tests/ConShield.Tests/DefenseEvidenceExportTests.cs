@@ -26,6 +26,7 @@ public sealed class DefenseEvidenceExportTests
         Assert.Contains("## Incidents", script, StringComparison.Ordinal);
         Assert.Contains("## Security events", script, StringComparison.Ordinal);
         Assert.Contains("## Runtime Sensor Evidence", script, StringComparison.Ordinal);
+        Assert.Contains("## Runtime Sensor Health", script, StringComparison.Ordinal);
         Assert.Contains("## Outbox and inbox summary", script, StringComparison.Ordinal);
         Assert.Contains("## Demo navigation checklist", script, StringComparison.Ordinal);
         Assert.Contains("## Operator checklist", script, StringComparison.Ordinal);
@@ -52,6 +53,7 @@ public sealed class DefenseEvidenceExportTests
         Assert.Contains("artifacts\\local\\defense-evidence.md", readme, StringComparison.Ordinal);
         Assert.Contains("safe aggregate and metadata fields", readme, StringComparison.Ordinal);
         Assert.Contains("Runtime Sensor Evidence", readme, StringComparison.Ordinal);
+        Assert.Contains("Runtime Sensor Health", readme, StringComparison.Ordinal);
         Assert.Contains("generated Markdown under `artifacts/local/`", readme, StringComparison.Ordinal);
     }
 
