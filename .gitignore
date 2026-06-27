@@ -41,6 +41,7 @@ trivy
 
 # Generated/cache files
 *.cache
+artifacts/local/
 TestResults/
 coverage/
 *.tmp
