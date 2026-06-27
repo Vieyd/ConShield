@@ -106,7 +106,7 @@
             <table class="table table-striped align-middle app-table app-table-compact">
             <thead>
             <tr>
-                <th>ID</th>
+                <th class="app-table-id-col-sm">ID</th>
                 <th>Время (GMT+3)</th>
                 <th>Тип</th>
                 <th>Критичность</th>
@@ -123,7 +123,7 @@
             @foreach (var item in Model.Items)
             {
                 <tr>
-                    <td><code class="id-code app-id-nowrap">@item.Id</code></td>
+                    <td class="app-table-id-col-sm"><code class="app-id-pill">@item.Id</code></td>
                     <td>@item.OccurredAtUtc.ToMoscowDisplay()</td>
                     <td>
                         <span class="app-display-primary">@DisplayText.EventType(item.EventType)</span>

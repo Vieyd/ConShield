@@ -149,7 +149,51 @@ public sealed class WebUiReadabilityStatusPolishTests
     {
         var view = ReadRepoFile("src", "ConShield.Web", "Views", "SecurityEvents", "Index.cshtml");
 
-        Assert.Contains("id-code app-id-nowrap", view, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-table-id-col-sm\">ID", view, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-table-id-col-sm\"><code class=\"app-id-pill\">@item.Id</code>", view, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NumericTableIds_UseNoWrapPillsAcrossCoreTables()
+    {
+        var incidentIndex = ReadRepoFile("src", "ConShield.Web", "Views", "Incidents", "Index.cshtml");
+        var siemIndex = ReadRepoFile("src", "ConShield.Web", "Views", "Siem", "Index.cshtml");
+        var siemDetails = ReadRepoFile("src", "ConShield.Web", "Views", "Siem", "Details.cshtml");
+        var securityEvents = ReadRepoFile("src", "ConShield.Web", "Views", "SecurityEvents", "Index.cshtml");
+        var outbox = ReadRepoFile("src", "ConShield.Web", "Views", "Outbox", "Index.cshtml");
+        var userExceptions = ReadRepoFile("src", "ConShield.Web", "Views", "UserExceptions", "Index.cshtml");
+
+        Assert.Contains("<code class=\"app-id-pill\">@item.Id</code>", incidentIndex, StringComparison.Ordinal);
+        Assert.Contains("<code class=\"app-id-pill\">@item.SourceEventId</code>", incidentIndex, StringComparison.Ordinal);
+        Assert.Contains("<code class=\"app-id-pill\">@item.Id</code>", siemIndex, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-id-pill\">@item.IncidentId.Value</a>", siemIndex, StringComparison.Ordinal);
+        Assert.Contains("<code class=\"app-id-pill\">@Model.Alert.Id</code>", siemDetails, StringComparison.Ordinal);
+        Assert.Contains("<code class=\"app-id-pill\">@item.Id</code>", siemDetails, StringComparison.Ordinal);
+        Assert.Contains("<code class=\"app-id-pill\">@item.Id</code>", securityEvents, StringComparison.Ordinal);
+        Assert.Contains("<code class=\"app-id-pill\">@item.SecurityEventId</code>", outbox, StringComparison.Ordinal);
+        Assert.Contains("<code class=\"app-id-pill\">@item.Id</code>", userExceptions, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NumericTableIdCssPreventsWrappingWithoutChangingTechnicalTruncation()
+    {
+        var css = ReadRepoFile("src", "ConShield.Web", "wwwroot", "css", "site.css");
+        var idPillStart = css.IndexOf(".app-id-pill {", StringComparison.Ordinal);
+        var idPillEnd = css.IndexOf("}", idPillStart, StringComparison.Ordinal);
+        var idPillBlock = css[idPillStart..idPillEnd];
+        var truncateStart = css.IndexOf(".app-technical-code--truncate,", StringComparison.Ordinal);
+        var truncateEnd = css.IndexOf("}", truncateStart, StringComparison.Ordinal);
+        var truncateBlock = css[truncateStart..truncateEnd];
+
+        Assert.Contains(".app-table-id-col", css, StringComparison.Ordinal);
+        Assert.Contains(".app-table-id-col-sm", css, StringComparison.Ordinal);
+        Assert.Contains("display: inline-flex", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("min-width: 2.75rem", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("white-space: nowrap", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("word-break: normal", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("overflow-wrap: normal", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("max-width: 16rem", truncateBlock, StringComparison.Ordinal);
+        Assert.Contains("text-overflow: ellipsis", truncateBlock, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -271,7 +315,7 @@ public sealed class WebUiReadabilityStatusPolishTests
         var view = ReadRepoFile("src", "ConShield.Web", "Views", "Outbox", "Index.cshtml");
 
         Assert.True(
-            view.IndexOf("<th>ID события</th>", StringComparison.Ordinal) <
+            view.IndexOf("<th class=\"app-table-id-col\">ID события</th>", StringComparison.Ordinal) <
             view.IndexOf("<th>ID сообщения</th>", StringComparison.Ordinal));
         Assert.True(
             view.IndexOf("@item.SecurityEventId", StringComparison.Ordinal) <

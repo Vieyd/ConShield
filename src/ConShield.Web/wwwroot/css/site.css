@@ -618,11 +618,54 @@ dd code {
     overflow-wrap: anywhere;
 }
 
+.app-table-id-col {
+    width: 5.5rem;
+    min-width: 5.5rem;
+    white-space: nowrap;
+}
+
+.app-table-id-col-sm {
+    width: 4.5rem;
+    min-width: 4.5rem;
+    white-space: nowrap;
+}
+
 .app-id-nowrap,
 .app-code-short {
     white-space: nowrap;
     word-break: normal;
     overflow-wrap: normal;
+}
+
+.app-id-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    max-width: 100%;
+    min-height: 1.65rem;
+    padding: .12rem .45rem;
+    border: 1px solid var(--app-code-border);
+    border-radius: 999px;
+    background: var(--app-code-bg);
+    color: var(--app-code-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: .86em;
+    font-weight: 720;
+    line-height: 1.1;
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    vertical-align: middle;
+    text-decoration: none;
+}
+
+a.app-id-pill:hover,
+a.app-id-pill:focus-visible {
+    color: var(--app-accent-hover);
+    border-color: var(--app-accent);
+    background: var(--app-accent-soft);
+    text-decoration: none;
 }
 
 .app-technical-code--truncate,
