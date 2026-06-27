@@ -62,6 +62,8 @@ Wide tables must keep the horizontal scrollbar discoverable in both themes. Use 
 
 Heavy list pages must use server-side pagination or an explicit server-side cap. Apply filters before `Count`, `Skip`, and `Take`; use a stable descending date/id sort; and preserve filters in pagination links.
 
+List filters are page-local URL/query state. Pagination links should preserve the current filters within the same page, and reset buttons should intentionally clear them. Do not add broad `localStorage` persistence for every filter across pages; avoid making stale filters silently follow the operator into unrelated screens.
+
 ## Actions
 
 Row and toolbar actions should use `.app-action-group` so buttons share height, spacing, and alignment. Prefer blue primary actions, neutral secondary actions, readable amber warning actions, and readable red danger actions.

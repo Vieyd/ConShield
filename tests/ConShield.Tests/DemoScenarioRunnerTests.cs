@@ -56,6 +56,49 @@ public class DemoScenarioRunnerTests
     }
 
     [Fact]
+    public async Task DefenseDemoScenario_CoversImagePolicyRuntimeLifecycleAndPipelineSignals()
+    {
+        await using var db = CreateDbContext();
+
+        await RunScenarioAsync(db, "defense-demo");
+
+        Assert.Contains(await db.SecurityEvents.ToListAsync(), x => x.ExternalEventType == "container.image.scan.completed");
+        Assert.Contains(await db.SecurityEvents.ToListAsync(), x => x.ExternalEventType == "container.image.policy.evaluated");
+        Assert.Contains(await db.SecurityEvents.ToListAsync(), x => x.ExternalEventType == "container.runtime.shell_spawned");
+        Assert.Contains(await db.SecurityEvents.ToListAsync(), x => x.SourceSystem == SecuritySourceSystems.SensorLifecycle);
+        Assert.Single(await db.SecurityEventInboxReceipts.ToListAsync());
+        Assert.Single(await db.SecurityEventOutboxMessages.ToListAsync());
+
+        var rules = await db.SiemAlerts.Select(x => x.RuleCode).ToListAsync();
+        Assert.Contains("IMG-001", rules);
+        Assert.Contains("POL-001", rules);
+        Assert.Contains("RTE-001", rules);
+        Assert.Contains("LIFE-001", rules);
+        Assert.Contains("LIFE-002", rules);
+    }
+
+    [Fact]
+    public async Task DefenseDemoScenario_WritesSafeEvidenceCounts()
+    {
+        await using var db = CreateDbContext();
+        var output = new StringWriter();
+
+        var result = await new DemoScenarioRunner().RunAsync(
+            db,
+            new DemoScenarioOptions("defense-demo", DryRun: false, ResetDemoData: false, Yes: true),
+            output);
+
+        Assert.Equal(0, result.ExitCode);
+        var rendered = output.ToString();
+        Assert.Contains("actual_security_events=", rendered, StringComparison.Ordinal);
+        Assert.Contains("actual_outbox_pending=0", rendered, StringComparison.Ordinal);
+        Assert.Contains("actual_rules=", rendered, StringComparison.Ordinal);
+        Assert.DoesNotContain("AdditionalDataJson", rendered, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Password=", rendered, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("connection string", rendered, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task LifecycleAlertsScenario_CanTriggerLife001AndLife002()
     {
         await using var db = CreateDbContext();

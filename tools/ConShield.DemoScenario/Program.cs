@@ -50,6 +50,7 @@ public static class Program
     {
         writer.WriteLine("Usage:");
         writer.WriteLine("  dotnet run --project tools/ConShield.DemoScenario -- --scenario healthy --dry-run");
+        writer.WriteLine("  dotnet run --project tools/ConShield.DemoScenario -- --scenario defense-demo --yes");
         writer.WriteLine("  dotnet run --project tools/ConShield.DemoScenario -- --scenario full-demo --yes");
         writer.WriteLine("  dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --dry-run");
         writer.WriteLine("  dotnet run --project tools/ConShield.DemoScenario -- --reset-demo-data --yes");
@@ -65,6 +66,7 @@ public sealed record DemoScenarioOptions(
     public static readonly string[] SupportedScenarios =
     [
         "healthy",
+        "defense-demo",
         "full-demo",
         "lifecycle-alerts",
         "runtime-incident",
@@ -144,8 +146,10 @@ public sealed class DemoScenarioRunner
 
         await SeedScenarioAsync(dbContext, options.Scenario, cancellationToken);
         var correlationResult = await RunSafeCorrelationAsync(dbContext, options.Scenario, cancellationToken);
+        var summary = await DemoScenarioSummary.CreateAsync(dbContext, options.Scenario, cancellationToken);
         await output.WriteLineAsync($"Seeded demo scenario '{options.Scenario}'.");
         await output.WriteLineAsync($"SIEM correlation: alerts_created={correlationResult.CreatedAlerts} incidents_created={correlationResult.CreatedIncidents} rules={string.Join(",", correlationResult.TriggeredRules.Distinct().Order())}");
+        await WriteSummaryAsync(summary, output);
         await WriteNextStepsAsync(output);
         return DemoScenarioRunResult.Success();
     }
@@ -169,6 +173,21 @@ public sealed class DemoScenarioRunner
         await output.WriteLineAsync("All generated records are synthetic and marked with DemoScenario=true metadata or demo-* names.");
     }
 
+    private static async Task WriteSummaryAsync(DemoScenarioSummary summary, TextWriter output)
+    {
+        await output.WriteLineAsync("Demo evidence summary:");
+        await output.WriteLineAsync($"  actual_sensors={summary.Sensors}");
+        await output.WriteLineAsync($"  actual_security_events={summary.SecurityEvents}");
+        await output.WriteLineAsync($"  actual_inbox_receipts={summary.InboxReceipts}");
+        await output.WriteLineAsync($"  actual_outbox_messages={summary.OutboxMessages}");
+        await output.WriteLineAsync($"  actual_outbox_pending={summary.OutboxPending}");
+        await output.WriteLineAsync($"  actual_outbox_processing={summary.OutboxProcessing}");
+        await output.WriteLineAsync($"  actual_outbox_deadletter={summary.OutboxDeadLetter}");
+        await output.WriteLineAsync($"  actual_siem_alerts={summary.SiemAlerts}");
+        await output.WriteLineAsync($"  actual_incidents={summary.Incidents}");
+        await output.WriteLineAsync($"  actual_rules={string.Join(",", summary.Rules)}");
+    }
+
     private static async Task WriteNextStepsAsync(TextWriter output)
     {
         await output.WriteLineAsync("Next safe demo routes:");
@@ -190,6 +209,13 @@ public sealed class DemoScenarioRunner
             case "healthy":
                 await SeedHealthyAsync(dbContext, cancellationToken);
                 break;
+            case "defense-demo":
+                await SeedHealthyAsync(dbContext, cancellationToken, scenarioName: "defense-demo");
+                await SeedImageScanAsync(dbContext, cancellationToken, scenarioName: "defense-demo");
+                await SeedPolicyGateAsync(dbContext, cancellationToken, scenarioName: "defense-demo");
+                await SeedRuntimeIncidentAsync(dbContext, cancellationToken, scenarioName: "defense-demo");
+                await SeedLifecycleAlertsAsync(dbContext, cancellationToken, scenarioName: "defense-demo");
+                break;
             case "lifecycle-alerts":
                 await SeedLifecycleAlertsAsync(dbContext, cancellationToken);
                 break;
@@ -200,17 +226,75 @@ public sealed class DemoScenarioRunner
                 await SeedOutboxBacklogAsync(dbContext, cancellationToken);
                 break;
             case "full-demo":
-                await SeedHealthyAsync(dbContext, cancellationToken);
-                await SeedLifecycleAlertsAsync(dbContext, cancellationToken);
-                await SeedRuntimeIncidentAsync(dbContext, cancellationToken);
-                await SeedOutboxBacklogAsync(dbContext, cancellationToken);
+                await SeedHealthyAsync(dbContext, cancellationToken, scenarioName: "full-demo");
+                await SeedImageScanAsync(dbContext, cancellationToken, scenarioName: "full-demo");
+                await SeedPolicyGateAsync(dbContext, cancellationToken, scenarioName: "full-demo");
+                await SeedLifecycleAlertsAsync(dbContext, cancellationToken, scenarioName: "full-demo");
+                await SeedRuntimeIncidentAsync(dbContext, cancellationToken, scenarioName: "full-demo");
+                await SeedOutboxBacklogAsync(dbContext, cancellationToken, scenarioName: "full-demo");
                 break;
             default:
                 throw new InvalidOperationException($"Unsupported scenario: {scenario}");
         }
     }
 
-    private static async Task SeedHealthyAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task SeedImageScanAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken, string scenarioName = "defense-demo")
+    {
+        await EnsureSecurityEventAsync(
+            dbContext,
+            DemoIds.EventImageScanCritical,
+            DateTime.UtcNow.AddMinutes(-5),
+            EventSeverity.Critical,
+            "conshield.image-scanner",
+            "container.image.scan.completed",
+            "demo-build-agent-01",
+            "[DemoScenario] Synthetic Trivy-compatible image scan result with critical findings.",
+            scenarioName,
+            new Dictionary<string, object?>
+            {
+                ["schemaVersion"] = 1,
+                ["scanner"] = "trivy",
+                ["imageReference"] = "repo/conshield-demo:latest",
+                ["imageDigest"] = $"repo/conshield-demo@sha256:{DemoIds.ShaB}",
+                ["criticalCount"] = 1,
+                ["highCount"] = 2,
+                ["totalCount"] = 3,
+                ["reportSha256"] = DemoIds.ShaA
+            },
+            cancellationToken);
+    }
+
+    private static async Task SeedPolicyGateAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken, string scenarioName = "defense-demo")
+    {
+        await EnsureSecurityEventAsync(
+            dbContext,
+            DemoIds.EventPolicyBlocked,
+            DateTime.UtcNow.AddMinutes(-4),
+            EventSeverity.High,
+            "conshield.container-guard",
+            "container.image.policy.evaluated",
+            "demo-build-agent-01",
+            "[DemoScenario] Synthetic container policy gate block decision.",
+            scenarioName,
+            new Dictionary<string, object?>
+            {
+                ["schemaVersion"] = 1,
+                ["decision"] = "Block",
+                ["policyId"] = "container-baseline",
+                ["policyVersion"] = "1.0.0",
+                ["policySha256"] = DemoIds.ShaA,
+                ["imageReference"] = "repo/conshield-demo:latest",
+                ["imageDigest"] = $"repo/conshield-demo@sha256:{DemoIds.ShaB}",
+                ["reportSha256"] = DemoIds.ShaC,
+                ["criticalCount"] = 1,
+                ["highCount"] = 2,
+                ["totalCount"] = 3,
+                ["reasonCodes"] = new[] { "CRITICAL_THRESHOLD_REACHED" }
+            },
+            cancellationToken);
+    }
+
+    private static async Task SeedHealthyAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken, string scenarioName = "healthy")
     {
         var now = DateTime.UtcNow;
         await EnsureDemoSensorAsync(dbContext, DemoIds.HealthySensorA, "demo-fedora-runtime-01", now.AddSeconds(-25), cancellationToken);
@@ -225,7 +309,7 @@ public sealed class DemoScenarioRunner
             "demo.health.sensor.heartbeat",
             "demo-fedora-runtime-01",
             "[DemoScenario] Healthy enrolled sensor heartbeat sample.",
-            "healthy",
+            scenarioName,
             new Dictionary<string, object?>
             {
                 ["status"] = "Fresh",
@@ -243,7 +327,7 @@ public sealed class DemoScenarioRunner
             "demo.policy.warning",
             "demo-build-agent-01",
             "[DemoScenario] Low-risk demo policy warning.",
-            "healthy",
+            scenarioName,
             new Dictionary<string, object?>
             {
                 ["policyId"] = "demo-baseline",
@@ -252,10 +336,10 @@ public sealed class DemoScenarioRunner
             cancellationToken);
 
         await EnsureInboxReceiptAsync(dbContext, healthEvent.Id, DemoIds.MessageHealthyInbox, "conshield.demo.health", cancellationToken);
-        await EnsureOutboxMessageAsync(dbContext, healthEvent.Id, DemoIds.MessageHealthyOutbox, SecurityEventOutboxStatus.Delivered, "healthy", cancellationToken);
+        await EnsureOutboxMessageAsync(dbContext, healthEvent.Id, DemoIds.MessageHealthyOutbox, SecurityEventOutboxStatus.Delivered, scenarioName, cancellationToken);
     }
 
-    private static async Task SeedLifecycleAlertsAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task SeedLifecycleAlertsAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken, string scenarioName = "lifecycle-alerts")
     {
         var now = DateTime.UtcNow;
         await EnsureDemoSensorAsync(dbContext, DemoIds.LifecycleSensor, "demo-lifecycle-sensor-01", now.AddMinutes(-4), cancellationToken);
@@ -269,7 +353,7 @@ public sealed class DemoScenarioRunner
             SensorLifecycleEventTypes.SensorRevoked,
             "demo-lifecycle-sensor-01",
             "[DemoScenario] Demo sensor identity revoked lifecycle audit event.",
-            "lifecycle-alerts",
+            scenarioName,
             LifecyclePayload(
                 DemoIds.LifecycleSensor,
                 "demo-lifecycle-sensor-01",
@@ -288,7 +372,7 @@ public sealed class DemoScenarioRunner
             SensorLifecycleEventTypes.SensorCredentialRotated,
             "demo-lifecycle-sensor-01",
             "[DemoScenario] Demo sensor credential rotated lifecycle audit event.",
-            "lifecycle-alerts",
+            scenarioName,
             LifecyclePayload(DemoIds.LifecycleSensor, "demo-lifecycle-sensor-01", "demo-adminib", "rotateCredential", DemoIds.LifecycleCredentialA, null),
             cancellationToken);
 
@@ -301,7 +385,7 @@ public sealed class DemoScenarioRunner
             SensorLifecycleEventTypes.SensorCredentialRevoked,
             "demo-lifecycle-sensor-01",
             "[DemoScenario] Demo sensor credential revoked lifecycle audit event.",
-            "lifecycle-alerts",
+            scenarioName,
             LifecyclePayload(DemoIds.LifecycleSensor, "demo-lifecycle-sensor-01", "demo-adminib", "revokeCredential", DemoIds.LifecycleCredentialA, null),
             cancellationToken);
 
@@ -314,12 +398,12 @@ public sealed class DemoScenarioRunner
             SensorLifecycleEventTypes.SensorCredentialRotated,
             "demo-lifecycle-sensor-01",
             "[DemoScenario] Demo sensor credential rotated lifecycle audit event.",
-            "lifecycle-alerts",
+            scenarioName,
             LifecyclePayload(DemoIds.LifecycleSensor, "demo-lifecycle-sensor-01", "demo-adminib", "rotateCredential", DemoIds.LifecycleCredentialB, null),
             cancellationToken);
     }
 
-    private static async Task SeedRuntimeIncidentAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task SeedRuntimeIncidentAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken, string scenarioName = "runtime-incident")
     {
         await EnsureDemoSensorAsync(dbContext, DemoIds.RuntimeSensor, "demo-runtime-incident-01", DateTime.UtcNow.AddSeconds(-40), cancellationToken);
         await EnsureSecurityEventAsync(
@@ -331,7 +415,7 @@ public sealed class DemoScenarioRunner
             "container.runtime.shell_spawned",
             "demo-runtime-incident-01",
             "[DemoScenario] Synthetic Falco-compatible runtime shell event; no real Fedora state touched.",
-            "runtime-incident",
+            scenarioName,
             new Dictionary<string, object?>
             {
                 ["schemaVersion"] = 1,
@@ -357,7 +441,7 @@ public sealed class DemoScenarioRunner
             cancellationToken);
     }
 
-    private static async Task SeedOutboxBacklogAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task SeedOutboxBacklogAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken, string scenarioName = "outbox-backlog")
     {
         var pending = await EnsureSecurityEventAsync(
             dbContext,
@@ -368,7 +452,7 @@ public sealed class DemoScenarioRunner
             "demo.outbox.pending",
             "demo-outbox-node-01",
             "[DemoScenario] Demo outbox pending backlog row.",
-            "outbox-backlog",
+            scenarioName,
             new Dictionary<string, object?> { ["backlogStatus"] = "Pending" },
             cancellationToken);
 
@@ -381,7 +465,7 @@ public sealed class DemoScenarioRunner
             "demo.outbox.processing",
             "demo-outbox-node-01",
             "[DemoScenario] Demo outbox processing backlog row.",
-            "outbox-backlog",
+            scenarioName,
             new Dictionary<string, object?> { ["backlogStatus"] = "Processing" },
             cancellationToken);
 
@@ -394,13 +478,13 @@ public sealed class DemoScenarioRunner
             "demo.outbox.deadletter",
             "demo-outbox-node-01",
             "[DemoScenario] Demo outbox dead-letter backlog row.",
-            "outbox-backlog",
+            scenarioName,
             new Dictionary<string, object?> { ["backlogStatus"] = "DeadLetter" },
             cancellationToken);
 
-        await EnsureOutboxMessageAsync(dbContext, pending.Id, DemoIds.MessageOutboxPending, SecurityEventOutboxStatus.Pending, "outbox-backlog", cancellationToken);
-        await EnsureOutboxMessageAsync(dbContext, processing.Id, DemoIds.MessageOutboxProcessing, SecurityEventOutboxStatus.Processing, "outbox-backlog", cancellationToken);
-        await EnsureOutboxMessageAsync(dbContext, deadLetter.Id, DemoIds.MessageOutboxDeadLetter, SecurityEventOutboxStatus.DeadLetter, "outbox-backlog", cancellationToken);
+        await EnsureOutboxMessageAsync(dbContext, pending.Id, DemoIds.MessageOutboxPending, SecurityEventOutboxStatus.Pending, scenarioName, cancellationToken);
+        await EnsureOutboxMessageAsync(dbContext, processing.Id, DemoIds.MessageOutboxProcessing, SecurityEventOutboxStatus.Processing, scenarioName, cancellationToken);
+        await EnsureOutboxMessageAsync(dbContext, deadLetter.Id, DemoIds.MessageOutboxDeadLetter, SecurityEventOutboxStatus.DeadLetter, scenarioName, cancellationToken);
     }
 
     private static async Task<CorrelationRunResult> RunSafeCorrelationAsync(
@@ -408,7 +492,7 @@ public sealed class DemoScenarioRunner
         string scenario,
         CancellationToken cancellationToken)
     {
-        if (scenario is not ("lifecycle-alerts" or "runtime-incident" or "full-demo"))
+        if (scenario is not ("lifecycle-alerts" or "runtime-incident" or "defense-demo" or "full-demo"))
             return new CorrelationRunResult();
 
         var service = new SiemCorrelationService(dbContext, new NoOpSecurityEventWriter());
@@ -699,12 +783,97 @@ public sealed record DemoScenarioPlan(
     public static DemoScenarioPlan For(string scenario) => scenario switch
     {
         "healthy" => new DemoScenarioPlan("healthy", 2, 2, 1, 1, []),
+        "defense-demo" => new DemoScenarioPlan("defense-demo", 4, 9, 1, 1, ["IMG-001", "POL-001", "LIFE-001", "LIFE-002", "RTE-001"]),
         "lifecycle-alerts" => new DemoScenarioPlan("lifecycle-alerts", 1, 4, 0, 0, ["LIFE-001", "LIFE-002"]),
         "runtime-incident" => new DemoScenarioPlan("runtime-incident", 1, 1, 0, 0, ["RTE-001"]),
         "outbox-backlog" => new DemoScenarioPlan("outbox-backlog", 0, 3, 0, 3, []),
-        "full-demo" => new DemoScenarioPlan("full-demo", 4, 10, 1, 4, ["LIFE-001", "LIFE-002", "RTE-001"]),
+        "full-demo" => new DemoScenarioPlan("full-demo", 4, 12, 1, 4, ["IMG-001", "POL-001", "LIFE-001", "LIFE-002", "RTE-001"]),
         _ => throw new InvalidOperationException($"Unsupported scenario: {scenario}")
     };
+}
+
+public sealed record DemoScenarioSummary(
+    int Sensors,
+    int SecurityEvents,
+    int InboxReceipts,
+    int OutboxMessages,
+    int OutboxPending,
+    int OutboxProcessing,
+    int OutboxDeadLetter,
+    int SiemAlerts,
+    int Incidents,
+    string[] Rules)
+{
+    public static async Task<DemoScenarioSummary> CreateAsync(
+        ApplicationDbContext dbContext,
+        string scenario,
+        CancellationToken cancellationToken)
+    {
+        var demoEventIds = await dbContext.SecurityEvents
+            .Where(x => (x.SourceSystem != null && x.SourceSystem.StartsWith("conshield.demo"))
+                || x.Description.StartsWith("[DemoScenario]")
+                || (x.AdditionalDataJson != null && x.AdditionalDataJson.Contains("\"DemoScenario\":true")))
+            .Where(x => scenario == "all"
+                || (x.AdditionalDataJson != null && x.AdditionalDataJson.Contains($"\"ScenarioName\":\"{scenario}\"")))
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+        var demoEventIdSet = demoEventIds.ToHashSet();
+        var alerts = (await dbContext.SiemAlerts.ToListAsync(cancellationToken))
+            .Where(x => AlertReferencesAnyDemoEvent(x, demoEventIdSet))
+            .ToList();
+        var alertIncidentIds = alerts
+            .Select(x => x.IncidentId)
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .ToHashSet();
+
+        var outbox = await dbContext.SecurityEventOutboxMessages
+            .Where(x => scenario == "all"
+                ? demoEventIds.Contains(x.SecurityEventId)
+                    || x.MessageType.StartsWith("conshield.demo")
+                    || x.PayloadJson.Contains("\"DemoScenario\":true")
+                : x.PayloadJson.Contains($"\"ScenarioName\":\"{scenario}\""))
+            .ToListAsync(cancellationToken);
+        var inbox = await dbContext.SecurityEventInboxReceipts
+            .Where(x => demoEventIds.Contains(x.SecurityEventId)
+                || x.MessageType.StartsWith("conshield.demo")
+                || x.RoutingKey.StartsWith("conshield.demo"))
+            .ToListAsync(cancellationToken);
+        var incidents = await dbContext.Incidents
+            .Where(x => (x.SourceEventId.HasValue && demoEventIds.Contains(x.SourceEventId.Value))
+                || alertIncidentIds.Contains(x.Id)
+                || x.Name.StartsWith("[DemoScenario]")
+                || (x.Notes != null && x.Notes.Contains("demo-")))
+            .ToListAsync(cancellationToken);
+
+        return new DemoScenarioSummary(
+            Sensors: await dbContext.Sensors.CountAsync(x => x.DisplayName.StartsWith("demo-") || x.SourceSystem.StartsWith("conshield.demo"), cancellationToken),
+            SecurityEvents: demoEventIds.Count,
+            InboxReceipts: inbox.Count,
+            OutboxMessages: outbox.Count,
+            OutboxPending: outbox.Count(x => x.Status == SecurityEventOutboxStatus.Pending),
+            OutboxProcessing: outbox.Count(x => x.Status == SecurityEventOutboxStatus.Processing),
+            OutboxDeadLetter: outbox.Count(x => x.Status == SecurityEventOutboxStatus.DeadLetter),
+            SiemAlerts: alerts.Count,
+            Incidents: incidents.Count,
+            Rules: alerts.Select(x => x.RuleCode).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray());
+    }
+
+    private static bool AlertReferencesAnyDemoEvent(SiemAlertRecord alert, HashSet<long> demoEventIds)
+    {
+        if (string.IsNullOrWhiteSpace(alert.SourceEventIdsJson))
+            return false;
+
+        try
+        {
+            var ids = JsonSerializer.Deserialize<List<long>>(alert.SourceEventIdsJson) ?? [];
+            return ids.Any(demoEventIds.Contains);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
 }
 
 public sealed record DemoScenarioRunResult(int ExitCode)
@@ -723,14 +892,16 @@ public static class DemoIds
 
     public static readonly Guid EventHealthyInfo = Guid.Parse("33333333-3333-3333-3333-000000000001");
     public static readonly Guid EventHealthyWarning = Guid.Parse("33333333-3333-3333-3333-000000000002");
-    public static readonly Guid EventLifecycleRevoked = Guid.Parse("33333333-3333-3333-3333-000000000003");
-    public static readonly Guid EventLifecycleCredentialRotated1 = Guid.Parse("33333333-3333-3333-3333-000000000004");
-    public static readonly Guid EventLifecycleCredentialRevoked = Guid.Parse("33333333-3333-3333-3333-000000000005");
-    public static readonly Guid EventLifecycleCredentialRotated2 = Guid.Parse("33333333-3333-3333-3333-000000000006");
-    public static readonly Guid EventRuntimeIncident = Guid.Parse("33333333-3333-3333-3333-000000000007");
-    public static readonly Guid EventOutboxPending = Guid.Parse("33333333-3333-3333-3333-000000000008");
-    public static readonly Guid EventOutboxProcessing = Guid.Parse("33333333-3333-3333-3333-000000000009");
-    public static readonly Guid EventOutboxDeadLetter = Guid.Parse("33333333-3333-3333-3333-000000000010");
+    public static readonly Guid EventImageScanCritical = Guid.Parse("33333333-3333-3333-3333-000000000003");
+    public static readonly Guid EventPolicyBlocked = Guid.Parse("33333333-3333-3333-3333-000000000004");
+    public static readonly Guid EventLifecycleRevoked = Guid.Parse("33333333-3333-3333-3333-000000000005");
+    public static readonly Guid EventLifecycleCredentialRotated1 = Guid.Parse("33333333-3333-3333-3333-000000000006");
+    public static readonly Guid EventLifecycleCredentialRevoked = Guid.Parse("33333333-3333-3333-3333-000000000007");
+    public static readonly Guid EventLifecycleCredentialRotated2 = Guid.Parse("33333333-3333-3333-3333-000000000008");
+    public static readonly Guid EventRuntimeIncident = Guid.Parse("33333333-3333-3333-3333-000000000009");
+    public static readonly Guid EventOutboxPending = Guid.Parse("33333333-3333-3333-3333-000000000010");
+    public static readonly Guid EventOutboxProcessing = Guid.Parse("33333333-3333-3333-3333-000000000011");
+    public static readonly Guid EventOutboxDeadLetter = Guid.Parse("33333333-3333-3333-3333-000000000012");
 
     public static readonly Guid MessageHealthyInbox = Guid.Parse("44444444-4444-4444-4444-000000000001");
     public static readonly Guid MessageHealthyOutbox = Guid.Parse("44444444-4444-4444-4444-000000000002");

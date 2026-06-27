@@ -145,6 +145,18 @@ After changing config, restart Web. Environment variables may override `appsetti
 
 For a safe local walkthrough, an operator/developer can seed marked synthetic records with `tools/ConShield.DemoScenario` or use the safer validation wrapper `scripts/Validate-DemoScenario.ps1`. This is not a production remediation or sensor operation path; it does not touch Fedora services and does not publish RabbitMQ messages.
 
+For a full defense walkthrough, prefer the one-command scenario runner. It prepares only safe local evidence and does not require a real Fedora VM:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Set-LocalDemoUsers.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1
+```
+
+The runner checks Web, PostgreSQL, RabbitMQ/EventConsumer/Mongo projection availability, then uses synthetic image-scan, policy-gate, runtime, and lifecycle signals to demonstrate `IMG-001`, `POL-001`, `RTE-001`, `LIFE-001`, and `LIFE-002`. PASS/WARN/FAIL interpretation: `PASS` means the required local evidence was demonstrated; `WARN` means the core evidence exists but an optional local service is missing/degraded; `FAIL` means the evidence could not be produced. Optional Markdown evidence can be written with `-OutputMarkdownPath .\artifacts\local\defense-scenario.md`; do not commit generated evidence, logs, screenshots, `.env` files, or local config.
+
+After the runner finishes, open `/Operations/Health`, `/SecurityEvents`, `/Sensors`, `/SiemAlerts`, `/Incidents`, and `/Reports/SecuritySummary`. The runner and report output intentionally avoid raw JSON, `AdditionalDataJson`, connection strings, API keys, tokens, cookies, credentials, verifier values, and Fedora protected env contents.
+
 Start with wrapper dry-run mode:
 
 ```powershell
