@@ -23,7 +23,7 @@
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-sm-5">ID</dt>
-                    <dd class="col-sm-7">@Model.Alert.Id</dd>
+                    <dd class="col-sm-7"><code class="app-id-pill">@Model.Alert.Id</code></dd>
 
                     <dt class="col-sm-5">Создано</dt>
                     <dd class="col-sm-7">@Model.Alert.CreatedAtUtc.ToMoscowDisplay()</dd>
@@ -44,7 +44,16 @@
                     <dd class="col-sm-7">@DisplayText.Status(Model.Alert.Status)</dd>
 
                     <dt class="col-sm-5">ID инцидента</dt>
-                    <dd class="col-sm-7">@(Model.Alert.IncidentId?.ToString() ?? "—")</dd>
+                    <dd class="col-sm-7">
+                        @if (Model.Alert.IncidentId.HasValue)
+                        {
+                            <a asp-controller="Incidents" asp-action="Details" asp-route-id="@Model.Alert.IncidentId.Value" class="app-id-pill">@Model.Alert.IncidentId.Value</a>
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+                    </dd>
 
                     <dt class="col-sm-5">Описание</dt>
                     <dd class="col-sm-7">@DisplayText.AlertDescription(Model.Alert.RuleCode, Model.Alert.Description)</dd>
@@ -86,7 +95,7 @@
                 {
                     <dl class="row mb-0">
                         <dt class="col-sm-4">ID</dt>
-                        <dd class="col-sm-8">@Model.Incident.Id</dd>
+                        <dd class="col-sm-8"><code class="app-id-pill">@Model.Incident.Id</code></dd>
                         <dt class="col-sm-4">Название</dt>
                         <dd class="col-sm-8">@DisplayText.IncidentTitle(Model.Incident.Name)</dd>
                         <dt class="col-sm-4">Статус</dt>
@@ -105,7 +114,7 @@
                     <table class="table table-striped mb-0 align-middle app-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th class="app-table-id-col-sm">ID</th>
                                 <th>Время</th>
                                 <th>Тип</th>
                                 <th>Пользователь</th>
@@ -117,7 +126,7 @@
                         @foreach (var item in Model.SourceEvents)
                         {
                             <tr>
-                                <td>@item.Id</td>
+                                <td class="app-table-id-col-sm"><code class="app-id-pill">@item.Id</code></td>
                                 <td>@item.OccurredAtUtc.ToMoscowDisplay()</td>
                                 <td>@item.EventType</td>
                                 <td>@(item.UserName ?? "—")</td>

@@ -77,12 +77,12 @@
             <table class="table table-striped align-middle app-table">
             <thead>
             <tr>
-                <th>ID</th>
+                <th class="app-table-id-col-sm">ID</th>
                 <th>Создан</th>
                 <th>Название</th>
                 <th>Критичность</th>
                 <th>Статус</th>
-                <th>Событие-источник</th>
+                <th class="app-table-id-col">Событие-источник</th>
                 <th>Действия</th>
             </tr>
             </thead>
@@ -90,7 +90,7 @@
             @foreach (var item in Model.Items)
             {
                 <tr>
-                    <td><code class="id-code">@item.Id</code></td>
+                    <td class="app-table-id-col-sm"><code class="app-id-pill">@item.Id</code></td>
                     <td>@item.CreatedAtUtc.ToMoscowDisplay()</td>
                     <td>@DisplayText.IncidentTitle(item.Name)</td>
                     <td>
@@ -105,7 +105,7 @@
                             <span>@DisplayText.Status(item.Status)</span>
                         </span>
                     </td>
-                    <td><code class="id-code">@item.SourceEventId</code></td>
+                    <td class="app-table-id-col"><code class="app-id-pill">@item.SourceEventId</code></td>
                     <td>
                         <div class="app-action-group">
                             <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Открыть</a>

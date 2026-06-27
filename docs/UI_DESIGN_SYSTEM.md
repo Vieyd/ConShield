@@ -56,7 +56,7 @@ Wrap data tables in:
 </div>
 ```
 
-Table headers are sticky, rows have calm hover color, and wide tables scroll horizontally inside the card. The mirrored top scrollbar is a visual affordance for long pages; if JavaScript is unavailable, the real bottom scroll container remains usable. Use a sticky `.app-table-actions-col` for right-side action columns when wide tables would otherwise hide controls. Numeric IDs use nowrap classes, while long GUIDs/source systems use truncated muted technical-code classes with the full value in `title`.
+Table headers are sticky, rows have calm hover color, and wide tables scroll horizontally inside the card. The mirrored top scrollbar is a visual affordance for long pages; if JavaScript is unavailable, the real bottom scroll container remains usable. Use a sticky `.app-table-actions-col` for right-side action columns when wide tables would otherwise hide controls. Short numeric table IDs use `.app-table-id-col` / `.app-table-id-col-sm` with `.app-id-pill` so 2–6 digit IDs never wrap, while long GUIDs/source systems keep truncated muted technical-code classes with the full value in `title`.
 
 Wide tables must keep the horizontal scrollbar discoverable in both themes. Use the shared `.app-table-scroll-wrap` / `.app-table-scrollbar-top` pattern instead of adding visible text hints or per-page banners.
 

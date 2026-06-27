@@ -20,7 +20,7 @@
         <table class="table table-striped align-middle app-table app-table-compact">
             <thead>
                 <tr>
-                    <th>Id</th>
+                    <th class="app-table-id-col-sm">Id</th>
                     <th>Логин</th>
                     <th>Система</th>
                     <th>Тип</th>
@@ -33,7 +33,7 @@
             @foreach (var item in Model.Items)
             {
                 <tr>
-                    <td><code class="id-code app-id-nowrap">@item.Id</code></td>
+                    <td class="app-table-id-col-sm"><code class="app-id-pill">@item.Id</code></td>
                     <td>@item.UserLogin</td>
                     <td><code class="app-technical-code app-technical-code--truncate" title="@item.SourceSystem">@DisplayText.ShortTechnicalValue(item.SourceSystem)</code></td>
                     <td>@item.ExceptionType</td>

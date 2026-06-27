@@ -79,13 +79,13 @@
     <table class="table table-striped align-middle app-table app-table-wide">
         <thead>
             <tr>
-                <th>ID</th>
+                <th class="app-table-id-col-sm">ID</th>
                 <th>Создан</th>
                 <th>Код правила</th>
                 <th>Правило</th>
                 <th>Критичность</th>
                 <th>Статус</th>
-                <th>ID инцидента</th>
+                <th class="app-table-id-col">ID инцидента</th>
                 <th>Описание</th>
                 <th class="app-table-actions-col">Действия</th>
             </tr>
@@ -94,7 +94,7 @@
         @foreach (var item in Model.Items)
         {
             <tr>
-                <td>@item.Id</td>
+                <td class="app-table-id-col-sm"><code class="app-id-pill">@item.Id</code></td>
                 <td>@item.CreatedAtUtc.ToMoscowDisplay()</td>
                 <td><code class="id-code">@item.RuleCode</code></td>
                 <td>@DisplayText.RuleName(item.RuleCode, item.RuleName)</td>
@@ -110,10 +110,10 @@
                         <span>@DisplayText.Status(item.Status)</span>
                     </span>
                 </td>
-                <td>
+                <td class="app-table-id-col">
                     @if (item.IncidentId.HasValue)
                     {
-                        <a asp-controller="Incidents" asp-action="Details" asp-route-id="@item.IncidentId.Value">@item.IncidentId.Value</a>
+                        <a asp-controller="Incidents" asp-action="Details" asp-route-id="@item.IncidentId.Value" class="app-id-pill">@item.IncidentId.Value</a>
                     }
                     else
                     {
