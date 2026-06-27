@@ -398,6 +398,14 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScen
 
 Result meanings: `PASS` means all required demo evidence was demonstrated, `WARN` means the core scenario ran but an optional local service was unavailable or degraded, and `FAIL` means the scenario could not prove required evidence. The runner prints only counts, rule codes, statuses, timestamps, and UI routes; it intentionally excludes secrets, raw event JSON, `AdditionalDataJson`, connection strings, API keys, tokens, cookies, credentials, and verifier values. Do not commit generated evidence, logs, screenshots, `.env` files, or `appsettings.Development.json`.
 
+For a defense-ready evidence pack that combines health, scenario summary, SIEM alerts, incidents, security events, outbox/inbox summary, and demo checklists, export to an ignored local artifact path:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseEvidence.ps1 -RunScenario -OutputMarkdownPath .\artifacts\local\defense-evidence.md
+```
+
+The evidence exporter writes only safe aggregate and metadata fields. It excludes sensitive local configuration, raw event bodies, local logs, and generated reports from source control; keep the generated Markdown under `artifacts/local/` or another ignored path.
+
 ## Roadmap
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) and the product-level [architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md).
