@@ -622,28 +622,42 @@ dd code {
     width: 5.5rem;
     min-width: 5.5rem;
     white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    word-wrap: normal;
 }
 
 .app-table-id-col-sm {
     width: 4.5rem;
     min-width: 4.5rem;
     white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    word-wrap: normal;
 }
 
 .app-id-nowrap,
-.app-code-short {
+.app-code-short,
+.app-table-id-col,
+.app-table-id-col-sm,
+.app-id-pill,
+.app-id-pill > a,
+.app-id-pill > span {
     white-space: nowrap;
     word-break: normal;
     overflow-wrap: normal;
+    word-wrap: normal;
 }
 
 .app-id-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: max-content;
     min-width: 2.75rem;
-    max-width: 100%;
+    max-width: none;
     min-height: 1.65rem;
+    flex: 0 0 auto;
     padding: .12rem .45rem;
     border: 1px solid var(--app-code-border);
     border-radius: 999px;
@@ -652,10 +666,11 @@ dd code {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     font-size: .86em;
     font-weight: 720;
-    line-height: 1.1;
+    line-height: 1;
     white-space: nowrap;
     word-break: normal;
     overflow-wrap: normal;
+    word-wrap: normal;
     vertical-align: middle;
     text-decoration: none;
 }
@@ -731,6 +746,17 @@ a.app-id-pill:focus-visible {
 code {
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+code.app-id-pill,
+a.app-id-pill,
+.app-id-pill,
+.app-id-pill > a,
+.app-id-pill > span {
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    word-wrap: normal;
 }
 
 @media (max-width: 991.98px) {

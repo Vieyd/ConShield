@@ -105,7 +105,20 @@
                             <span>@DisplayText.Status(item.Status)</span>
                         </span>
                     </td>
-                    <td class="app-table-id-col"><code class="app-id-pill">@item.SourceEventId</code></td>
+                    <td class="app-table-id-col">
+                        @if (item.SourceEventId.HasValue)
+                        {
+                            <a asp-controller="SecurityEvents"
+                               asp-action="Index"
+                               asp-route-SearchText="@item.SourceEventId.Value"
+                               class="app-id-pill app-id-nowrap"
+                               title="Открыть событие безопасности @item.SourceEventId.Value">@item.SourceEventId.Value</a>
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+                    </td>
                     <td>
                         <div class="app-action-group">
                             <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Открыть</a>

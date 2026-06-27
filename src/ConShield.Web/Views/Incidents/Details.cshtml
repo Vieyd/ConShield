@@ -12,7 +12,7 @@
 
 <dl class="row">
     <dt class="col-sm-3">ID</dt>
-    <dd class="col-sm-9">@Model.Id</dd>
+    <dd class="col-sm-9"><code class="app-id-pill">@Model.Id</code></dd>
 
     <dt class="col-sm-3">Создан</dt>
     <dd class="col-sm-9">@Model.CreatedAtUtc.ToMoscowDisplay()</dd>
@@ -27,7 +27,20 @@
     <dd class="col-sm-9">@DisplayText.Status(Model.Status)</dd>
 
     <dt class="col-sm-3">ID события-источника</dt>
-    <dd class="col-sm-9">@Model.SourceEventId</dd>
+    <dd class="col-sm-9">
+        @if (Model.SourceEventId.HasValue)
+        {
+            <a asp-controller="SecurityEvents"
+               asp-action="Index"
+               asp-route-SearchText="@Model.SourceEventId.Value"
+               class="app-id-pill app-id-nowrap"
+               title="Открыть событие безопасности @Model.SourceEventId.Value">@Model.SourceEventId.Value</a>
+        }
+        else
+        {
+            <span>—</span>
+        }
+    </dd>
 
     <dt class="col-sm-3">Примечание</dt>
     <dd class="col-sm-9">@DisplayText.IncidentNotes(Model.Notes)</dd>
@@ -42,7 +55,13 @@
         <div class="card-body app-related-event-body">
             <dl class="row mb-0">
                 <dt class="col-sm-3">ID</dt>
-                <dd class="col-sm-9">@sourceEvent.Id</dd>
+                <dd class="col-sm-9">
+                    <a asp-controller="SecurityEvents"
+                       asp-action="Index"
+                       asp-route-SearchText="@sourceEvent.Id"
+                       class="app-id-pill app-id-nowrap"
+                       title="Открыть событие безопасности @sourceEvent.Id">@sourceEvent.Id</a>
+                </dd>
 
                 <dt class="col-sm-3">Время</dt>
                 <dd class="col-sm-9">@sourceEvent.OccurredAtUtc.ToMoscowDisplay()</dd>
