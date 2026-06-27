@@ -32,6 +32,27 @@ public sealed class SecurityEventsUiTests
     }
 
     [Fact]
+    public async Task SecurityEventsFilter_CanOpenNumericIdFromSearchText()
+    {
+        await using var db = CreateDbContext();
+        SeedSecurityEvents(db);
+        var expected = await db.SecurityEvents
+            .OrderBy(x => x.Id)
+            .Skip(1)
+            .FirstAsync();
+        var controller = new SecurityEventsController(db);
+
+        var model = await IndexModelAsync(controller, new SecurityEventFilterViewModel
+        {
+            SearchText = expected.Id.ToString()
+        });
+
+        var item = Assert.Single(model.Items);
+        Assert.Equal(expected.Id, item.Id);
+        Assert.Equal(1, model.Paging.TotalCount);
+    }
+
+    [Fact]
     public async Task SecurityEventsIndex_DefaultPageSizeIsCappedAndReportsTotalCount()
     {
         await using var db = CreateDbContext();

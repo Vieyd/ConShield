@@ -154,6 +154,58 @@ public sealed class WebUiReadabilityStatusPolishTests
     }
 
     [Fact]
+    public void Incidents_IndexIdColumnUsesNoWrapPill()
+    {
+        var view = ReadRepoFile("src", "ConShield.Web", "Views", "Incidents", "Index.cshtml");
+
+        Assert.Contains("<th class=\"app-table-id-col-sm\">ID</th>", view, StringComparison.Ordinal);
+        Assert.Contains("<td class=\"app-table-id-col-sm\"><code class=\"app-id-pill\">@item.Id</code></td>", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("id-code\">@item.Id", view, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Incidents_SourceEventIdLinksToSecurityEvent()
+    {
+        var view = ReadRepoFile("src", "ConShield.Web", "Views", "Incidents", "Index.cshtml");
+
+        Assert.Contains("asp-controller=\"SecurityEvents\"", view, StringComparison.Ordinal);
+        Assert.Contains("asp-action=\"Index\"", view, StringComparison.Ordinal);
+        Assert.Contains("asp-route-SearchText=\"@item.SourceEventId.Value\"", view, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-id-pill app-id-nowrap\"", view, StringComparison.Ordinal);
+        Assert.Contains("item.SourceEventId.HasValue", view, StringComparison.Ordinal);
+        Assert.Contains("<span>—</span>", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("@item.AdditionalDataJson", view, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Incidents_DetailsSourceEventIdLinksToSecurityEvent()
+    {
+        var view = ReadRepoFile("src", "ConShield.Web", "Views", "Incidents", "Details.cshtml");
+
+        Assert.Contains("asp-controller=\"SecurityEvents\"", view, StringComparison.Ordinal);
+        Assert.Contains("asp-action=\"Index\"", view, StringComparison.Ordinal);
+        Assert.Contains("asp-route-SearchText=\"@Model.SourceEventId.Value\"", view, StringComparison.Ordinal);
+        Assert.Contains("asp-route-SearchText=\"@sourceEvent.Id\"", view, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-id-pill app-id-nowrap\"", view, StringComparison.Ordinal);
+        Assert.Contains("Model.SourceEventId.HasValue", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("AdditionalDataJson", view, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SiemAlerts_IdColumnsUseNoWrapPills()
+    {
+        var siemIndex = ReadRepoFile("src", "ConShield.Web", "Views", "Siem", "Index.cshtml");
+        var siemDetails = ReadRepoFile("src", "ConShield.Web", "Views", "Siem", "Details.cshtml");
+
+        Assert.Contains("<td class=\"app-table-id-col-sm\"><code class=\"app-id-pill\">@item.Id</code></td>", siemIndex, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-id-pill\">@item.IncidentId.Value</a>", siemIndex, StringComparison.Ordinal);
+        Assert.Contains("<code class=\"app-id-pill\">@Model.Alert.Id</code>", siemDetails, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-id-pill\">@Model.Alert.IncidentId.Value</a>", siemDetails, StringComparison.Ordinal);
+        Assert.Contains("asp-route-SearchText=\"@item.Id\"", siemDetails, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-id-pill app-id-nowrap\"", siemDetails, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void NumericTableIds_UseNoWrapPillsAcrossCoreTables()
     {
         var incidentIndex = ReadRepoFile("src", "ConShield.Web", "Views", "Incidents", "Index.cshtml");
@@ -164,36 +216,73 @@ public sealed class WebUiReadabilityStatusPolishTests
         var userExceptions = ReadRepoFile("src", "ConShield.Web", "Views", "UserExceptions", "Index.cshtml");
 
         Assert.Contains("<code class=\"app-id-pill\">@item.Id</code>", incidentIndex, StringComparison.Ordinal);
-        Assert.Contains("<code class=\"app-id-pill\">@item.SourceEventId</code>", incidentIndex, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-id-pill app-id-nowrap\"", incidentIndex, StringComparison.Ordinal);
         Assert.Contains("<code class=\"app-id-pill\">@item.Id</code>", siemIndex, StringComparison.Ordinal);
         Assert.Contains("class=\"app-id-pill\">@item.IncidentId.Value</a>", siemIndex, StringComparison.Ordinal);
         Assert.Contains("<code class=\"app-id-pill\">@Model.Alert.Id</code>", siemDetails, StringComparison.Ordinal);
-        Assert.Contains("<code class=\"app-id-pill\">@item.Id</code>", siemDetails, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-id-pill app-id-nowrap\"", siemDetails, StringComparison.Ordinal);
         Assert.Contains("<code class=\"app-id-pill\">@item.Id</code>", securityEvents, StringComparison.Ordinal);
         Assert.Contains("<code class=\"app-id-pill\">@item.SecurityEventId</code>", outbox, StringComparison.Ordinal);
         Assert.Contains("<code class=\"app-id-pill\">@item.Id</code>", userExceptions, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void NumericTableIdCssPreventsWrappingWithoutChangingTechnicalTruncation()
+    public void AppIdPillCssPreventsDigitWrapping()
     {
         var css = ReadRepoFile("src", "ConShield.Web", "wwwroot", "css", "site.css");
         var idPillStart = css.IndexOf(".app-id-pill {", StringComparison.Ordinal);
         var idPillEnd = css.IndexOf("}", idPillStart, StringComparison.Ordinal);
         var idPillBlock = css[idPillStart..idPillEnd];
+        var finalOverrideStart = css.LastIndexOf("code.app-id-pill,", StringComparison.Ordinal);
+        var finalOverrideEnd = css.IndexOf("}", finalOverrideStart, StringComparison.Ordinal);
+        var finalOverrideBlock = css[finalOverrideStart..finalOverrideEnd];
+
+        Assert.Contains("display: inline-flex", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("width: max-content", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("min-width: 2.75rem", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("max-width: none", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("flex: 0 0 auto", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("line-height: 1", idPillBlock, StringComparison.Ordinal);
+        Assert.Contains("white-space: nowrap", finalOverrideBlock, StringComparison.Ordinal);
+        Assert.Contains("word-break: normal", finalOverrideBlock, StringComparison.Ordinal);
+        Assert.Contains("overflow-wrap: normal", finalOverrideBlock, StringComparison.Ordinal);
+        Assert.Contains("word-wrap: normal", finalOverrideBlock, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IdPillNestedLinksCannotWrap()
+    {
+        var css = ReadRepoFile("src", "ConShield.Web", "wwwroot", "css", "site.css");
+        var combinedViews = string.Join(
+            Environment.NewLine,
+            ReadRepoFile("src", "ConShield.Web", "Views", "Incidents", "Index.cshtml"),
+            ReadRepoFile("src", "ConShield.Web", "Views", "Incidents", "Details.cshtml"),
+            ReadRepoFile("src", "ConShield.Web", "Views", "Siem", "Index.cshtml"),
+            ReadRepoFile("src", "ConShield.Web", "Views", "Siem", "Details.cshtml"));
+
+        Assert.Contains(".app-id-pill > a", css, StringComparison.Ordinal);
+        Assert.Contains(".app-id-pill > span", css, StringComparison.Ordinal);
+        Assert.Contains("a.app-id-pill", css, StringComparison.Ordinal);
+        Assert.Contains("class=\"app-id-pill app-id-nowrap\"", combinedViews, StringComparison.Ordinal);
+        Assert.DoesNotContain("id-code app-id-pill", combinedViews, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LongTechnicalIdsStillUseTruncation()
+    {
+        var css = ReadRepoFile("src", "ConShield.Web", "wwwroot", "css", "site.css");
         var truncateStart = css.IndexOf(".app-technical-code--truncate,", StringComparison.Ordinal);
         var truncateEnd = css.IndexOf("}", truncateStart, StringComparison.Ordinal);
         var truncateBlock = css[truncateStart..truncateEnd];
+        var outbox = ReadRepoFile("src", "ConShield.Web", "Views", "Outbox", "Index.cshtml");
 
         Assert.Contains(".app-table-id-col", css, StringComparison.Ordinal);
         Assert.Contains(".app-table-id-col-sm", css, StringComparison.Ordinal);
-        Assert.Contains("display: inline-flex", idPillBlock, StringComparison.Ordinal);
-        Assert.Contains("min-width: 2.75rem", idPillBlock, StringComparison.Ordinal);
-        Assert.Contains("white-space: nowrap", idPillBlock, StringComparison.Ordinal);
-        Assert.Contains("word-break: normal", idPillBlock, StringComparison.Ordinal);
-        Assert.Contains("overflow-wrap: normal", idPillBlock, StringComparison.Ordinal);
         Assert.Contains("max-width: 16rem", truncateBlock, StringComparison.Ordinal);
         Assert.Contains("text-overflow: ellipsis", truncateBlock, StringComparison.Ordinal);
+        Assert.Contains("app-code-short", outbox, StringComparison.Ordinal);
+        Assert.Contains("ShortTechnicalValue(item.MessageId)", outbox, StringComparison.Ordinal);
+        Assert.DoesNotContain("app-id-pill\">@item.MessageId", outbox, StringComparison.Ordinal);
     }
 
     [Fact]

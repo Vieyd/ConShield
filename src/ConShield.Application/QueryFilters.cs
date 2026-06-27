@@ -45,13 +45,21 @@ public static class QueryFilters
 
         if (!string.IsNullOrWhiteSpace(searchText))
         {
-            var pattern = ToContainsPattern(searchText);
-            query = query.Where(x =>
-                EF.Functions.ILike(x.Description, pattern) ||
-                (x.AdditionalDataJson != null && EF.Functions.ILike(x.AdditionalDataJson, pattern)) ||
-                (x.SourceIp != null && EF.Functions.ILike(x.SourceIp, pattern)) ||
-                (x.SourceSystem != null && EF.Functions.ILike(x.SourceSystem, pattern)) ||
-                (x.ExternalEventType != null && EF.Functions.ILike(x.ExternalEventType, pattern)));
+            var hasEventId = long.TryParse(searchText.Trim(), out var eventId);
+            if (hasEventId)
+            {
+                query = query.Where(x => x.Id == eventId);
+            }
+            else
+            {
+                var pattern = ToContainsPattern(searchText);
+                query = query.Where(x =>
+                    EF.Functions.ILike(x.Description, pattern) ||
+                    (x.AdditionalDataJson != null && EF.Functions.ILike(x.AdditionalDataJson, pattern)) ||
+                    (x.SourceIp != null && EF.Functions.ILike(x.SourceIp, pattern)) ||
+                    (x.SourceSystem != null && EF.Functions.ILike(x.SourceSystem, pattern)) ||
+                    (x.ExternalEventType != null && EF.Functions.ILike(x.ExternalEventType, pattern)));
+            }
         }
 
         return query;

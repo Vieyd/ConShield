@@ -126,7 +126,13 @@
                         @foreach (var item in Model.SourceEvents)
                         {
                             <tr>
-                                <td class="app-table-id-col-sm"><code class="app-id-pill">@item.Id</code></td>
+                                <td class="app-table-id-col-sm">
+                                    <a asp-controller="SecurityEvents"
+                                       asp-action="Index"
+                                       asp-route-SearchText="@item.Id"
+                                       class="app-id-pill app-id-nowrap"
+                                       title="Открыть событие безопасности @item.Id">@item.Id</a>
+                                </td>
                                 <td>@item.OccurredAtUtc.ToMoscowDisplay()</td>
                                 <td>@item.EventType</td>
                                 <td>@(item.UserName ?? "—")</td>
