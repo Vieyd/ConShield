@@ -263,7 +263,11 @@ It stores normalized envelopes immutably with `_id = MessageId`, TTL retention, 
 
 RabbitMQ DLQ messages can be captured into immutable PostgreSQL quarantine rows, inspected by `AdminIB`, and replayed only through a bounded background dispatcher. MVC requests never publish RabbitMQ messages directly, raw payload is not shown in the list UI, and replay preserves the original `MessageId` for Inbox/Mongo deduplication. See [docs/DLQ_INSPECTION_AND_REPLAY.md](docs/DLQ_INSPECTION_AND_REPLAY.md).
 
-Falco-compatible runtime JSON alerts can be normalized by `ConShield.RuntimeCollector` and submitted to the existing external ingestion API. This stage uses safe JSONL fixtures and does not install Falco, Falco Operator, or Kubernetes components. See [docs/FALCO_RUNTIME_EVENT_INGESTION.md](docs/FALCO_RUNTIME_EVENT_INGESTION.md).
+Falco-compatible runtime JSON alerts can be normalized by `ConShield.RuntimeCollector` and submitted to the existing external ingestion API. The local replay path uses safe fixtures and does not install or require Fedora, Falco, Falco Operator, or Kubernetes components. See [docs/FALCO_RUNTIME_EVENT_INGESTION.md](docs/FALCO_RUNTIME_EVENT_INGESTION.md) and [docs/FALCO_RUNTIME_SENSOR.md](docs/FALCO_RUNTIME_SENSOR.md).
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 -NoSubmit
+```
 
 ## Demo Accounts
 
@@ -404,7 +408,7 @@ For a defense-ready evidence pack that combines health, scenario summary, SIEM a
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseEvidence.ps1 -RunScenario -OutputMarkdownPath .\artifacts\local\defense-evidence.md
 ```
 
-The evidence exporter writes only safe aggregate and metadata fields. It excludes sensitive local configuration, raw event bodies, local logs, and generated reports from source control; keep the generated Markdown under `artifacts/local/` or another ignored path.
+The evidence exporter writes only safe aggregate and metadata fields, including a Runtime Sensor Evidence section when Falco-compatible runtime events are present. It excludes sensitive local configuration, raw event bodies, local logs, and generated reports from source control; keep the generated Markdown under `artifacts/local/` or another ignored path.
 
 Operator workflow demo:
 

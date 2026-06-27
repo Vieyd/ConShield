@@ -16,6 +16,8 @@ public sealed class RuntimeCollectorOptions
     public int ReadTimeoutSeconds { get; init; } = 30;
     public int SubmitTimeoutSeconds { get; init; } = 30;
     public int MaxRetries { get; init; } = 3;
+    public int MaxEventAgeDays { get; init; } = 30;
+    public string SourceSystem { get; init; } = ConShield.RuntimeDetection.RuntimeDetectionConstants.SourceSystem;
 }
 
 public enum RuntimeCollectorExitCode

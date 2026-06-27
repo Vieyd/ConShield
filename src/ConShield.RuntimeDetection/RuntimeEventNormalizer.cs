@@ -49,7 +49,7 @@ public sealed record RuntimeNetworkData(string? SourceIp, string? SourcePort, st
 
 public sealed class RuntimeEventNormalizer
 {
-    public RuntimeSecurityEvent Normalize(FalcoAlert alert, FalcoMappingPolicy policy)
+    public RuntimeSecurityEvent Normalize(FalcoAlert alert, FalcoMappingPolicy policy, string? sourceSystem = null)
     {
         var rule = FindRule(alert, policy);
         var mapped = rule is not null;
@@ -111,7 +111,7 @@ public sealed class RuntimeEventNormalizer
         return new RuntimeSecurityEvent(
             fingerprint.EventId,
             alert.OccurredAtUtc,
-            RuntimeDetectionConstants.SourceSystem,
+            string.IsNullOrWhiteSpace(sourceSystem) ? RuntimeDetectionConstants.SourceSystem : sourceSystem.Trim(),
             eventType,
             severity,
             SafeRuntimeText.RedactCredentialLike(alert.Hostname, RuntimeDetectionConstants.MaxHostnameLength),

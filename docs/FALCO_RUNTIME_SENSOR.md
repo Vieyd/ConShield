@@ -1,0 +1,64 @@
+# Falco Linux Runtime Sensor Path v1
+
+This path connects a Fedora/Linux Falco-compatible JSON alert to the existing ConShield external event pipeline without requiring Fedora for the default local demo.
+
+## Flow
+
+```text
+Falco-compatible JSON line
+-> ConShield.RuntimeCollector parser and mapping
+-> /api/v1/security-events
+-> SecurityEvent ExternalEvent
+-> RTE-001 SIEM correlation
+-> SIEM alert and linked incident
+-> operator workflow and defense evidence export
+```
+
+## Local replay without Fedora
+
+The default local defense scenario stays synthetic and does not require Fedora, Falco, kernel drivers, or Podman.
+
+For a local collector replay against the running Web app, start ConShield first and then run:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1
+```
+
+To validate only parser and mapping behavior without submitting:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 -NoSubmit
+```
+
+To replay the filesystem fixture:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -FixturePath .\tests\TestData\Falco\write-below-etc-container.json
+```
+
+The script prints only a safe summary: Web status, fixture name, mapped runtime event type, source system, a short hash identifier, ingestion status, expected SIEM rule, and result. It does not print API keys, sensor credentials, connection strings, environment values, raw Falco payload JSON, raw `AdditionalDataJson`, logs, screenshots, or generated evidence artifacts.
+
+## Credentials and source system
+
+Local replay uses the non-reserved source system `conshield.falco-linux-sensor` with the normal local external ingestion key. This keeps the Windows-only verification path available without Fedora, Falco, or enrolled sensor headers.
+
+The real Fedora collector keeps the reserved source system `conshield.falco-runtime-collector`. General external ingestion API keys must not submit that reserved source. Fedora deployment should use enrolled sensor headers, or the explicitly enabled local legacy runtime collector credential during controlled rollout only. Credentials are read from environment variables or ignored local files and are never echoed.
+
+## Fedora collector helper
+
+The tracked Fedora deployment kit includes `deploy/falco-linux/collect-falco-json.sh` for one-shot validation from a file or stdin:
+
+```bash
+sudo ./collect-falco-json.sh --file /var/log/conshield/falco-events.jsonl --no-submit
+```
+
+Submit mode validates `/etc/conshield/runtime-collector.env` ownership and permissions before invoking the collector. SELinux remains enforcing, and the helper does not install Falco, change kernel settings, or print protected environment values.
+
+## Evidence export
+
+`scripts/Export-ConShieldDefenseEvidence.ps1` includes a `Runtime Sensor Evidence` section. It reports safe aggregates and latest Falco-compatible rule names only. If no events are present, it writes:
+
+```text
+No Falco-compatible runtime events were found in the current evidence window.
+```

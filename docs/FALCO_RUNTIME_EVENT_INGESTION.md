@@ -36,6 +36,7 @@ Mapped baseline rules:
 
 - `Terminal shell in container` -> `container.runtime.shell_spawned`
 - `Write below binary dir` -> `container.runtime.binary_path_write`
+- `Write below etc` -> `container.runtime.etc_write`
 - `Set Setuid or Setgid bit` / compatible casing -> `container.runtime.setuid_change`
 - `Launch Suspicious Network Tool in Container` -> `container.runtime.suspicious_network_tool`
 - `Privileged Container Started` -> `container.runtime.privileged_container_started`
@@ -89,6 +90,15 @@ Get-Content .\samples\falco\runtime-demo.jsonl |
   --endpoint http://127.0.0.1:<port>/api/v1/security-events `
   --api-key-env CONSHIELD_RUNTIME_COLLECTOR_API_KEY
 ```
+
+Local one-fixture replay without Fedora:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 -NoSubmit
+```
+
+See [FALCO_RUNTIME_SENSOR.md](FALCO_RUNTIME_SENSOR.md) for the v1 local replay, Fedora helper, and evidence export workflow.
 
 Implemented:
 

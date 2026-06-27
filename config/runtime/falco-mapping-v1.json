@@ -21,6 +21,14 @@
       "correlate": true
     },
     {
+      "mappingKey": "etc-write",
+      "matchRuleNames": [ "Write below etc" ],
+      "requiredTags": [ "container" ],
+      "eventType": "container.runtime.etc_write",
+      "severity": "High",
+      "correlate": true
+    },
+    {
       "mappingKey": "setuid-change",
       "matchRuleNames": [ "Set Setuid or Setgid bit", "Set setuid or setgid bit" ],
       "requiredTags": [ "container" ],

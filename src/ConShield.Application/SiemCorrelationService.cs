@@ -500,6 +500,7 @@ public class SiemCorrelationService : ISiemCorrelationService
         {
             "container.runtime.shell_spawned",
             "container.runtime.binary_path_write",
+            "container.runtime.etc_write",
             "container.runtime.setuid_change",
             "container.runtime.suspicious_network_tool",
             "container.runtime.privileged_container_started"

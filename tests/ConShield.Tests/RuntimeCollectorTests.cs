@@ -106,6 +106,23 @@ public class RuntimeCollectorTests
     }
 
     [Fact]
+    public void RuntimeCollector_AcceptsBoundedMaxEventAgeForDeterministicReplayFixtures()
+    {
+        var result = CommandLineParser.Parse([
+            "collect",
+            "--file", FalcoFixturePath("terminal-shell-container.json"),
+            "--mapping", MappingPath(),
+            "--no-submit",
+            "--source-system", "conshield.falco-linux-sensor",
+            "--max-event-age-days", "3650"
+        ]);
+
+        Assert.True(result.IsValid);
+        Assert.Equal(3650, result.Options!.MaxEventAgeDays);
+        Assert.Equal("conshield.falco-linux-sensor", result.Options.SourceSystem);
+    }
+
+    [Fact]
     public async Task RuntimeCollector_StdinNoSubmit_ProcessesValidAndMalformedLines()
     {
         var input = """
@@ -147,6 +164,7 @@ public class RuntimeCollectorTests
 
     private static string MappingPath() => Path.Combine(FindRepoRoot(), "config", "runtime", "falco-mapping-v1.json");
     private static string SamplePath() => Path.Combine(FindRepoRoot(), "samples", "falco", "runtime-demo.jsonl");
+    private static string FalcoFixturePath(string fileName) => Path.Combine(FindRepoRoot(), "tests", "TestData", "Falco", fileName);
 
     private static string FindRepoRoot()
     {

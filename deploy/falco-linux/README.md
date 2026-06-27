@@ -39,6 +39,12 @@ Create the staging file from `conshield-runtime-collector.env.example` only afte
 
 Use the local operator tool and follow the complete staged rollout, verification, fallback-disablement, and rollback procedure in [`docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md`](../../docs/SENSOR_PROVISIONING_AND_FEDORA_ROLLOUT.md). `verify-pipeline.sh` submits through the running systemd collector and never extracts the credential from its protected environment file.
 
+For a one-shot Fedora-side collector validation, use `collect-falco-json.sh`. It accepts `--file <path>` or `--stdin`, supports `--no-submit` / `--dry-run`, verifies the protected environment file before submit, and never prints credential values:
+
+```bash
+sudo ./collect-falco-json.sh --file /var/log/conshield/falco-events.jsonl --no-submit
+```
+
 ## Rollback
 
 ```bash
