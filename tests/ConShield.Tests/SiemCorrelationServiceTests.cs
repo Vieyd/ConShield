@@ -422,6 +422,25 @@ public class SiemCorrelationServiceTests
     }
 
     [Fact]
+    public async Task RTE001_LocalFalcoLinuxSensorEvent_CreatesAlertAndIncident()
+    {
+        await using var db = CreateDbContext();
+        AddRuntimeEvent(
+            db,
+            "container.runtime.shell_spawned",
+            "shell-in-container",
+            "runtime-container-local",
+            sourceSystem: SecuritySourceSystems.FalcoLinuxSensor);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RunAsync();
+
+        Assert.Equal(1, result.CreatedAlerts);
+        Assert.Equal(1, result.CreatedIncidents);
+        Assert.Equal("RTE-001", (await db.SiemAlerts.SingleAsync()).RuleCode);
+    }
+
+    [Fact]
     public async Task RTE001_RepeatedRun_DoesNotDuplicateActiveAlert()
     {
         await using var db = CreateDbContext();
@@ -806,7 +825,8 @@ public class SiemCorrelationServiceTests
         string mappingKey,
         string containerId,
         bool correlate = true,
-        EventSeverity severity = EventSeverity.High)
+        EventSeverity severity = EventSeverity.High,
+        string sourceSystem = SecuritySourceSystems.FalcoRuntimeCollector)
     {
         dbContext.SecurityEvents.Add(new SecurityEventEntry
         {
@@ -814,7 +834,7 @@ public class SiemCorrelationServiceTests
             EventType = SecurityEventType.ExternalEvent,
             ExternalEventType = externalEventType,
             Severity = severity,
-            SourceSystem = "conshield.falco-runtime-collector",
+            SourceSystem = sourceSystem,
             SourceHost = "runtime-node",
             Description = "Falco-compatible runtime event.",
             AdditionalDataJson = System.Text.Json.JsonSerializer.Serialize(new

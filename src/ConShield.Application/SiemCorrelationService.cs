@@ -156,7 +156,8 @@ public class SiemCorrelationService : ISiemCorrelationService
 
         var recentRuntimeEvents = await _dbContext.SecurityEvents
             .Where(x => x.EventType == SecurityEventType.ExternalEvent
-                        && x.SourceSystem == "conshield.falco-runtime-collector"
+                        && (x.SourceSystem == SecuritySourceSystems.FalcoRuntimeCollector
+                            || x.SourceSystem == SecuritySourceSystems.FalcoLinuxSensor)
                         && (x.Severity == EventSeverity.High || x.Severity == EventSeverity.Critical)
                         && x.OccurredAtUtc >= now.AddMinutes(-10))
             .ToListAsync(cancellationToken);

@@ -1,0 +1,159 @@
+@using ConShield.Web.Infrastructure
+@using ConShield.Contracts.Enums
+@model ConShield.Web.ViewModels.RuntimeSensorHealthViewModel
+@{
+    ViewData["Title"] = "Runtime Sensor Health";
+}
+
+<div class="app-page-header">
+    <div>
+        <h2 class="mb-1">Runtime Sensor Health</h2>
+        <div class="text-muted small">Состояние runtime/Falco источников на основе уже ingested событий безопасности.</div>
+    </div>
+    <div class="app-actions">
+        <a asp-controller="Reports" asp-action="SecuritySummary" class="btn btn-outline-secondary">Сводка безопасности</a>
+        <a asp-controller="SecurityEvents" asp-action="Index" asp-route-SearchText="runtime" class="btn btn-outline-primary">Runtime события</a>
+    </div>
+</div>
+
+<div class="alert alert-info py-2">
+    Runtime Sensor Health is derived from ingested runtime/Falco events. Страница показывает только агрегаты,
+    ссылки и безопасные metadata; raw JSON, <code>AdditionalDataJson</code>, payload, API keys, env values и логи не отображаются.
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Runtime sources</div>
+                <div class="fs-5"><span class="app-badge badge-neutral">@Model.Summary.RuntimeSourcesCount</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Active sources (@Model.ActiveWindowLabel)</div>
+                <div class="fs-5"><span class="app-badge badge-neutral">@Model.Summary.ActiveSourcesCount</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Stale / NoData</div>
+                <div class="fs-5"><span class="app-badge badge-neutral">@Model.Summary.StaleOrNoDataSourcesCount</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Latest runtime event</div>
+                <div class="fs-6"><span class="app-badge badge-neutral">@(Model.Summary.LatestRuntimeEventUtc?.ToMoscowDisplay() ?? "—")</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-table-card">
+    <div class="app-table-scroll-wrap" data-table-scroll-sync>
+        <div class="app-table-scrollbar-top" aria-hidden="true">
+            <div class="app-table-scrollbar-inner"></div>
+        </div>
+        <div class="app-table-scroll">
+            <table class="table table-striped align-middle app-table app-table-wide">
+                <thead>
+                <tr>
+                    <th>SourceSystem</th>
+                    <th>DisplayName</th>
+                    <th>LastSeenUtc</th>
+                    <th>EventCount</th>
+                    <th>Latest event</th>
+                    <th>Latest severity</th>
+                    <th>RTE alerts</th>
+                    <th>Incidents</th>
+                    <th>Status</th>
+                    <th class="app-table-actions-col">Links</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var item in Model.Sources)
+                {
+                    <tr>
+                        <td>
+                            <code class="app-technical-code app-technical-code--truncate" title="@item.SourceSystem">@DisplayText.ShortTechnicalValue(item.SourceSystem)</code>
+                        </td>
+                        <td>@item.DisplayName</td>
+                        <td>@(item.LastSeenUtc?.ToMoscowDisplay() ?? "—")</td>
+                        <td><span class="app-badge badge-neutral">@item.EventCount</span></td>
+                        <td>
+                            @if (item.LatestEventId.HasValue)
+                            {
+                                <a asp-controller="SecurityEvents"
+                                   asp-action="Index"
+                                   asp-route-SearchText="@item.LatestEventId.Value"
+                                   class="app-id-pill app-id-nowrap">@item.LatestEventId.Value</a>
+                            }
+                            else
+                            {
+                                <span>—</span>
+                            }
+                            <span class="app-display-secondary">
+                                <code class="app-technical-code app-technical-code--truncate" title="@item.LatestEventType">@DisplayText.ShortTechnicalValue(item.LatestEventType)</code>
+                            </span>
+                        </td>
+                        <td>
+                            @if (item.LatestSeverity.HasValue)
+                            {
+                                <span class="app-status @DisplayText.SeverityClass(item.LatestSeverity.Value)">
+                                    <span class="app-status-dot" aria-hidden="true"></span>
+                                    <span>@DisplayText.Severity(item.LatestSeverity.Value)</span>
+                                </span>
+                            }
+                            else
+                            {
+                                <span>—</span>
+                            }
+                        </td>
+                        <td><span class="app-badge badge-neutral">@item.RelatedRteAlertCount</span></td>
+                        <td><span class="app-badge badge-neutral">@item.RelatedIncidentCount</span></td>
+                        <td>
+                            <span class="app-status @DisplayText.StatusClass(item.Status)">
+                                <span class="app-status-dot" aria-hidden="true"></span>
+                                <span>@DisplayText.Status(item.Status)</span>
+                            </span>
+                        </td>
+                        <td class="app-table-actions-col">
+                            <div class="app-action-group">
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-controller="SecurityEvents"
+                                   asp-action="Index"
+                                   asp-route-SourceSystem="@item.SourceSystem">SecurityEvents</a>
+                                <a class="btn btn-sm btn-outline-info"
+                                   asp-controller="Siem"
+                                   asp-action="Index"
+                                   asp-route-RuleCode="RTE-001"
+                                   asp-route-SearchText="runtime">RTE-001</a>
+                                @if (item.LatestEventId.HasValue)
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       asp-controller="Incidents"
+                                       asp-action="Index"
+                                       asp-route-SearchText="@item.LatestEventId.Value">Incidents</a>
+                                }
+                                else
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       asp-controller="Incidents"
+                                       asp-action="Index">Incidents</a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

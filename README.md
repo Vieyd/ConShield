@@ -410,6 +410,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseE
 
 The evidence exporter writes only safe aggregate and metadata fields, including a Runtime Sensor Evidence section when Falco-compatible runtime events are present. It excludes sensitive local configuration, raw event bodies, local logs, and generated reports from source control; keep the generated Markdown under `artifacts/local/` or another ignored path.
 
+Runtime Sensor Health is available at `/RuntimeSensors`. It derives source health from existing security events, `RTE-001` alerts, and incidents, showing SourceSystem, last seen time, event count, latest event metadata, related alert/incident counts, and `Active` / `Stale` / `NoData` status. Local validation can use `Replay-ConShieldFalcoRuntimeEvent.ps1`; real Fedora/Falco is optional for this check.
+
 Operator workflow demo:
 
 1. Run local apps.

@@ -92,6 +92,7 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddScoped<IUserExceptionService, UserExceptionService>();
 builder.Services.AddScoped<ISiemCorrelationService, SiemCorrelationService>();
+builder.Services.AddScoped<IRuntimeSensorHealthService, RuntimeSensorHealthService>();
 builder.Services.AddScoped<IExternalSecurityEventIngestionService, ExternalSecurityEventIngestionService>();
 builder.Services.AddScoped<ISensorIdentityService, SensorIdentityService>();
 builder.Services.AddScoped<ISensorCredentialLifecycleService, SensorCredentialLifecycleService>();
