@@ -61,6 +61,7 @@ ConShield.RuntimeDetection Falco-compatible parser, mapping, normalization, and 
 ConShield.RuntimeCollector CLI for stdin/file/follow runtime alert ingestion
 ConShield.SensorProvisioning Local operator-only enrolled sensor credential provisioning
 tools/ConShield.DemoScenario Local-only synthetic demo scenario runner
+scripts/Run-ConShieldDefenseScenario.ps1 Safe local end-to-end defense scenario evidence runner
 infra/                     Future infrastructure for message/event pipeline
 docs/                      Architecture, roadmap, security notes
 ```
@@ -344,7 +345,7 @@ dotnet run --project tools/ConShield.DemoScenario -- --scenario healthy --dry-ru
 dotnet run --project tools/ConShield.DemoScenario -- --scenario full-demo --yes
 ```
 
-Supported scenarios are `healthy`, `full-demo`, `lifecycle-alerts`, `runtime-incident`, and `outbox-backlog`. The lifecycle scenario can trigger `LIFE-001` and `LIFE-002`; the runtime scenario can trigger `RTE-001` using synthetic Falco-compatible data only.
+Supported scenarios are `healthy`, `defense-demo`, `full-demo`, `lifecycle-alerts`, `runtime-incident`, and `outbox-backlog`. The `defense-demo` scenario demonstrates `IMG-001`, `POL-001`, `RTE-001`, `LIFE-001`, and `LIFE-002` without real Fedora sensor operations; the runtime scenario uses synthetic Falco-compatible data only.
 
 Reset only marked demo records:
 
@@ -376,6 +377,26 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps
 ```
 
 Do not run `-Apply` against a production database. After seeding, inspect `/Operations/Health`, `/SecurityEvents`, `/Sensors`, `/Reports/SecuritySummary`, `/Siem`, and `/Incidents`.
+
+### Local Defense Scenario Runner
+
+`scripts/Run-ConShieldDefenseScenario.ps1` is the one-command local defense walkthrough for demo/protection review. It checks the repo, Web routes, PostgreSQL availability, RabbitMQ/EventConsumer/Mongo projection signals where available, then uses marked synthetic demo data to demonstrate image scan (`IMG-001`), policy gate (`POL-001`), runtime (`RTE-001`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM correlation, alerts/incidents, outbox/inbox evidence, and the Security Summary report. The default scenario does not require a real Fedora VM and does not rotate or revoke a real sensor.
+
+Prepare local demo users and start apps first:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Set-LocalDemoUsers.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1
+```
+
+Optional safe Markdown evidence can be written outside committed files:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1 -OutputMarkdownPath .\artifacts\local\defense-scenario.md
+```
+
+Result meanings: `PASS` means all required demo evidence was demonstrated, `WARN` means the core scenario ran but an optional local service was unavailable or degraded, and `FAIL` means the scenario could not prove required evidence. The runner prints only counts, rule codes, statuses, timestamps, and UI routes; it intentionally excludes secrets, raw event JSON, `AdditionalDataJson`, connection strings, API keys, tokens, cookies, credentials, and verifier values. Do not commit generated evidence, logs, screenshots, `.env` files, or `appsettings.Development.json`.
 
 ## Roadmap
 

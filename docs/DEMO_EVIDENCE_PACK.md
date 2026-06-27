@@ -20,7 +20,7 @@ For a compact current-state handoff, see [CONSHIELD_FINAL_HANDOFF_SNAPSHOT.md](C
 10. Правила SIEM and alerts: rules include image, policy, runtime, and lifecycle detections such as `LIFE-001` and `LIFE-002`.
 11. Состояние системы: `/Operations/Health` provides an AdminIB-only aggregate health view.
 12. Сводка безопасности / экспорт: `/Reports/SecuritySummary` and the Markdown export provide a safe read-only handoff.
-13. Demo scenario runner: `tools/ConShield.DemoScenario` seeds local-only synthetic evidence for safe walkthroughs.
+13. Demo scenario runner: `scripts/Run-ConShieldDefenseScenario.ps1` orchestrates local-only synthetic evidence for safe walkthroughs; `tools/ConShield.DemoScenario` remains the lower-level seeding CLI.
 
 ## Mapping to diploma goals
 
@@ -119,11 +119,30 @@ Run policy gate without submitting:
 dotnet run --project src/ConShield.ImageScanner -- gate --image alpine:3.20 --policy config/policies/container-baseline-v1.json --no-submit
 ```
 
-Preview and seed synthetic demo data:
+Run the full local defense scenario:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Set-LocalDemoUsers.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1
+```
+
+The expected result is `PASS` when Web, local data access, synthetic image/policy/runtime/lifecycle evidence, SIEM correlation, alerts/incidents, and reports are demonstrated. `WARN` is acceptable for a local defense if an optional RabbitMQ/EventConsumer/Mongo projection check is unavailable while the synthetic evidence still exists. `FAIL` means the scenario could not prove the required evidence and should be fixed before the demo.
+
+Optional Markdown evidence:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1 -OutputMarkdownPath .\artifacts\local\defense-scenario.md
+```
+
+The default scenario uses marked synthetic data: no real Fedora VM is required, no real sensor is rotated/revoked, and no secrets, raw JSON, `AdditionalDataJson`, connection strings, API keys, tokens, cookies, credentials, or verifier values are printed. Do not commit generated evidence, logs, screenshots, `.env` files, local Markdown outputs, or `appsettings.Development.json`.
+
+Preview and seed synthetic demo data through the lower-level CLI:
 
 ```powershell
 $env:CONSHIELD_DEMO_CONNECTION_STRING = "Host=127.0.0.1;Port=5432;Database=conshield;Username=conshield;Password=<local-dev-password>"
 dotnet run --project tools/ConShield.DemoScenario -- --scenario healthy --dry-run
+dotnet run --project tools/ConShield.DemoScenario -- --scenario defense-demo --yes
 dotnet run --project tools/ConShield.DemoScenario -- --scenario full-demo --yes
 ```
 
@@ -186,6 +205,7 @@ Optional Fedora status evidence should be limited to service state and file perm
 - [ ] Security Events lifecycle filters are visible.
 - [ ] Сенсоры shows sensor status.
 - [ ] Lifecycle audit events are filterable.
+- [ ] `Run-ConShieldDefenseScenario.ps1` returns PASS or an explained WARN.
 - [ ] `LIFE-001` and `LIFE-002` rules are documented.
 - [ ] Markdown report export contains no raw JSON/secrets.
 - [ ] Test suite passes.
