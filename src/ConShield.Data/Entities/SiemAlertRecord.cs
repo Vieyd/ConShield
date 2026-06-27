@@ -14,4 +14,6 @@ public class SiemAlertRecord
     public string Description { get; set; } = string.Empty;
     public string? SourceEventIdsJson { get; set; }
     public long? IncidentId { get; set; }
+    public DateTime? AcknowledgedAtUtc { get; set; }
+    public string? AcknowledgedBy { get; set; }
 }

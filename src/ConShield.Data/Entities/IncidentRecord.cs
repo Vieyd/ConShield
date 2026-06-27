@@ -11,4 +11,6 @@ public class IncidentRecord
     public string Status { get; set; } = "New";
     public long? SourceEventId { get; set; }
     public string? Notes { get; set; }
+    public DateTime? ClosedAtUtc { get; set; }
+    public string? Conclusion { get; set; }
 }

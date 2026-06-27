@@ -68,6 +68,10 @@ public class IncidentsController : Controller
         ViewBag.SourceEvent = item.SourceEventId.HasValue
             ? await _dbContext.SecurityEvents.FirstOrDefaultAsync(x => x.Id == item.SourceEventId.Value, cancellationToken)
             : null;
+        ViewBag.RelatedAlert = await _dbContext.SiemAlerts
+            .Where(x => x.IncidentId == item.Id)
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
 
         return View(item);
     }
@@ -203,7 +207,15 @@ public class IncidentsController : Controller
             return NotFound();
         }
 
-        entity.Status = NormalizeStatus(status);
+        var normalizedStatus = NormalizeStatus(status);
+        if (entity.Status == IncidentStatuses.Closed)
+        {
+            return RedirectToAction(nameof(Details), new { id = entity.Id });
+        }
+
+        entity.Status = normalizedStatus == IncidentStatuses.Closed
+            ? IncidentStatuses.InProgress
+            : normalizedStatus;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         await WriteIncidentAuditAsync(
@@ -213,7 +225,45 @@ public class IncidentsController : Controller
             new { entity.Id, entity.Status, entity.SourceEventId },
             cancellationToken);
 
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Details), new { id = entity.Id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = AppRoles.AdminIB)]
+    public async Task<IActionResult> Close(long id, string? conclusion, CancellationToken cancellationToken)
+    {
+        var entity = await _dbContext.Incidents.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (entity is null)
+        {
+            return NotFound();
+        }
+
+        if (entity.Status == IncidentStatuses.Closed)
+        {
+            return RedirectToAction(nameof(Details), new { id = entity.Id });
+        }
+
+        var normalizedConclusion = NormalizeConclusion(conclusion);
+        if (string.IsNullOrWhiteSpace(normalizedConclusion))
+        {
+            TempData["IncidentError"] = "Для закрытия инцидента укажите непустой вывод оператора.";
+            return RedirectToAction(nameof(Details), new { id = entity.Id });
+        }
+
+        entity.Status = IncidentStatuses.Closed;
+        entity.ClosedAtUtc = DateTime.UtcNow;
+        entity.Conclusion = normalizedConclusion;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await WriteIncidentAuditAsync(
+            SecurityEventType.IncidentUpdated,
+            entity.Severity,
+            $"Закрыт инцидент #{entity.Id}: {entity.Name}.",
+            new { entity.Id, entity.Status, entity.SourceEventId, conclusionProvided = true },
+            cancellationToken);
+
+        return RedirectToAction(nameof(Details), new { id = entity.Id });
     }
 
     private static string NormalizeStatus(string? status)
@@ -224,6 +274,12 @@ public class IncidentsController : Controller
             IncidentStatuses.Closed => IncidentStatuses.Closed,
             _ => IncidentStatuses.New
         };
+    }
+
+    private static string NormalizeConclusion(string? conclusion)
+    {
+        var trimmed = (conclusion ?? string.Empty).Trim();
+        return trimmed.Length <= 500 ? trimmed : trimmed[..500];
     }
 
     private async Task WriteIncidentAuditAsync(SecurityEventType eventType, EventSeverity severity, string description, object additionalData, CancellationToken cancellationToken)

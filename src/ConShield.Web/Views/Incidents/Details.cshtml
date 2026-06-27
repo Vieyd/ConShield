@@ -4,11 +4,24 @@
 @{
     ViewData["Title"] = "Карточка инцидента";
     var sourceEvent = ViewBag.SourceEvent as ConShield.Data.Entities.SecurityEventEntry;
+    var relatedAlert = ViewBag.RelatedAlert as ConShield.Data.Entities.SiemAlertRecord;
 }
 
 <div class="app-page-header">
     <h2 class="mb-0">Карточка инцидента</h2>
+    <div class="app-actions">
+        @if (relatedAlert is not null)
+        {
+            <a asp-controller="Siem" asp-action="Details" asp-route-id="@relatedAlert.Id" class="btn btn-outline-primary">Открыть SIEM alert</a>
+        }
+        <a asp-controller="Reports" asp-action="SecuritySummary" class="btn btn-outline-secondary">Сводка безопасности</a>
+    </div>
 </div>
+
+@if (TempData["IncidentError"] is string incidentError)
+{
+    <div class="alert alert-danger py-2">@incidentError</div>
+}
 
 <dl class="row">
     <dt class="col-sm-3">ID</dt>
@@ -24,7 +37,12 @@
     <dd class="col-sm-9">@DisplayText.Severity(Model.Severity)</dd>
 
     <dt class="col-sm-3">Статус</dt>
-    <dd class="col-sm-9">@DisplayText.Status(Model.Status)</dd>
+    <dd class="col-sm-9">
+        <span class="app-status @DisplayText.StatusClass(Model.Status)">
+            <span class="app-status-dot" aria-hidden="true"></span>
+            <span>@DisplayText.Status(Model.Status)</span>
+        </span>
+    </dd>
 
     <dt class="col-sm-3">ID события-источника</dt>
     <dd class="col-sm-9">
@@ -44,7 +62,37 @@
 
     <dt class="col-sm-3">Примечание</dt>
     <dd class="col-sm-9">@DisplayText.IncidentNotes(Model.Notes)</dd>
+
+    @if (Model.Status == IncidentStatuses.Closed)
+    {
+        <dt class="col-sm-3">Закрыт</dt>
+        <dd class="col-sm-9">@(Model.ClosedAtUtc?.ToMoscowDisplay() ?? "—")</dd>
+
+        <dt class="col-sm-3">Вывод оператора</dt>
+        <dd class="col-sm-9">@DisplayText.IncidentNotes(Model.Conclusion)</dd>
+    }
 </dl>
+
+@if (relatedAlert is not null)
+{
+    <div class="app-card mb-3">
+        <div class="card-header app-card-header">
+            <h3 class="app-section-title mb-0">Связанное SIEM-оповещение</h3>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">ID</dt>
+                <dd class="col-sm-9">
+                    <a asp-controller="Siem" asp-action="Details" asp-route-id="@relatedAlert.Id" class="app-id-pill app-id-nowrap">@relatedAlert.Id</a>
+                </dd>
+                <dt class="col-sm-3">Правило</dt>
+                <dd class="col-sm-9"><code class="id-code">@relatedAlert.RuleCode</code></dd>
+                <dt class="col-sm-3">Статус</dt>
+                <dd class="col-sm-9">@DisplayText.Status(relatedAlert.Status)</dd>
+            </dl>
+        </div>
+    </div>
+}
 
 @if (sourceEvent is not null)
 {
@@ -81,20 +129,36 @@
 
 @if (User.IsInRole(AppRoles.AdminIB))
 {
-    <div class="mb-3 d-flex gap-2 flex-wrap">
-        <form asp-action="ChangeStatus" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="id" value="@Model.Id" />
-            <input type="hidden" name="status" value="@IncidentStatuses.InProgress" />
-            <button type="submit" class="btn btn-outline-warning">Перевести в работу</button>
-        </form>
-        <form asp-action="ChangeStatus" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="id" value="@Model.Id" />
-            <input type="hidden" name="status" value="@IncidentStatuses.Closed" />
-            <button type="submit" class="btn btn-outline-success">Закрыть</button>
-        </form>
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">Редактировать</a>
+    <div class="app-card mb-3">
+        <div class="card-body">
+            <div class="fw-semibold mb-2">Операторский workflow</div>
+            @if (Model.Status != IncidentStatuses.Closed)
+            {
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    @if (Model.Status != IncidentStatuses.InProgress)
+                    {
+                        <form asp-action="ChangeStatus" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <input type="hidden" name="status" value="@IncidentStatuses.InProgress" />
+                            <button type="submit" class="btn btn-outline-warning">Взять в работу</button>
+                        </form>
+                    }
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">Редактировать</a>
+                </div>
+                <form asp-action="Close" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <label for="operatorConclusion" class="form-label">Вывод оператора для закрытия</label>
+                    <textarea id="operatorConclusion" name="conclusion" class="form-control mb-2" rows="3" maxlength="500" required></textarea>
+                    <button type="submit" class="btn btn-outline-success">Закрыть инцидент</button>
+                </form>
+            }
+            else
+            {
+                <div class="text-muted">Инцидент закрыт; недопустимые действия скрыты.</div>
+            }
+        </div>
     </div>
 }
 

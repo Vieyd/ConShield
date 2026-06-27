@@ -204,6 +204,8 @@ public class ApplicationDbContext : DbContext
             entity.Property(x => x.Name).HasMaxLength(256).IsRequired();
             entity.Property(x => x.Status).HasMaxLength(64).IsRequired();
             entity.Property(x => x.Notes).HasMaxLength(2000);
+            entity.Property(x => x.ClosedAtUtc).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.Conclusion).HasMaxLength(500);
         });
 
         modelBuilder.Entity<SiemAlertRecord>(entity =>
@@ -216,6 +218,8 @@ public class ApplicationDbContext : DbContext
             entity.Property(x => x.Status).HasMaxLength(64).IsRequired();
             entity.Property(x => x.Description).HasMaxLength(2000).IsRequired();
             entity.Property(x => x.SourceEventIdsJson).HasMaxLength(2000);
+            entity.Property(x => x.AcknowledgedAtUtc).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.AcknowledgedBy).HasMaxLength(128);
         });
     }
 }

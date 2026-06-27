@@ -291,6 +291,9 @@ $tables = @{
     Outbox = @()
     Inbox = @()
     Rules = @()
+    OperatorIncidentCounts = @()
+    OperatorAcknowledgedAlerts = @()
+    OperatorClosedIncidents = @()
 }
 
 if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
@@ -314,6 +317,9 @@ if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
         $tables.Outbox = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Status", count(*)::int as "Count" from "SecurityEventOutbox" group by "Status" order by "Status";')
         $tables.Inbox = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select count(*)::int as "Count", max("ProcessedAtUtc") as "LastProcessedAtUtc" from "SecurityEventInboxReceipts";')
         $tables.Rules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count" from "SiemAlerts" group by "RuleCode" order by "RuleCode";')
+        $tables.OperatorIncidentCounts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Status", count(*)::int as "Count" from "Incidents" group by "Status" order by "Status";')
+        $tables.OperatorAcknowledgedAlerts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "RuleCode", "Status", "AcknowledgedAtUtc", coalesce("AcknowledgedBy", '''') as "AcknowledgedBy", coalesce("IncidentId", 0) as "IncidentId" from "SiemAlerts" where "Status" = ''Acknowledged'' or "AcknowledgedAtUtc" is not null order by coalesce("AcknowledgedAtUtc", "CreatedAtUtc") desc limit 10;')
+        $tables.OperatorClosedIncidents = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "Status", "ClosedAtUtc", coalesce("SourceEventId", 0) as "SourceEventId", "Conclusion" from "Incidents" where "Status" = ''Closed'' order by coalesce("ClosedAtUtc", "CreatedAtUtc") desc limit 10;')
     }
     catch {
         $queryError = ConvertTo-SafeCell -Value $_.Exception.Message -MaxLength 180
@@ -421,6 +427,30 @@ $lines.Add('') | Out-Null
 $lines.Add('## Correlation rules demonstrated') | Out-Null
 $lines.Add('') | Out-Null
 Add-MarkdownTable -Lines $lines -Headers @('RuleCode', 'Count') -Rows $tables.Rules
+$lines.Add('') | Out-Null
+
+$lines.Add('## Operator Workflow') | Out-Null
+$lines.Add('') | Out-Null
+$lines.Add('### Incident status counts') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('Status', 'Count') -Rows $tables.OperatorIncidentCounts
+$lines.Add('') | Out-Null
+$lines.Add('### Recently acknowledged or reviewed SIEM alerts') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('Id', 'RuleCode', 'Status', 'AcknowledgedAtUtc', 'AcknowledgedBy', 'IncidentId') -Rows $tables.OperatorAcknowledgedAlerts
+$lines.Add('') | Out-Null
+$lines.Add('### Recently closed incidents') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('Id', 'Status', 'ClosedAtUtc', 'SourceEventId', 'Conclusion') -Rows $tables.OperatorClosedIncidents
+$lines.Add('') | Out-Null
+$lines.Add('### Operator workflow checklist') | Out-Null
+$lines.Add('') | Out-Null
+$lines.Add('- [ ] Open Security Summary and follow the SIEM alerts link.') | Out-Null
+$lines.Add('- [ ] Open a SIEM alert and confirm the linked incident and source Security Event metadata.') | Out-Null
+$lines.Add('- [ ] Acknowledge or review the SIEM alert.') | Out-Null
+$lines.Add('- [ ] Move the linked incident to In Progress.') | Out-Null
+$lines.Add('- [ ] Close the incident with a non-empty operator conclusion.') | Out-Null
+$lines.Add('- [ ] Re-run this evidence export and confirm the Operator Workflow section reflects the actions.') | Out-Null
 $lines.Add('') | Out-Null
 
 $lines.Add('## Demo navigation checklist') | Out-Null

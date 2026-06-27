@@ -29,6 +29,8 @@
        asp-controller="Reports" asp-action="SecuritySummary" asp-route-range="7d">7d</a>
     <a class="btn btn-sm btn-outline-secondary"
        asp-controller="Reports" asp-action="SecuritySummaryMarkdown" asp-route-range="@Model.RangeKey">Скачать Markdown</a>
+    <a class="btn btn-sm btn-outline-primary"
+       asp-controller="Siem" asp-action="Index">Открыть SIEM alerts</a>
 </div>
 
 <div class="text-muted small mb-4">

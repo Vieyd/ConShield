@@ -157,6 +157,34 @@ The runner checks Web, PostgreSQL, RabbitMQ/EventConsumer/Mongo projection avail
 
 After the runner finishes, open `/Operations/Health`, `/SecurityEvents`, `/Sensors`, `/SiemAlerts`, `/Incidents`, and `/Reports/SecuritySummary`. The runner and report output intentionally avoid raw JSON, `AdditionalDataJson`, connection strings, API keys, tokens, cookies, credentials, verifier values, and Fedora protected env contents.
 
+## Operator workflow demo
+
+Use this small walkthrough for a defense-friendly analyst path without exposing raw event JSON or local secrets:
+
+1. Run local apps.
+2. Run the defense scenario.
+3. Open Security Summary.
+4. Open a SIEM alert.
+5. Acknowledge/review the alert.
+6. Open the linked incident.
+7. Move the incident to In Progress.
+8. Open the linked source Security Event.
+9. Close the incident with a non-empty conclusion.
+10. Export defense evidence and confirm the Operator Workflow section.
+
+Safe commands:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseEvidence.ps1 `
+  -OutputMarkdownPath .\artifacts\local\defense-evidence.md
+```
+
+The close action requires a non-empty operator conclusion. Keep generated Markdown under `artifacts/local/` and do not commit generated evidence, screenshots, logs, `.env` files, `appsettings.Development.json`, API keys, passwords, tokens, or connection strings.
+
 Start with wrapper dry-run mode:
 
 ```powershell
