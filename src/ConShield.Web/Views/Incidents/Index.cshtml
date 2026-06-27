@@ -125,7 +125,7 @@
                             @if (User.IsInRole(AppRoles.AdminIB))
                             {
                                 <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Изменить</a>
-                                if (item.Status != IncidentStatuses.InProgress)
+                                if (item.Status != IncidentStatuses.InProgress && item.Status != IncidentStatuses.Closed)
                                 {
                                     <form asp-action="ChangeStatus" method="post">
                                         @Html.AntiForgeryToken()
@@ -136,12 +136,7 @@
                                 }
                                 if (item.Status != IncidentStatuses.Closed)
                                 {
-                                    <form asp-action="ChangeStatus" method="post">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@item.Id" />
-                                        <input type="hidden" name="status" value="@IncidentStatuses.Closed" />
-                                        <button type="submit" class="btn btn-sm btn-outline-success">Закрыть</button>
-                                    </form>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-success">Закрыть с выводом</a>
                                 }
                             }
                         </div>

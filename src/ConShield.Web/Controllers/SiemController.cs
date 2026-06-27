@@ -120,6 +120,11 @@ public class SiemController : Controller
             AlertStatuses.Closed => AlertStatuses.Closed,
             _ => AlertStatuses.New
         };
+        if (alert.Status == AlertStatuses.Acknowledged)
+        {
+            alert.AcknowledgedAtUtc ??= DateTime.UtcNow;
+            alert.AcknowledgedBy ??= User.Identity?.Name;
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -133,7 +138,7 @@ public class SiemController : Controller
             AdditionalData = new { alert.Id, alert.RuleCode, alert.Status }
         });
 
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Details), new { id = alert.Id });
     }
 
 

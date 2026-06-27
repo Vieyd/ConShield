@@ -41,7 +41,28 @@
                     <dd class="col-sm-7">@DisplayText.Severity(Model.Alert.Severity)</dd>
 
                     <dt class="col-sm-5">Статус</dt>
-                    <dd class="col-sm-7">@DisplayText.Status(Model.Alert.Status)</dd>
+                    <dd class="col-sm-7">
+                        <span class="app-status @DisplayText.StatusClass(Model.Alert.Status)">
+                            <span class="app-status-dot" aria-hidden="true"></span>
+                            <span>@DisplayText.Status(Model.Alert.Status)</span>
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-5">Подтверждено</dt>
+                    <dd class="col-sm-7">
+                        @if (Model.Alert.AcknowledgedAtUtc.HasValue)
+                        {
+                            <span>@Model.Alert.AcknowledgedAtUtc.Value.ToMoscowDisplay()</span>
+                            @if (!string.IsNullOrWhiteSpace(Model.Alert.AcknowledgedBy))
+                            {
+                                <span class="text-muted small"> · @Model.Alert.AcknowledgedBy</span>
+                            }
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+                    </dd>
 
                     <dt class="col-sm-5">ID инцидента</dt>
                     <dd class="col-sm-7">
@@ -65,19 +86,29 @@
         {
             <div class="app-card mt-3">
                 <div class="card-body">
-                    <div class="fw-semibold mb-2">Изменить статус</div>
-                    <form asp-action="ChangeStatus" method="post" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@Model.Alert.Id" />
-                        <input type="hidden" name="status" value="@AlertStatuses.Acknowledged" />
-                        <button class="btn btn-outline-primary" type="submit">Подтвердить</button>
-                    </form>
-                    <form asp-action="ChangeStatus" method="post" class="d-inline ms-2">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@Model.Alert.Id" />
-                        <input type="hidden" name="status" value="@AlertStatuses.Closed" />
-                        <button class="btn btn-outline-secondary" type="submit">Закрыть</button>
-                    </form>
+                    <div class="fw-semibold mb-2">Операторская обработка</div>
+                    @if (Model.Alert.Status != AlertStatuses.Closed)
+                    {
+                        @if (Model.Alert.Status != AlertStatuses.Acknowledged)
+                        {
+                            <form asp-action="ChangeStatus" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Alert.Id" />
+                                <input type="hidden" name="status" value="@AlertStatuses.Acknowledged" />
+                                <button class="btn btn-outline-primary" type="submit">Подтвердить / reviewed</button>
+                            </form>
+                        }
+                        <form asp-action="ChangeStatus" method="post" class="d-inline ms-2">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.Alert.Id" />
+                            <input type="hidden" name="status" value="@AlertStatuses.Closed" />
+                            <button class="btn btn-outline-secondary" type="submit">Закрыть alert</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="text-muted">Alert уже закрыт; недопустимые действия скрыты.</div>
+                    }
                 </div>
             </div>
         }

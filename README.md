@@ -406,6 +406,25 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseE
 
 The evidence exporter writes only safe aggregate and metadata fields. It excludes sensitive local configuration, raw event bodies, local logs, and generated reports from source control; keep the generated Markdown under `artifacts/local/` or another ignored path.
 
+Operator workflow demo:
+
+1. Run local apps.
+2. Run the defense scenario.
+3. Open Security Summary.
+4. Open a SIEM alert.
+5. Acknowledge/review the alert.
+6. Open the linked incident.
+7. Move the incident to In Progress.
+8. Open the linked source Security Event.
+9. Close the incident with a non-empty conclusion.
+10. Export defense evidence and confirm the Operator Workflow section.
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseEvidence.ps1 -OutputMarkdownPath .\artifacts\local\defense-evidence.md
+```
+
 ## Roadmap
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) and the product-level [architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md).
