@@ -56,14 +56,14 @@ public static class RuntimeCollectorApp
         {
             await foreach (var line in BoundedRuntimeLineReader.ReadAsync(options, stdin, cancellationToken))
             {
-                var parsedLine = parser.Parse(line, DateTime.UtcNow, TimeSpan.FromMinutes(5), TimeSpan.FromDays(30));
+                var parsedLine = parser.Parse(line, DateTime.UtcNow, TimeSpan.FromMinutes(5), TimeSpan.FromDays(options.MaxEventAgeDays));
                 if (!parsedLine.Success)
                 {
                     counters.Invalid++;
                     continue;
                 }
                 counters.Parsed++;
-                var runtimeEvent = normalizer.Normalize(parsedLine.Alert!, mapping.Policy!);
+                var runtimeEvent = normalizer.Normalize(parsedLine.Alert!, mapping.Policy!, options.SourceSystem);
                 counters.Mapped += runtimeEvent.AdditionalData.Correlate ? 1 : 0;
                 counters.Unmapped += runtimeEvent.AdditionalData.Correlate ? 0 : 1;
                 if (options.NoSubmit)

@@ -178,6 +178,25 @@ public class FalcoRuntimeDetectionTests
         Assert.Equal(EventSeverity.Info, normalized.Severity);
     }
 
+    [Theory]
+    [InlineData("terminal-shell-container.json", "shell-in-container", "container.runtime.shell_spawned", EventSeverity.High)]
+    [InlineData("write-below-etc-container.json", "etc-write", "container.runtime.etc_write", EventSeverity.High)]
+    public void FalcoFixtures_MapToRuntimeEventsForRte001(string fixtureName, string mappingKey, string eventType, EventSeverity minimumSeverity)
+    {
+        var path = Path.Combine(FindRepoRoot(), "tests", "TestData", "Falco", fixtureName);
+        var json = File.ReadAllText(path);
+        var alert = new FalcoAlertParser().Parse(Encoding.UTF8.GetBytes(json), Now, TimeSpan.FromMinutes(5), TimeSpan.FromDays(3650)).Alert!;
+
+        var normalized = new RuntimeEventNormalizer().Normalize(alert, BaselinePolicy());
+
+        Assert.Equal(RuntimeDetectionConstants.SourceSystem, normalized.SourceSystem);
+        Assert.Equal(eventType, normalized.EventType);
+        Assert.Equal(mappingKey, normalized.AdditionalData.MappingKey);
+        Assert.True(normalized.AdditionalData.Correlate);
+        Assert.True(normalized.Severity >= minimumSeverity);
+        Assert.DoesNotContain("AdditionalDataJson", JsonSerializer.Serialize(normalized.AdditionalData), StringComparison.OrdinalIgnoreCase);
+    }
+
     private static readonly DateTime Now = new(2026, 06, 18, 10, 0, 0, DateTimeKind.Utc);
 
     private static string ValidAlert() => """

@@ -11,7 +11,9 @@ public static class CommandLineParser
         "max-line-bytes",
         "read-timeout-seconds",
         "submit-timeout-seconds",
-        "max-retries"
+        "max-retries",
+        "max-event-age-days",
+        "source-system"
     };
 
     private static readonly HashSet<string> FlagOptions = new(StringComparer.OrdinalIgnoreCase)
@@ -58,6 +60,11 @@ public static class CommandLineParser
         if (string.IsNullOrWhiteSpace(mapping))
             return ParseResult.Invalid("--mapping is required.");
         var noSubmit = values.ContainsKey("no-submit");
+        var sourceSystem = Get(values, "source-system") ?? ConShield.RuntimeDetection.RuntimeDetectionConstants.SourceSystem;
+        sourceSystem = sourceSystem.Trim();
+        if (sourceSystem.Length is < 1 or > 128 || sourceSystem.Any(char.IsControl))
+            return ParseResult.Invalid("--source-system must be a non-empty safe value up to 128 characters.");
+
         var endpoint = Get(values, "endpoint")
             ?? Environment.GetEnvironmentVariable("CONSHIELD_ENDPOINT")
             ?? Environment.GetEnvironmentVariable("CONSHIELD_BASE_URL");
@@ -109,7 +116,9 @@ public static class CommandLineParser
             MaxLineBytes = ReadInt(values, "max-line-bytes", 4096, 1048576, 262144),
             ReadTimeoutSeconds = ReadInt(values, "read-timeout-seconds", 1, 3600, 30),
             SubmitTimeoutSeconds = ReadInt(values, "submit-timeout-seconds", 1, 300, 30),
-            MaxRetries = ReadInt(values, "max-retries", 1, 10, 3)
+            MaxRetries = ReadInt(values, "max-retries", 1, 10, 3),
+            MaxEventAgeDays = ReadInt(values, "max-event-age-days", 1, 3650, 30),
+            SourceSystem = sourceSystem
         });
     }
 

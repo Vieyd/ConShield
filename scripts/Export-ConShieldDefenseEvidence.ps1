@@ -294,6 +294,8 @@ $tables = @{
     OperatorIncidentCounts = @()
     OperatorAcknowledgedAlerts = @()
     OperatorClosedIncidents = @()
+    RuntimeSensorSummary = @()
+    RuntimeSensorRules = @()
 }
 
 if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
@@ -320,6 +322,8 @@ if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
         $tables.OperatorIncidentCounts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Status", count(*)::int as "Count" from "Incidents" group by "Status" order by "Status";')
         $tables.OperatorAcknowledgedAlerts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "RuleCode", "Status", "AcknowledgedAtUtc", coalesce("AcknowledgedBy", '''') as "AcknowledgedBy", coalesce("IncidentId", 0) as "IncidentId" from "SiemAlerts" where "Status" = ''Acknowledged'' or "AcknowledgedAtUtc" is not null order by coalesce("AcknowledgedAtUtc", "CreatedAtUtc") desc limit 10;')
         $tables.OperatorClosedIncidents = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "Status", "ClosedAtUtc", coalesce("SourceEventId", 0) as "SourceEventId", "Conclusion" from "Incidents" where "Status" = ''Closed'' order by coalesce("ClosedAtUtc", "CreatedAtUtc") desc limit 10;')
+        $tables.RuntimeSensorSummary = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", count(*)::int as "Count", max("OccurredAtUtc") as "LatestOccurredAtUtc" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.falco-runtime-collector'' or coalesce("ExternalEventType", '''') like ''container.runtime.%'' group by coalesce("SourceSystem", ''''), coalesce("ExternalEventType", '''') order by max("OccurredAtUtc") desc limit 10;')
+        $tables.RuntimeSensorRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select case when position(''rule='' in "Description") > 0 then split_part(split_part("Description", ''rule='', 2), '','', 1) else ''-'' end as "FalcoRule", count(*)::int as "Count", max("OccurredAtUtc") as "LatestOccurredAtUtc" from "SecurityEvents" where (coalesce("SourceSystem", '''') = ''conshield.falco-runtime-collector'' or coalesce("ExternalEventType", '''') like ''container.runtime.%'') group by case when position(''rule='' in "Description") > 0 then split_part(split_part("Description", ''rule='', 2), '','', 1) else ''-'' end order by max("OccurredAtUtc") desc limit 10;')
     }
     catch {
         $queryError = ConvertTo-SafeCell -Value $_.Exception.Message -MaxLength 180
@@ -411,6 +415,25 @@ $lines.Add('') | Out-Null
 $lines.Add('## Security events') | Out-Null
 $lines.Add('') | Out-Null
 Add-MarkdownTable -Lines $lines -Headers @('Id', 'OccurredAtUtc', 'EventType', 'Severity', 'SourceSystem', 'ExternalEventType', 'Description') -Rows $tables.SecurityEvents
+$lines.Add('') | Out-Null
+
+$lines.Add('## Runtime Sensor Evidence') | Out-Null
+$lines.Add('') | Out-Null
+if (@($tables.RuntimeSensorSummary).Count -eq 0) {
+    $lines.Add('No Falco-compatible runtime events were found in the current evidence window.') | Out-Null
+}
+else {
+    $lines.Add('### Runtime event summary') | Out-Null
+    $lines.Add('') | Out-Null
+    Add-MarkdownTable -Lines $lines -Headers @('SourceSystem', 'ExternalEventType', 'Count', 'LatestOccurredAtUtc') -Rows $tables.RuntimeSensorSummary
+    $lines.Add('') | Out-Null
+    $lines.Add('### Latest Falco-compatible rule names') | Out-Null
+    $lines.Add('') | Out-Null
+    Add-MarkdownTable -Lines $lines -Headers @('FalcoRule', 'Count', 'LatestOccurredAtUtc') -Rows $tables.RuntimeSensorRules
+    $lines.Add('') | Out-Null
+    $lines.Add('- Related SIEM rule: `RTE-001` Container runtime threat detected.') | Out-Null
+    $lines.Add('- Review linked pages: `/SecurityEvents`, `/SiemAlerts`, `/Incidents`, and `/Reports/SecuritySummary`.') | Out-Null
+}
 $lines.Add('') | Out-Null
 
 $lines.Add('## Outbox and inbox summary') | Out-Null
