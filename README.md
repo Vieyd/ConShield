@@ -102,6 +102,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadin
 
 It verifies Git awareness, Docker services, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, the defense scenario, Falco replay, Runtime Sensor Health, and evidence export. The generated evidence defaults to `artifacts/local/demo-readiness-evidence.md`, which must stay uncommitted.
 
+### Reset local demo data
+
+Use this before a clean defense/demo run:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Reset-ConShieldLocalDemoData.ps1 -WhatIf
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Reset-ConShieldLocalDemoData.ps1 -ConfirmReset
+```
+
+The reset is local-only, does not print secrets, and does not remove Docker volumes by default. It resets demo-generated operational data such as Security Events, SIEM alerts, Incidents, outbox/inbox rows, and Mongo projections while keeping migrations, configuration, demo-user settings, source files, and Docker volumes intact.
+
 ### Export defense evidence
 
 Export a safe Markdown evidence pack to an ignored local artifact path:
@@ -301,6 +313,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadin
 ```
 
 Команда проверяет Git awareness, локальные Docker services, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, defense scenario, Falco replay, Runtime Sensor Health и evidence export. Generated evidence по умолчанию сохраняется в `artifacts/local/demo-readiness-evidence.md`; этот файл нельзя коммитить.
+
+### Сброс локальных demo-данных
+
+Используйте перед чистым прогоном защиты/демо:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Reset-ConShieldLocalDemoData.ps1 -WhatIf
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Reset-ConShieldLocalDemoData.ps1 -ConfirmReset
+```
+
+Сброс предназначен только для локальных demo-данных, не печатает секреты и не удаляет Docker volumes по умолчанию. Он очищает demo-generated operational data: Security Events, SIEM alerts, Incidents, outbox/inbox rows и Mongo projections, сохраняя migrations, configuration, demo-user settings, source files и Docker volumes.
 
 ### Экспорт evidence для защиты
 
