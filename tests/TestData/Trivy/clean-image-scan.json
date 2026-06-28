@@ -1,0 +1,21 @@
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "registry.local/conshield-clean-demo:1.0",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "RepoTags": [
+      "registry.local/conshield-clean-demo:1.0"
+    ],
+    "RepoDigests": [
+      "registry.local/conshield-clean-demo@sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    ]
+  },
+  "Results": [
+    {
+      "Target": "alpine:3.18 (apk)",
+      "Class": "os-pkgs",
+      "Type": "alpine",
+      "Vulnerabilities": []
+    }
+  ]
+}

@@ -28,6 +28,7 @@ public sealed class DemoWalkthroughPageTests
         {
             "Start-ConShield.ps1",
             "Reset-ConShieldLocalDemoData.ps1",
+            "Invoke-ConShieldImageScan.ps1",
             "Run-ConShieldDefenseScenario.ps1",
             "Replay-ConShieldFalcoRuntimeEvent.ps1",
             "Export-ConShieldDefenseEvidence.ps1",
@@ -56,6 +57,7 @@ public sealed class DemoWalkthroughPageTests
         Assert.Contains("/Siem", combined, StringComparison.Ordinal);
         Assert.Contains("/Incidents", combined, StringComparison.Ordinal);
         Assert.Contains("/RuntimeSensors", combined, StringComparison.Ordinal);
+        Assert.Contains("sample-image-scan.json", combined, StringComparison.Ordinal);
         Assert.Contains("asp-controller=\"Reports\"", combined, StringComparison.Ordinal);
         Assert.Contains("asp-controller=\"SecurityEvents\"", combined, StringComparison.Ordinal);
         Assert.Contains("asp-controller=\"Siem\"", combined, StringComparison.Ordinal);

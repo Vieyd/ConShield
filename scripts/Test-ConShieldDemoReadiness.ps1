@@ -2,6 +2,7 @@
 param(
     [switch]$SkipStartApps,
     [switch]$SkipScenario,
+    [switch]$SkipImageScan,
     [switch]$SkipFalcoReplay,
     [string]$BaseUrl = 'http://127.0.0.1:5080',
     [string]$OutputMarkdownPath = '.\artifacts\local\demo-readiness-evidence.md'
@@ -382,6 +383,23 @@ try {
         }
         else {
             Add-ReadinessCheck -Name 'Defense scenario' -Status 'FAIL' -Detail 'scenario did not return PASS' -Hint 'Run scripts\Run-ConShieldDefenseScenario.ps1 directly for safe detailed output.'
+        }
+    }
+
+    if ($SkipImageScan) {
+        Add-ReadinessCheck -Name 'Image scan fixture' -Status 'SKIP' -Detail 'requested by -SkipImageScan'
+    }
+    else {
+        $imageScan = Invoke-CapturedCommand `
+            -FilePath 'pwsh' `
+            -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '.\scripts\Invoke-ConShieldImageScan.ps1', '-FromTrivyJson', '.\tests\TestData\Trivy\sample-image-scan.json', '-NoSubmit') `
+            -WorkingDirectory $repoRoot
+        $imageScanResult = ($imageScan.Output | Where-Object { $_ -match '^Result:\s+' } | Select-Object -Last 1)
+        if ($imageScan.ExitCode -eq 0 -and $imageScanResult -match 'PASS') {
+            Add-ReadinessCheck -Name 'Image scan fixture' -Status 'PASS' -Detail 'Result: PASS'
+        }
+        else {
+            Add-ReadinessCheck -Name 'Image scan fixture' -Status 'FAIL' -Detail 'fixture scan did not return PASS' -Hint 'Run scripts\Invoke-ConShieldImageScan.ps1 with -FromTrivyJson and -NoSubmit for safe detailed output.'
         }
     }
 
