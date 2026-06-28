@@ -1,0 +1,150 @@
+@using ConShield.Web.Infrastructure
+@model ConShield.Web.ViewModels.DemoWalkthroughViewModel
+@{
+    ViewData["Title"] = "Demo Walkthrough";
+}
+
+<div class="app-page-header">
+    <div>
+        <h2 class="mb-1">Demo Walkthrough</h2>
+        <div class="text-muted small">
+            Use this page as the live navigation guide for the local ConShield defense demo.
+        </div>
+    </div>
+    <div class="app-actions">
+        <a asp-controller="Reports" asp-action="SecuritySummary" class="btn btn-outline-secondary">Security Summary</a>
+        <a asp-controller="RuntimeSensors" asp-action="Index" class="btn btn-outline-primary">Runtime Sensor Health</a>
+    </div>
+</div>
+
+<div class="alert alert-info py-2">
+    Commands are run from PowerShell; this page does not execute local scripts. It shows only safe counts,
+    navigation links, and copy-paste commands. Secrets, raw event payloads, environment values, logs, screenshots,
+    and generated local artifacts are not displayed.
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Security Events</div>
+                <div class="fs-5"><span class="app-badge badge-neutral">@Model.SecurityEventsCount</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">SIEM Alerts</div>
+                <div class="fs-5"><span class="app-badge badge-neutral">@Model.SiemAlertsCount</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Incidents</div>
+                <div class="fs-5"><span class="app-badge badge-neutral">@Model.IncidentsCount</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Runtime Sensor Sources</div>
+                <div class="fs-5">
+                    @if (Model.RuntimeSensorSourcesCount > 0)
+                    {
+                        <span class="app-badge badge-neutral">@Model.RuntimeSensorSourcesCount</span>
+                    }
+                    else
+                    {
+                        <span class="app-status app-status-neutral"><span class="app-status-dot" aria-hidden="true"></span><span>No data yet</span></span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Latest Runtime Sensor LastSeenUtc</div>
+                <div class="fs-6">
+                    <span class="app-badge badge-neutral">@(Model.LatestRuntimeSensorLastSeenUtc?.ToMoscowDisplay() ?? "No data yet")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-card mb-4">
+    <div class="card-body">
+        <h3 class="h5">Useful navigation links</h3>
+        <div class="app-action-group">
+            <a asp-controller="Reports" asp-action="SecuritySummary" class="btn btn-sm btn-outline-primary">/Reports/SecuritySummary</a>
+            <a asp-controller="SecurityEvents" asp-action="Index" class="btn btn-sm btn-outline-primary">/SecurityEvents</a>
+            <a asp-controller="Siem" asp-action="Index" class="btn btn-sm btn-outline-primary">/Siem</a>
+            <a asp-controller="Incidents" asp-action="Index" class="btn btn-sm btn-outline-primary">/Incidents</a>
+            <a asp-controller="RuntimeSensors" asp-action="Index" class="btn btn-sm btn-outline-primary">/RuntimeSensors</a>
+        </div>
+    </div>
+</div>
+
+<div class="app-table-card mb-4">
+    <div class="app-table-scroll-wrap" data-table-scroll-sync>
+        <div class="app-table-scrollbar-top" aria-hidden="true">
+            <div class="app-table-scrollbar-inner"></div>
+        </div>
+        <div class="app-table-scroll">
+            <table class="table table-striped align-middle app-table app-table-wide">
+                <thead>
+                <tr>
+                    <th>Step</th>
+                    <th>Step name</th>
+                    <th>Purpose</th>
+                    <th>Command or UI link</th>
+                    <th>Expected result</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var step in Model.Steps)
+                {
+                    <tr>
+                        <td><span class="app-badge badge-neutral">@step.Number</span></td>
+                        <td>@step.Name</td>
+                        <td>@step.Purpose</td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(step.Controller) && !string.IsNullOrWhiteSpace(step.Action))
+                            {
+                                <a asp-controller="@step.Controller" asp-action="@step.Action" class="app-id-pill app-id-nowrap">@step.CommandOrLink</a>
+                            }
+                            else
+                            {
+                                <span class="app-badge badge-neutral">@step.CommandOrLink</span>
+                            }
+                        </td>
+                        <td>@step.ExpectedResult</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="app-card mb-4">
+    <div class="card-body">
+        <h3 class="h5">Safe commands</h3>
+        <p class="text-muted small mb-3">
+            Copy these commands into PowerShell. The browser page is read-only and does not execute them.
+        </p>
+        @foreach (var command in Model.Commands)
+        {
+            <div class="mb-3">
+                <div class="fw-semibold">@command.Name</div>
+                <pre class="app-code-block mb-1"><code>@command.Command</code></pre>
+                <div class="text-muted small">@command.ExpectedResult</div>
+            </div>
+        }
+    </div>
+</div>

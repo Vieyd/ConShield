@@ -114,6 +114,16 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Reset-ConShieldLocalDemo
 
 The reset is local-only, does not print secrets, and does not remove Docker volumes by default. It resets demo-generated operational data such as Security Events, SIEM alerts, Incidents, outbox/inbox rows, and Mongo projections while keeping migrations, configuration, demo-user settings, source files, and Docker volumes intact.
 
+### Demo walkthrough page
+
+Open the guided demo page after starting the Web app:
+
+```text
+http://127.0.0.1:5080/Demo
+```
+
+The page is read-only. It shows the demo order, safe PowerShell commands, current counts, and links to Security Summary, Security Events, SIEM, Incidents, and Runtime Sensor Health. It does not execute scripts from the browser and does not display secrets, raw payloads, logs, or generated local artifacts.
+
 ### Export defense evidence
 
 Export a safe Markdown evidence pack to an ignored local artifact path:
@@ -325,6 +335,16 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Reset-ConShieldLocalDemo
 ```
 
 Сброс предназначен только для локальных demo-данных, не печатает секреты и не удаляет Docker volumes по умолчанию. Он очищает demo-generated operational data: Security Events, SIEM alerts, Incidents, outbox/inbox rows и Mongo projections, сохраняя migrations, configuration, demo-user settings, source files и Docker volumes.
+
+### Страница демонстрационного сценария
+
+После запуска Web откройте страницу:
+
+```text
+http://127.0.0.1:5080/Demo
+```
+
+Страница только для чтения: она показывает порядок демонстрации, безопасные PowerShell-команды, текущие счётчики и ссылки на Security Summary, Security Events, SIEM, Incidents и Runtime Sensor Health. Она не запускает scripts из браузера и не показывает secrets, raw payloads, logs или generated local artifacts.
 
 ### Экспорт evidence для защиты
 

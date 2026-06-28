@@ -701,6 +701,15 @@ a.app-id-pill:focus-visible {
     white-space: pre-wrap;
 }
 
+.app-code-block {
+    background: var(--app-code-bg);
+    border: 1px solid var(--app-code-border);
+    border-radius: var(--app-radius-sm);
+    color: var(--app-code-text);
+    padding: .75rem;
+    white-space: pre-wrap;
+}
+
 .app-code-panel {
     margin-top: 1rem;
     background: var(--app-code-bg);

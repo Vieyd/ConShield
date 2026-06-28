@@ -196,6 +196,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Reset-ConShieldLocalDemo
 
 `-CleanLocalArtifacts` only targets files under `artifacts/local/`. The script fails closed unless the PostgreSQL target is provably local, and it never prints secrets, raw `AdditionalDataJson`, raw payload JSON, env values, logs, or generated artifact contents.
 
+## Demo walkthrough page
+
+After starting the Web app, open the read-only demo walkthrough page:
+
+```text
+http://127.0.0.1:5080/Demo
+```
+
+Use it as the live navigation guide for the local defense demo. It shows the order of operations, safe PowerShell commands, current Security Events / SIEM / Incidents / Runtime Sensor counts, and links to `/Reports/SecuritySummary`, `/SecurityEvents`, `/Siem`, `/Incidents`, and `/RuntimeSensors`.
+
+The page does not execute shell scripts from the browser. Run commands in PowerShell from the repository root. It does not display secrets, connection strings, API keys, env values, raw event payloads, logs, screenshots, or generated files under `artifacts/local/`.
+
 ## Runtime Sensor Health
 
 Runtime Sensor Health is a read-only UI/evidence view derived from ingested runtime/Falco-compatible security events. It shows SourceSystem, last seen time, event count, latest event metadata, related `RTE-001` alerts, related incidents, and `Active` / `Stale` / `NoData` status. It does not require a real Fedora VM for local validation.
