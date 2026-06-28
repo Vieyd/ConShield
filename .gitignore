@@ -38,6 +38,9 @@ trivy
 *.tar
 *.tar.gz
 *trivy-report*.json
+!tests/TestData/Trivy/
+!tests/TestData/Trivy/sample-image-scan.json
+!tests/TestData/Trivy/clean-image-scan.json
 
 # Generated/cache files
 *.cache

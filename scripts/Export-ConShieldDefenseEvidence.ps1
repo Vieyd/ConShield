@@ -297,6 +297,9 @@ $tables = @{
     RuntimeSensorSummary = @()
     RuntimeSensorRules = @()
     RuntimeSensorHealth = @()
+    ImageScanEvidence = @()
+    ImageScanRules = @()
+    ImageScanIncidents = @()
 }
 
 if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
@@ -326,6 +329,9 @@ if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
         $tables.RuntimeSensorSummary = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", count(*)::int as "Count", max("OccurredAtUtc") as "LatestOccurredAtUtc" from "SecurityEvents" where coalesce("SourceSystem", '''') in (''conshield.falco-linux-sensor'', ''conshield.falco-runtime-collector'', ''conshield.container-runtime'') or coalesce("ExternalEventType", '''') like ''container.runtime.%'' group by coalesce("SourceSystem", ''''), coalesce("ExternalEventType", '''') order by max("OccurredAtUtc") desc limit 10;')
         $tables.RuntimeSensorRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select case when position(''rule='' in "Description") > 0 then split_part(split_part("Description", ''rule='', 2), '','', 1) else ''-'' end as "FalcoRule", count(*)::int as "Count", max("OccurredAtUtc") as "LatestOccurredAtUtc" from "SecurityEvents" where (coalesce("SourceSystem", '''') in (''conshield.falco-linux-sensor'', ''conshield.falco-runtime-collector'', ''conshield.container-runtime'') or coalesce("ExternalEventType", '''') like ''container.runtime.%'') group by case when position(''rule='' in "Description") > 0 then split_part(split_part("Description", ''rule='', 2), '','', 1) else ''-'' end order by max("OccurredAtUtc") desc limit 10;')
         $tables.RuntimeSensorHealth = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'with runtime_sources("SourceSystem") as (values (''conshield.falco-linux-sensor''), (''conshield.falco-runtime-collector''), (''conshield.container-runtime'') union select distinct coalesce("SourceSystem", ''unknown-runtime-source'') from "SecurityEvents" where coalesce("SourceSystem", '''') ilike ''%runtime%'' or coalesce("SourceSystem", '''') ilike ''%falco%'' or coalesce("ExternalEventType", '''') ilike ''%runtime%'' or coalesce("ExternalEventType", '''') ilike ''%falco%''), runtime_events as (select se.* from "SecurityEvents" se join runtime_sources rs on coalesce(se."SourceSystem", ''unknown-runtime-source'') = rs."SourceSystem" where coalesce(se."SourceSystem", '''') ilike ''%runtime%'' or coalesce(se."SourceSystem", '''') ilike ''%falco%'' or coalesce(se."ExternalEventType", '''') ilike ''%runtime%'' or coalesce(se."ExternalEventType", '''') ilike ''%falco%''), latest as (select distinct on (coalesce("SourceSystem", ''unknown-runtime-source'')) coalesce("SourceSystem", ''unknown-runtime-source'') as "SourceSystem", "OccurredAtUtc" as "LastSeenUtc", "Id" as "LatestEventId", coalesce("ExternalEventType", '''') as "LatestEventType", "Severity"::text as "LatestSeverity" from runtime_events order by coalesce("SourceSystem", ''unknown-runtime-source''), "OccurredAtUtc" desc, "Id" desc), grouped as (select coalesce("SourceSystem", ''unknown-runtime-source'') as "SourceSystem", count(*)::int as "EventCount" from runtime_events group by coalesce("SourceSystem", ''unknown-runtime-source'')) select rs."SourceSystem", case when latest."LastSeenUtc" is null then ''NoData'' when latest."LastSeenUtc" >= ((now() at time zone ''utc'') - interval ''24 hours'') then ''Active'' else ''Stale'' end as "Status", latest."LastSeenUtc", coalesce(grouped."EventCount", 0)::int as "EventCount", latest."LatestEventType", (select count(distinct alert."Id")::int from "SiemAlerts" alert where alert."RuleCode" = ''RTE-001'' and exists (select 1 from runtime_events se where coalesce(se."SourceSystem", ''unknown-runtime-source'') = rs."SourceSystem" and position(''Source event #'' || se."Id"::text in alert."Description") > 0)) as "RelatedRteAlertCount", (select count(distinct incident."Id")::int from "Incidents" incident join runtime_events se on incident."SourceEventId" = se."Id" where coalesce(se."SourceSystem", ''unknown-runtime-source'') = rs."SourceSystem") as "RelatedIncidentCount" from runtime_sources rs left join grouped on grouped."SourceSystem" = rs."SourceSystem" left join latest on latest."SourceSystem" = rs."SourceSystem" order by case when latest."LastSeenUtc" is null then 1 else 0 end, latest."LastSeenUtc" desc nulls last, rs."SourceSystem";')
+        $tables.ImageScanEvidence = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.image-scanner'' and coalesce("ExternalEventType", '''') = ''container.image.scan.completed'' order by "OccurredAtUtc" desc limit 10;')
+        $tables.ImageScanRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" = ''IMG-001'' group by "RuleCode";')
+        $tables.ImageScanIncidents = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select count(*)::int as "Count" from "Incidents" incident join "SecurityEvents" se on incident."SourceEventId" = se."Id" where coalesce(se."SourceSystem", '''') = ''conshield.image-scanner'' and coalesce(se."ExternalEventType", '''') = ''container.image.scan.completed'';')
     }
     catch {
         $queryError = ConvertTo-SafeCell -Value $_.Exception.Message -MaxLength 180
@@ -417,6 +423,27 @@ $lines.Add('') | Out-Null
 $lines.Add('## Security events') | Out-Null
 $lines.Add('') | Out-Null
 Add-MarkdownTable -Lines $lines -Headers @('Id', 'OccurredAtUtc', 'EventType', 'Severity', 'SourceSystem', 'ExternalEventType', 'Description') -Rows $tables.SecurityEvents
+$lines.Add('') | Out-Null
+
+$lines.Add('## Image Scan Evidence') | Out-Null
+$lines.Add('') | Out-Null
+if (@($tables.ImageScanEvidence).Count -eq 0) {
+    $lines.Add('No ConShield image scan events were found in the current evidence window.') | Out-Null
+}
+else {
+    Add-MarkdownTable -Lines $lines -Headers @('Id', 'OccurredAtUtc', 'Severity', 'SourceSystem', 'ExternalEventType', 'Description') -Rows $tables.ImageScanEvidence
+    $lines.Add('') | Out-Null
+    $lines.Add('### Related IMG-001 alerts') | Out-Null
+    $lines.Add('') | Out-Null
+    Add-MarkdownTable -Lines $lines -Headers @('RuleCode', 'Count', 'LatestCreatedAtUtc') -Rows $tables.ImageScanRules
+    $lines.Add('') | Out-Null
+    $lines.Add('### Related image-scan incidents') | Out-Null
+    $lines.Add('') | Out-Null
+    Add-MarkdownTable -Lines $lines -Headers @('Count') -Rows $tables.ImageScanIncidents
+    $lines.Add('') | Out-Null
+    $lines.Add('- Related SIEM rule: `IMG-001` Critical container image risk.') | Out-Null
+    $lines.Add('- Review linked pages: `/SecurityEvents`, `/Siem`, `/Incidents`, and `/Demo`.') | Out-Null
+}
 $lines.Add('') | Out-Null
 
 $lines.Add('## Runtime Sensor Evidence') | Out-Null

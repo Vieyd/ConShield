@@ -208,6 +208,25 @@ Use it as the live navigation guide for the local defense demo. It shows the ord
 
 The page does not execute shell scripts from the browser. Run commands in PowerShell from the repository root. It does not display secrets, connection strings, API keys, env values, raw event payloads, logs, screenshots, or generated files under `artifacts/local/`.
 
+## Image scan CLI path
+
+For a deterministic local check that does not require live Trivy, internet, Fedora, or ingestion, run:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoSubmit
+```
+
+For the local demo ingestion path, start the Web app and submit the same sanitized fixture:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json
+```
+
+The script maps a Trivy-compatible report to `conshield.image-scanner` / `container.image.scan.completed`, expects `IMG-001`, and prints only compact summary fields. The evidence exporter adds `Image Scan Evidence` when matching image scan events are present. Do not commit generated Markdown under `artifacts/local/`, raw Trivy reports, raw event payloads, local logs, secrets, API keys, connection strings, or environment values.
+
 ## Runtime Sensor Health
 
 Runtime Sensor Health is a read-only UI/evidence view derived from ingested runtime/Falco-compatible security events. It shows SourceSystem, last seen time, event count, latest event metadata, related `RTE-001` alerts, related incidents, and `Active` / `Stale` / `NoData` status. It does not require a real Fedora VM for local validation.

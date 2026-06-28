@@ -124,6 +124,25 @@ http://127.0.0.1:5080/Demo
 
 The page is read-only. It shows the demo order, safe PowerShell commands, current counts, and links to Security Summary, Security Events, SIEM, Incidents, and Runtime Sensor Health. It does not execute scripts from the browser and does not display secrets, raw payloads, logs, or generated local artifacts.
 
+### Image scan CLI
+
+Run a deterministic offline image scan mapping check without live Trivy, internet, Fedora, or ingestion:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoSubmit
+```
+
+After the local Web app is running and local ingestion is configured, submit the same sanitized fixture through the external ingestion path:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json
+```
+
+The command maps Trivy-compatible results to `SourceSystem=conshield.image-scanner`, `ExternalEventType=container.image.scan.completed`, and the expected `IMG-001` path. Evidence export includes an `Image Scan Evidence` section when image scan events are available. The wrapper prints only safe summary fields and does not print raw Trivy JSON, raw event payloads, secrets, API keys, connection strings, or environment values.
+
 ### Export defense evidence
 
 Export a safe Markdown evidence pack to an ignored local artifact path:
@@ -133,7 +152,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseE
   -OutputMarkdownPath .\artifacts\local\defense-evidence.md
 ```
 
-The exporter writes only safe aggregate and metadata fields. It summarizes health, scenario results, SIEM alerts, incidents, Security Events, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation, and operator checklists. It intentionally excludes raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots, and generated reports from source control.
+The exporter writes only safe aggregate and metadata fields. It summarizes health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation, and operator checklists. It intentionally excludes raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots, and generated reports from source control.
 
 Keep generated Markdown under `artifacts/local/` or another ignored local path.
 
@@ -346,6 +365,25 @@ http://127.0.0.1:5080/Demo
 
 Страница только для чтения: она показывает порядок демонстрации, безопасные PowerShell-команды, текущие счётчики и ссылки на Security Summary, Security Events, SIEM, Incidents и Runtime Sensor Health. Она не запускает scripts из браузера и не показывает secrets, raw payloads, logs или generated local artifacts.
 
+### Image scan CLI
+
+Запустите deterministic offline-проверку маппинга image scan без live Trivy, интернета, Fedora или ingestion:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoSubmit
+```
+
+После запуска локального Web app и настройки local ingestion отправьте тот же sanitized fixture через внешний ingestion path:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json
+```
+
+Команда маппит Trivy-compatible результат в `SourceSystem=conshield.image-scanner`, `ExternalEventType=container.image.scan.completed` и ожидаемый путь `IMG-001`. Evidence export включает секцию `Image Scan Evidence`, если image scan events доступны. Wrapper печатает только safe summary fields и не выводит raw Trivy JSON, raw event payloads, secrets, API keys, connection strings или environment values.
+
 ### Экспорт evidence для защиты
 
 Выгрузите безопасный Markdown evidence pack в ignored local artifact path:
@@ -355,7 +393,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseE
   -OutputMarkdownPath .\artifacts\local\defense-evidence.md
 ```
 
-Exporter writes only safe aggregate and metadata fields. Он включает health, scenario results, SIEM alerts, incidents, Security Events, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation и operator checklists. Он намеренно не выводит raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots и generated reports в source control.
+Exporter writes only safe aggregate and metadata fields. Он включает health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation и operator checklists. Он намеренно не выводит raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots и generated reports в source control.
 
 Храните generated Markdown under `artifacts/local/` или в другом ignored local path.
 

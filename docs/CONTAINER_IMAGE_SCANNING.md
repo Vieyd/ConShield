@@ -77,6 +77,28 @@ Prefer `CONSHIELD_API_KEY` over `--api-key` so the key is not stored in shell hi
 
 ## CLI Examples
 
+Recommended PowerShell wrapper with deterministic fixture and no ingestion:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoSubmit
+```
+
+Submit the sanitized fixture through the local external ingestion path:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json
+```
+
+Live scan through the wrapper:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 `
+  -Image alpine:3.18
+```
+
 Scan and submit:
 
 ```powershell

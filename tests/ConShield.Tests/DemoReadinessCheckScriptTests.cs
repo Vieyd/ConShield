@@ -10,6 +10,7 @@ public sealed class DemoReadinessCheckScriptTests
         Assert.Contains("[string]$OutputMarkdownPath = '.\\artifacts\\local\\demo-readiness-evidence.md'", script, StringComparison.Ordinal);
         Assert.Contains("[switch]$SkipStartApps", script, StringComparison.Ordinal);
         Assert.Contains("[switch]$SkipScenario", script, StringComparison.Ordinal);
+        Assert.Contains("[switch]$SkipImageScan", script, StringComparison.Ordinal);
         Assert.Contains("[switch]$SkipFalcoReplay", script, StringComparison.Ordinal);
         Assert.Contains("ConShield demo readiness check", script, StringComparison.Ordinal);
         Assert.Contains("Result: {0}", script, StringComparison.Ordinal);
@@ -22,6 +23,9 @@ public sealed class DemoReadinessCheckScriptTests
 
         Assert.Contains("Start-ConShield.ps1", script, StringComparison.Ordinal);
         Assert.Contains("Run-ConShieldDefenseScenario.ps1", script, StringComparison.Ordinal);
+        Assert.Contains("Invoke-ConShieldImageScan.ps1", script, StringComparison.Ordinal);
+        Assert.Contains("sample-image-scan.json", script, StringComparison.Ordinal);
+        Assert.Contains("-NoSubmit", script, StringComparison.Ordinal);
         Assert.Contains("Replay-ConShieldFalcoRuntimeEvent.ps1", script, StringComparison.Ordinal);
         Assert.Contains("Export-ConShieldDefenseEvidence.ps1", script, StringComparison.Ordinal);
         Assert.Contains("/RuntimeSensors", script, StringComparison.Ordinal);
@@ -47,6 +51,7 @@ public sealed class DemoReadinessCheckScriptTests
             "Web",
             "EventConsumer",
             "Defense scenario",
+            "Image scan fixture",
             "Falco replay",
             "Runtime Sensor Health",
             "Evidence export"
