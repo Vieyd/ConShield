@@ -71,14 +71,17 @@ function Invoke-CapturedCommand {
     $stderrPath = [System.IO.Path]::GetTempFileName()
     $process = $null
     try {
-        $argumentText = ($Arguments | ForEach-Object {
-            $value = [string]$_
+        $escapedArguments = foreach ($argument in $Arguments) {
+            $value = [string]$argument
             if ($value -notmatch '[\s"]') {
-                return $value
+                $value
+                continue
             }
 
-            return ('"{0}"' -f ($value -replace '"', '\"'))
-        }) -join ' '
+            ('"{0}"' -f ($value -replace '"', '\"'))
+        }
+
+        $argumentText = $escapedArguments -join ' '
 
         $process = Start-Process `
             -FilePath $FilePath `
@@ -280,6 +283,14 @@ function Write-ReadinessSummary {
         Write-Host ('{0}: {1}' -f $check.Name, $check.Status)
     }
 
+    $failedCheck = $checks | Where-Object { $_.Status -eq 'FAIL' } | Select-Object -First 1
+    if ($null -ne $failedCheck) {
+        Write-Host ('Failed step: {0}' -f $failedCheck.Name)
+        if (-not [string]::IsNullOrWhiteSpace($failedCheck.Detail)) {
+            Write-Host ('Failure detail: {0}' -f $failedCheck.Detail)
+        }
+    }
+
     if (Test-Path -LiteralPath $ResolvedEvidencePath -PathType Leaf) {
         Write-Host ('Generated evidence: {0}' -f (Resolve-Path -LiteralPath $ResolvedEvidencePath -Relative))
     }
@@ -426,7 +437,11 @@ try {
     exit 0
 }
 catch {
-    Add-ReadinessCheck -Name 'Readiness runner' -Status 'FAIL' -Detail $_.Exception.Message
+    Add-ReadinessCheck `
+        -Name 'Readiness runner' `
+        -Status 'FAIL' `
+        -Detail $_.Exception.Message `
+        -Hint 'Rerun: pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadiness.ps1'
     Write-ReadinessSummary -ResolvedEvidencePath $resolvedEvidencePath -Result 'FAIL'
     exit 1
 }
