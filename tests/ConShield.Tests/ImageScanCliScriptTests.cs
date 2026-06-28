@@ -102,7 +102,8 @@ public sealed class ImageScanCliScriptTests
         foreach (var relativePath in new[]
         {
             Path.Combine("tests", "TestData", "Trivy", "sample-image-scan.json"),
-            Path.Combine("tests", "TestData", "Trivy", "clean-image-scan.json")
+            Path.Combine("tests", "TestData", "Trivy", "clean-image-scan.json"),
+            Path.Combine("tests", "TestData", "Trivy", "warn-image-scan.json")
         })
         {
             var fullPath = Path.Combine(GetRepositoryRoot(), relativePath);

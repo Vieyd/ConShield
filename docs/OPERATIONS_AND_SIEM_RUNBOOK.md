@@ -227,6 +227,31 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageSca
 
 The script maps a Trivy-compatible report to `conshield.image-scanner` / `container.image.scan.completed`, expects `IMG-001`, and prints only compact summary fields. The evidence exporter adds `Image Scan Evidence` when matching image scan events are present. Do not commit generated Markdown under `artifacts/local/`, raw Trivy reports, raw event payloads, local logs, secrets, API keys, connection strings, or environment values.
 
+## Protected container run path
+
+Use the protected run wrapper for the scan → policy → launch lifecycle workflow. Deterministic validation does not require live Trivy, internet, Fedora, or Docker execution:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtectedRun.ps1 `
+  -Image demo/insecure-api:latest `
+  -ContainerName conshield-demo-insecure `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoRun `
+  -NoSubmit
+```
+
+With local Web running, submit IMG/POL/LIFE events without starting a container:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtectedRun.ps1 `
+  -Image demo/insecure-api:latest `
+  -ContainerName conshield-demo-insecure `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoRun
+```
+
+Execution is explicit. No Docker container starts unless `-Execute` is present and policy allows it. `Block` never starts a container. `Warn` requires both `-AcceptWarning` and `-Execute`. The evidence exporter adds `Protected Run Evidence` from safe policy and launch lifecycle event descriptions only.
+
 ## Runtime Sensor Health
 
 Runtime Sensor Health is a read-only UI/evidence view derived from ingested runtime/Falco-compatible security events. It shows SourceSystem, last seen time, event count, latest event metadata, related `RTE-001` alerts, related incidents, and `Active` / `Stale` / `NoData` status. It does not require a real Fedora VM for local validation.

@@ -300,6 +300,9 @@ $tables = @{
     ImageScanEvidence = @()
     ImageScanRules = @()
     ImageScanIncidents = @()
+    ProtectedRunLaunches = @()
+    ProtectedRunPolicies = @()
+    ProtectedRunRules = @()
 }
 
 if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
@@ -332,6 +335,9 @@ if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
         $tables.ImageScanEvidence = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.image-scanner'' and coalesce("ExternalEventType", '''') = ''container.image.scan.completed'' order by "OccurredAtUtc" desc limit 10;')
         $tables.ImageScanRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" = ''IMG-001'' group by "RuleCode";')
         $tables.ImageScanIncidents = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select count(*)::int as "Count" from "Incidents" incident join "SecurityEvents" se on incident."SourceEventId" = se."Id" where coalesce(se."SourceSystem", '''') = ''conshield.image-scanner'' and coalesce(se."ExternalEventType", '''') = ''container.image.scan.completed'';')
+        $tables.ProtectedRunLaunches = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.container-runtime'' and coalesce("ExternalEventType", '''') = ''container.image.launch.result'' order by "OccurredAtUtc" desc limit 10;')
+        $tables.ProtectedRunPolicies = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.container-guard'' and coalesce("ExternalEventType", '''') = ''container.image.policy.evaluated'' order by "OccurredAtUtc" desc limit 10;')
+        $tables.ProtectedRunRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" in (''IMG-001'', ''POL-001'', ''LIFE-001'') group by "RuleCode" order by "RuleCode";')
     }
     catch {
         $queryError = ConvertTo-SafeCell -Value $_.Exception.Message -MaxLength 180
@@ -443,6 +449,29 @@ else {
     $lines.Add('') | Out-Null
     $lines.Add('- Related SIEM rule: `IMG-001` Critical container image risk.') | Out-Null
     $lines.Add('- Review linked pages: `/SecurityEvents`, `/Siem`, `/Incidents`, and `/Demo`.') | Out-Null
+}
+$lines.Add('') | Out-Null
+
+$lines.Add('## Protected Run Evidence') | Out-Null
+$lines.Add('') | Out-Null
+if (@($tables.ProtectedRunLaunches).Count -eq 0 -and @($tables.ProtectedRunPolicies).Count -eq 0) {
+    $lines.Add('No protected container run events were found in the current evidence window.') | Out-Null
+}
+else {
+    $lines.Add('### Launch lifecycle events') | Out-Null
+    $lines.Add('') | Out-Null
+    Add-MarkdownTable -Lines $lines -Headers @('Id', 'OccurredAtUtc', 'Severity', 'SourceSystem', 'ExternalEventType', 'Description') -Rows $tables.ProtectedRunLaunches
+    $lines.Add('') | Out-Null
+    $lines.Add('### Policy decision events') | Out-Null
+    $lines.Add('') | Out-Null
+    Add-MarkdownTable -Lines $lines -Headers @('Id', 'OccurredAtUtc', 'Severity', 'SourceSystem', 'ExternalEventType', 'Description') -Rows $tables.ProtectedRunPolicies
+    $lines.Add('') | Out-Null
+    $lines.Add('### Related rules') | Out-Null
+    $lines.Add('') | Out-Null
+    Add-MarkdownTable -Lines $lines -Headers @('RuleCode', 'Count', 'LatestCreatedAtUtc') -Rows $tables.ProtectedRunRules
+    $lines.Add('') | Out-Null
+    $lines.Add('- Protected run path: image scan → policy decision → launch lifecycle result.') | Out-Null
+    $lines.Add('- Related evidence uses safe descriptions only; raw Trivy JSON, raw payloads, raw Docker logs, and local artifacts are excluded.') | Out-Null
 }
 $lines.Add('') | Out-Null
 

@@ -143,6 +143,31 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageSca
 
 The command maps Trivy-compatible results to `SourceSystem=conshield.image-scanner`, `ExternalEventType=container.image.scan.completed`, and the expected `IMG-001` path. Evidence export includes an `Image Scan Evidence` section when image scan events are available. The wrapper prints only safe summary fields and does not print raw Trivy JSON, raw event payloads, secrets, API keys, connection strings, or environment values.
 
+### Protected container run
+
+Validate the protected run workflow without Docker execution or live Trivy:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtectedRun.ps1 `
+  -Image demo/insecure-api:latest `
+  -ContainerName conshield-demo-insecure `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoRun `
+  -NoSubmit
+```
+
+Submit safe IMG/POL/LIFE events to local ingestion without starting a container:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtectedRun.ps1 `
+  -Image demo/insecure-api:latest `
+  -ContainerName conshield-demo-insecure `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoRun
+```
+
+The runner enforces `Allow` / `Warn` / `Block` decisions from the container baseline policy. Without `-Execute`, no container is started. With `-NoRun`, a container is never started. `Block` never starts a container, and `Warn` requires both `-AcceptWarning` and `-Execute`. Evidence export includes `Protected Run Evidence` when matching policy or launch lifecycle events are available.
+
 ### Export defense evidence
 
 Export a safe Markdown evidence pack to an ignored local artifact path:
@@ -152,7 +177,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseE
   -OutputMarkdownPath .\artifacts\local\defense-evidence.md
 ```
 
-The exporter writes only safe aggregate and metadata fields. It summarizes health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation, and operator checklists. It intentionally excludes raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots, and generated reports from source control.
+The exporter writes only safe aggregate and metadata fields. It summarizes health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, Protected Run Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation, and operator checklists. It intentionally excludes raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots, and generated reports from source control.
 
 Keep generated Markdown under `artifacts/local/` or another ignored local path.
 
@@ -384,6 +409,31 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageSca
 
 Команда маппит Trivy-compatible результат в `SourceSystem=conshield.image-scanner`, `ExternalEventType=container.image.scan.completed` и ожидаемый путь `IMG-001`. Evidence export включает секцию `Image Scan Evidence`, если image scan events доступны. Wrapper печатает только safe summary fields и не выводит raw Trivy JSON, raw event payloads, secrets, API keys, connection strings или environment values.
 
+### Protected container run
+
+Проверьте workflow защищённого запуска без Docker execution или live Trivy:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtectedRun.ps1 `
+  -Image demo/insecure-api:latest `
+  -ContainerName conshield-demo-insecure `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoRun `
+  -NoSubmit
+```
+
+Отправьте safe IMG/POL/LIFE events в local ingestion без запуска контейнера:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtectedRun.ps1 `
+  -Image demo/insecure-api:latest `
+  -ContainerName conshield-demo-insecure `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoRun
+```
+
+Runner применяет решения `Allow` / `Warn` / `Block` из container baseline policy. Без `-Execute` контейнер не запускается. С `-NoRun` контейнер не запускается никогда. `Block` никогда не запускает контейнер, а `Warn` требует одновременно `-AcceptWarning` и `-Execute`. Evidence export включает `Protected Run Evidence`, если доступны policy или launch lifecycle events.
+
 ### Экспорт evidence для защиты
 
 Выгрузите безопасный Markdown evidence pack в ignored local artifact path:
@@ -393,7 +443,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseE
   -OutputMarkdownPath .\artifacts\local\defense-evidence.md
 ```
 
-Exporter writes only safe aggregate and metadata fields. Он включает health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation и operator checklists. Он намеренно не выводит raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots и generated reports в source control.
+Exporter writes only safe aggregate and metadata fields. Он включает health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, Protected Run Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation и operator checklists. Он намеренно не выводит raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots и generated reports в source control.
 
 Храните generated Markdown under `artifacts/local/` или в другом ignored local path.
 

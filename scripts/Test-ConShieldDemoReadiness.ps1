@@ -3,6 +3,7 @@ param(
     [switch]$SkipStartApps,
     [switch]$SkipScenario,
     [switch]$SkipImageScan,
+    [switch]$SkipProtectedRun,
     [switch]$SkipFalcoReplay,
     [string]$BaseUrl = 'http://127.0.0.1:5080',
     [string]$OutputMarkdownPath = '.\artifacts\local\demo-readiness-evidence.md'
@@ -400,6 +401,23 @@ try {
         }
         else {
             Add-ReadinessCheck -Name 'Image scan fixture' -Status 'FAIL' -Detail 'fixture scan did not return PASS' -Hint 'Run scripts\Invoke-ConShieldImageScan.ps1 with -FromTrivyJson and -NoSubmit for safe detailed output.'
+        }
+    }
+
+    if ($SkipProtectedRun) {
+        Add-ReadinessCheck -Name 'Protected run fixture' -Status 'SKIP' -Detail 'requested by -SkipProtectedRun'
+    }
+    else {
+        $protectedRun = Invoke-CapturedCommand `
+            -FilePath 'pwsh' `
+            -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '.\scripts\Invoke-ConShieldProtectedRun.ps1', '-Image', 'demo/insecure-api:latest', '-ContainerName', 'conshield-demo-insecure', '-FromTrivyJson', '.\tests\TestData\Trivy\sample-image-scan.json', '-NoRun', '-NoSubmit') `
+            -WorkingDirectory $repoRoot
+        $protectedRunResult = ($protectedRun.Output | Where-Object { $_ -match '^Result:\s+' } | Select-Object -Last 1)
+        if ($protectedRun.ExitCode -eq 0 -and $protectedRunResult -match 'PASS') {
+            Add-ReadinessCheck -Name 'Protected run fixture' -Status 'PASS' -Detail 'Result: PASS'
+        }
+        else {
+            Add-ReadinessCheck -Name 'Protected run fixture' -Status 'FAIL' -Detail 'protected run fixture did not return PASS' -Hint 'Run scripts\Invoke-ConShieldProtectedRun.ps1 with -FromTrivyJson -NoRun -NoSubmit for safe detailed output.'
         }
     }
 
