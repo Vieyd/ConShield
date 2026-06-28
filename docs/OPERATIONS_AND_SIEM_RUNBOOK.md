@@ -176,6 +176,26 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadin
 
 The script prints compact PASS/FAIL statuses and safe hints only. Do not commit generated evidence, local logs, screenshots, `.env` files, `appsettings.Development.json`, API keys, passwords, tokens, cookies, raw `AdditionalDataJson`, raw payload JSON, or connection strings.
 
+## Local demo data reset
+
+Before a clean defense run, preview and then confirm a local-only operational reset:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Reset-ConShieldLocalDemoData.ps1 -WhatIf
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Reset-ConShieldLocalDemoData.ps1 -ConfirmReset
+```
+
+The reset removes local demo-generated operational state such as Security Events, SIEM alerts, Incidents, outbox/inbox receipts, Dead Letter quarantine rows, demo sensors, and Mongo raw-event projections. It does not delete EF migrations, source files, demo-user configuration, local app settings, Docker volumes, credentials, API keys, or connection strings.
+
+Optional cleanup is intentionally narrow:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Reset-ConShieldLocalDemoData.ps1 -ConfirmReset -CleanLocalArtifacts
+```
+
+`-CleanLocalArtifacts` only targets files under `artifacts/local/`. The script fails closed unless the PostgreSQL target is provably local, and it never prints secrets, raw `AdditionalDataJson`, raw payload JSON, env values, logs, or generated artifact contents.
+
 ## Runtime Sensor Health
 
 Runtime Sensor Health is a read-only UI/evidence view derived from ingested runtime/Falco-compatible security events. It shows SourceSystem, last seen time, event count, latest event metadata, related `RTE-001` alerts, related incidents, and `Active` / `Stale` / `NoData` status. It does not require a real Fedora VM for local validation.
