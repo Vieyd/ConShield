@@ -32,6 +32,58 @@ public sealed class DemoReadinessCheckScriptTests
     }
 
     [Fact]
+    public void DemoReadinessScript_ReportsStepLevelStatusesAndFailureContext()
+    {
+        var script = ReadRepoFile("scripts", "Test-ConShieldDemoReadiness.ps1");
+
+        foreach (var label in new[]
+        {
+            "Git",
+            "Docker",
+            "PostgreSQL",
+            "RabbitMQ",
+            "MongoDB",
+            "Demo users",
+            "Web",
+            "EventConsumer",
+            "Defense scenario",
+            "Falco replay",
+            "Runtime Sensor Health",
+            "Evidence export"
+        })
+        {
+            Assert.Contains(label, script, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("Failed step: {0}", script, StringComparison.Ordinal);
+        Assert.Contains("Failure detail: {0}", script, StringComparison.Ordinal);
+        Assert.Contains("Hint: {0}", script, StringComparison.Ordinal);
+        Assert.Contains("Rerun: pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldDemoReadiness.ps1", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DemoReadinessScript_UsesSafeChildInvocationWithoutEarlyReturn()
+    {
+        var script = ReadRepoFile("scripts", "Test-ConShieldDemoReadiness.ps1");
+
+        Assert.Contains("$escapedArguments = foreach ($argument in $Arguments)", script, StringComparison.Ordinal);
+        Assert.Contains("ExitCode = [int]$process.ExitCode", script, StringComparison.Ordinal);
+        Assert.Contains("Output = @($output)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("return $value", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("return ('\"{0}\"", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DemoReadinessScript_AcceptsProtectedRuntimeSensorRedirects()
+    {
+        var script = ReadRepoFile("scripts", "Test-ConShieldDemoReadiness.ps1");
+
+        Assert.Contains("$normalizedBaseUrl + '/RuntimeSensors'", script, StringComparison.Ordinal);
+        Assert.Contains("ExpectedStatusCodes @(200, 302, 401, 403)", script, StringComparison.Ordinal);
+        Assert.Contains("Runtime Sensor Health", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DemoReadinessScript_DoesNotPrintSecretSourcesOrRawPayloads()
     {
         var script = ReadRepoFile("scripts", "Test-ConShieldDemoReadiness.ps1");
@@ -45,6 +97,15 @@ public sealed class DemoReadinessCheckScriptTests
         Assert.DoesNotContain("Write-Output $env:", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ConvertTo-Json", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("appsettings.Development.json", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DemoReadinessScript_KeepsGeneratedEvidenceUnderArtifactsLocal()
+    {
+        var script = ReadRepoFile("scripts", "Test-ConShieldDemoReadiness.ps1");
+
+        Assert.Contains("[string]$OutputMarkdownPath = '.\\artifacts\\local\\demo-readiness-evidence.md'", script, StringComparison.Ordinal);
+        Assert.Contains("Generated evidence: {0}", script, StringComparison.Ordinal);
     }
 
     [Fact]
