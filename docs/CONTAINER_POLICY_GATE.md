@@ -257,6 +257,38 @@ When Trivy provides a valid sha256 digest reference, Docker launch uses that imm
 
 The policy event records `executionRequested` and `warningAccepted`. It is not proof that Docker launch succeeded; the actual runtime outcome is recorded separately by `container.image.launch.result`.
 
+## Protected run wrapper
+
+`scripts/Invoke-ConShieldProtectedRun.ps1` is the user-facing local wrapper for the protected container workflow:
+
+```text
+image scan or sanitized fixture
+-> container policy decision
+-> optional Docker run only with explicit execution flags
+-> image scan, policy, and launch lifecycle ingestion events
+-> evidence export / demo walkthrough
+```
+
+Safe deterministic validation:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtectedRun.ps1 `
+  -Image demo/insecure-api:latest `
+  -ContainerName conshield-demo-insecure `
+  -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json `
+  -NoRun `
+  -NoSubmit
+```
+
+Safety rules:
+
+- without `-Execute`, Docker is not invoked;
+- with `-NoRun`, Docker is never invoked;
+- `Block` never invokes Docker;
+- `Warn` invokes Docker only when both `-AcceptWarning` and `-Execute` are present;
+- demo container removal is exact-name only through `-RemoveExistingDemoContainer`;
+- raw Trivy JSON, raw payloads, `AdditionalDataJson`, Docker logs, secrets, API keys, connection strings, environment values, screenshots, and generated local artifacts are excluded from console output and source control.
+
 ## Exit Codes
 
 ```text

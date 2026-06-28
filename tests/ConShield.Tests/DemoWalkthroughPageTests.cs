@@ -29,6 +29,7 @@ public sealed class DemoWalkthroughPageTests
             "Start-ConShield.ps1",
             "Reset-ConShieldLocalDemoData.ps1",
             "Invoke-ConShieldImageScan.ps1",
+            "Invoke-ConShieldProtectedRun.ps1",
             "Run-ConShieldDefenseScenario.ps1",
             "Replay-ConShieldFalcoRuntimeEvent.ps1",
             "Export-ConShieldDefenseEvidence.ps1",

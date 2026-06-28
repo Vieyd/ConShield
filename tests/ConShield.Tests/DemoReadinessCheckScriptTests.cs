@@ -11,6 +11,7 @@ public sealed class DemoReadinessCheckScriptTests
         Assert.Contains("[switch]$SkipStartApps", script, StringComparison.Ordinal);
         Assert.Contains("[switch]$SkipScenario", script, StringComparison.Ordinal);
         Assert.Contains("[switch]$SkipImageScan", script, StringComparison.Ordinal);
+        Assert.Contains("[switch]$SkipProtectedRun", script, StringComparison.Ordinal);
         Assert.Contains("[switch]$SkipFalcoReplay", script, StringComparison.Ordinal);
         Assert.Contains("ConShield demo readiness check", script, StringComparison.Ordinal);
         Assert.Contains("Result: {0}", script, StringComparison.Ordinal);
@@ -26,6 +27,8 @@ public sealed class DemoReadinessCheckScriptTests
         Assert.Contains("Invoke-ConShieldImageScan.ps1", script, StringComparison.Ordinal);
         Assert.Contains("sample-image-scan.json", script, StringComparison.Ordinal);
         Assert.Contains("-NoSubmit", script, StringComparison.Ordinal);
+        Assert.Contains("Invoke-ConShieldProtectedRun.ps1", script, StringComparison.Ordinal);
+        Assert.Contains("-NoRun", script, StringComparison.Ordinal);
         Assert.Contains("Replay-ConShieldFalcoRuntimeEvent.ps1", script, StringComparison.Ordinal);
         Assert.Contains("Export-ConShieldDefenseEvidence.ps1", script, StringComparison.Ordinal);
         Assert.Contains("/RuntimeSensors", script, StringComparison.Ordinal);
@@ -52,6 +55,7 @@ public sealed class DemoReadinessCheckScriptTests
             "EventConsumer",
             "Defense scenario",
             "Image scan fixture",
+            "Protected run fixture",
             "Falco replay",
             "Runtime Sensor Health",
             "Evidence export"

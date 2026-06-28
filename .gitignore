@@ -41,6 +41,7 @@ trivy
 !tests/TestData/Trivy/
 !tests/TestData/Trivy/sample-image-scan.json
 !tests/TestData/Trivy/clean-image-scan.json
+!tests/TestData/Trivy/warn-image-scan.json
 
 # Generated/cache files
 *.cache
