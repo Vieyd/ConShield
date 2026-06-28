@@ -157,6 +157,25 @@ The runner checks Web, PostgreSQL, RabbitMQ/EventConsumer/Mongo projection avail
 
 After the runner finishes, open `/Operations/Health`, `/SecurityEvents`, `/Sensors`, `/RuntimeSensors`, `/SiemAlerts`, `/Incidents`, and `/Reports/SecuritySummary`. The runner and report output intentionally avoid raw JSON, `AdditionalDataJson`, connection strings, API keys, tokens, cookies, credentials, verifier values, and Fedora protected env contents.
 
+## Demo readiness check
+
+Before a defense or live demo, run the safe readiness check from the repository root:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadiness.ps1
+```
+
+The check verifies Git awareness, Docker, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, the local defense scenario, Falco replay, Runtime Sensor Health, and defense evidence export. It does not require a real Fedora/Falco setup and writes generated evidence to `artifacts/local/demo-readiness-evidence.md` by default.
+
+Useful optional switches:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadiness.ps1 -SkipStartApps
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadiness.ps1 -SkipScenario -SkipFalcoReplay
+```
+
+The script prints compact PASS/FAIL statuses and safe hints only. Do not commit generated evidence, local logs, screenshots, `.env` files, `appsettings.Development.json`, API keys, passwords, tokens, cookies, raw `AdditionalDataJson`, raw payload JSON, or connection strings.
+
 ## Runtime Sensor Health
 
 Runtime Sensor Health is a read-only UI/evidence view derived from ingested runtime/Falco-compatible security events. It shows SourceSystem, last seen time, event count, latest event metadata, related `RTE-001` alerts, related incidents, and `Active` / `Stale` / `NoData` status. It does not require a real Fedora VM for local validation.

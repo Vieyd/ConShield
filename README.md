@@ -92,6 +92,16 @@ Result meanings:
 - `WARN`: the core scenario ran, but an optional local service was unavailable or degraded.
 - `FAIL`: required evidence could not be proven.
 
+### Demo readiness check
+
+Before a defense or live demo, run the one-command readiness check:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadiness.ps1
+```
+
+It verifies Git awareness, Docker services, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, the defense scenario, Falco replay, Runtime Sensor Health, and evidence export. The generated evidence defaults to `artifacts/local/demo-readiness-evidence.md`, which must stay uncommitted.
+
 ### Export defense evidence
 
 Export a safe Markdown evidence pack to an ignored local artifact path:
@@ -281,6 +291,16 @@ Default scenario не требует Fedora, Falco, Kubernetes или насто
 - `PASS`: обязательное demo evidence подтверждено.
 - `WARN`: основной сценарий прошёл, но optional local service недоступен или degraded.
 - `FAIL`: обязательное evidence подтвердить не удалось.
+
+### Demo readiness check
+
+Перед защитой или live demo запустите одну команду проверки готовности:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadiness.ps1
+```
+
+Команда проверяет Git awareness, локальные Docker services, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, defense scenario, Falco replay, Runtime Sensor Health и evidence export. Generated evidence по умолчанию сохраняется в `artifacts/local/demo-readiness-evidence.md`; этот файл нельзя коммитить.
 
 ### Экспорт evidence для защиты
 
