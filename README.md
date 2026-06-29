@@ -98,6 +98,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSiemRules.
 
 For the field reference and safety notes, see [`docs/SIEM_RULES.md`](docs/SIEM_RULES.md).
 
+### Container policy-as-code
+
+Protected container run decisions are loaded from [`config/container-policy.default.json`](config/container-policy.default.json). The committed default policy preserves the existing fixture behavior: critical findings block, high findings warn, and clean fixtures allow. Optional local overrides can use `config/container-policy.local.json`, which is ignored by Git.
+
+Validate the policy offline:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldContainerPolicy.ps1
+```
+
+The protected runner prints the safe policy decision, matched policy rule IDs, and policy config source. Details are documented in [`docs/CONTAINER_POLICY.md`](docs/CONTAINER_POLICY.md).
+
 Result meanings:
 
 - `PASS`: required demo evidence was demonstrated.
@@ -375,6 +387,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSiemRules.
 ```
 
 Описание полей и safety notes находятся в [`docs/SIEM_RULES.md`](docs/SIEM_RULES.md).
+
+### Политика контейнеров как код
+
+Решения защищённого запуска контейнеров загружаются из [`config/container-policy.default.json`](config/container-policy.default.json). Закоммиченная политика по умолчанию сохраняет текущее поведение fixtures: критические findings дают `Block`, high findings дают `Warn`, clean fixtures дают `Allow`. Необязательные локальные переопределения можно хранить в `config/container-policy.local.json`; этот файл игнорируется Git.
+
+Проверьте политику офлайн:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldContainerPolicy.ps1
+```
+
+Защищённый runner выводит безопасное policy decision, совпавшие policy rule IDs и источник config. Подробности описаны в [`docs/CONTAINER_POLICY.md`](docs/CONTAINER_POLICY.md).
 
 Значения результата:
 

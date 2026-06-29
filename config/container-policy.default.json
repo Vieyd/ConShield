@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "policyId": "container-policy-as-code",
+  "policyVersion": "1.0.0",
+  "defaultDecision": "Allow",
+  "rules": [
+    {
+      "id": "POLICY-CRITICAL-VULN-BLOCK",
+      "enabled": true,
+      "name": "Block images with critical vulnerabilities",
+      "match": {
+        "criticalVulnerabilitiesAtLeast": 1
+      },
+      "decision": "Block",
+      "reason": "Image contains critical vulnerabilities."
+    },
+    {
+      "id": "POLICY-HIGH-VULN-WARN",
+      "enabled": true,
+      "name": "Warn on high vulnerabilities",
+      "match": {
+        "highVulnerabilitiesAtLeast": 1
+      },
+      "decision": "Warn",
+      "reason": "Image contains high vulnerabilities."
+    }
+  ]
+}
