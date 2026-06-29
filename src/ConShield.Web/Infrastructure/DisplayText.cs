@@ -99,6 +99,8 @@ public static partial class DisplayText
         "LIFE-002" => "Повторные изменения учетных данных сенсора",
         "POL-001" => "Блокировка контейнерного образа политикой",
         "RTE-001" => "Угроза во время выполнения контейнера",
+        "SENSOR-001" => "Неизвестный runtime-сенсор",
+        "SENSOR-002" => "Отозванный или отключенный runtime-сенсор",
         "UE-001" => "Массовые изменения исключений доступа",
         _ => string.IsNullOrWhiteSpace(fallback) ? ruleCode ?? "—" : fallback
     };
@@ -108,6 +110,8 @@ public static partial class DisplayText
         "IMG-001" => "критических уязвимостей >= 1",
         "POL-001" => "решение = блокировка",
         "RTE-001" => "сопоставленное runtime-событие, корреляция включена, критичность высокая/критическая",
+        "SENSOR-001" => "runtime-событие от источника со статусом доверия Unknown",
+        "SENSOR-002" => "runtime-событие от источника со статусом доверия Revoked или Disabled",
         "LIFE-001" => "система-источник = conshield.sensor-lifecycle и внешний тип события = sensor.revoked",
         "LIFE-002" => "3 и более событий sensor.credential.rotated/sensor.credential.revoked для одного сенсора",
         _ => LocalizeTechnicalPhrase(fallback)
@@ -118,6 +122,7 @@ public static partial class DisplayText
         "IMG-001" => "Digest или reference контейнерного образа",
         "POL-001" => "Политика + digest/reference образа",
         "RTE-001" => "Контейнер + сопоставление + процесс",
+        "SENSOR-001" or "SENSOR-002" => "Источник runtime-сенсора",
         "LIFE-001" or "LIFE-002" => "Публичный ID сенсора",
         _ => LocalizeTechnicalPhrase(fallback)
     };
@@ -131,6 +136,8 @@ public static partial class DisplayText
         "LIFE-002" => "Правило выявляет повторные ротации или отзывы учетных данных одного сенсора за короткий интервал.",
         "POL-001" => "Правило выявляет решения Container Policy Gate с результатом «блокировка».",
         "RTE-001" => "Правило выявляет подтвержденные Falco-compatible runtime-события для контейнеров.",
+        "SENSOR-001" => "Правило выявляет runtime-события от неизвестного источника сенсора.",
+        "SENSOR-002" => "Правило выявляет runtime-события от отозванного или отключенного сенсора.",
         "UE-001" => "Правило выявляет подозрительную серию операций изменения или удаления исключений доступа.",
         _ => LocalizeTechnicalPhrase(fallback)
     };
@@ -166,6 +173,17 @@ public static partial class DisplayText
             text = RuntimeThreatRegex().Replace(
                 text,
                 "Обнаружена runtime-угроза: ${mapping} для ${identity}: правило=${rule}, процесс=${process}.");
+            return text;
+        }
+
+        if (string.Equals(ruleCode, "SENSOR-001", StringComparison.Ordinal)
+            || string.Equals(ruleCode, "SENSOR-002", StringComparison.Ordinal))
+        {
+            text = text.Replace("Sensor trust enforcement", "Контроль доверия сенсора", StringComparison.Ordinal);
+            text = text.Replace("trustStatus=", "статус доверия=", StringComparison.Ordinal);
+            text = text.Replace("sensorId=", "sensorId=", StringComparison.Ordinal);
+            text = text.Replace("sourceSystem=", "sourceSystem=", StringComparison.Ordinal);
+            text = text.Replace("eventType=", "eventType=", StringComparison.Ordinal);
             return text;
         }
 

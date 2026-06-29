@@ -13,6 +13,43 @@
       ],
       "fingerprintSha256": "demo-synthetic-fingerprint-placeholder",
       "notes": "Synthetic demo sensor for local replay."
+    },
+    {
+      "sensorId": "demo-falco-runtime-collector-01",
+      "displayName": "Demo Falco Runtime Collector",
+      "sourceSystem": "conshield.falco-runtime-collector",
+      "environment": "local-demo",
+      "status": "Trusted",
+      "expectedEventTypes": [
+        "container.runtime.shell_spawned",
+        "container.runtime.etc_write"
+      ],
+      "fingerprintSha256": "demo-runtime-collector-synthetic-fingerprint-placeholder",
+      "notes": "Synthetic trusted collector source for existing local RTE tests and demos."
+    },
+    {
+      "sensorId": "demo-falco-revoked-01",
+      "displayName": "Demo Revoked Falco Sensor",
+      "sourceSystem": "conshield.falco-revoked-sensor",
+      "environment": "local-demo",
+      "status": "Revoked",
+      "expectedEventTypes": [
+        "container.runtime.shell_spawned"
+      ],
+      "fingerprintSha256": "demo-revoked-synthetic-fingerprint-placeholder",
+      "notes": "Synthetic revoked sensor for deterministic enforcement simulation."
+    },
+    {
+      "sensorId": "demo-falco-disabled-01",
+      "displayName": "Demo Disabled Falco Sensor",
+      "sourceSystem": "conshield.falco-disabled-sensor",
+      "environment": "local-demo",
+      "status": "Disabled",
+      "expectedEventTypes": [
+        "container.runtime.shell_spawned"
+      ],
+      "fingerprintSha256": "demo-disabled-synthetic-fingerprint-placeholder",
+      "notes": "Synthetic disabled sensor for deterministic enforcement simulation."
     }
   ]
 }

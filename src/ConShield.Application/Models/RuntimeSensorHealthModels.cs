@@ -21,6 +21,7 @@ public sealed record RuntimeSensorHealthRow(
     string DisplayName,
     string Environment,
     string TrustStatus,
+    string EnforcementAction,
     IReadOnlyList<string> ExpectedEventTypes,
     DateTime? LastSeenUtc,
     int EventCount,
@@ -28,6 +29,7 @@ public sealed record RuntimeSensorHealthRow(
     string? LatestEventType,
     EventSeverity? LatestSeverity,
     int RelatedRteAlertCount,
+    int RelatedSensorTrustAlertCount,
     int RelatedIncidentCount,
     string Status);
 

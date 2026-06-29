@@ -70,11 +70,13 @@
                     <th>DisplayName</th>
                     <th>Environment</th>
                     <th>Trust</th>
+                    <th>Enforcement</th>
                     <th>LastSeenUtc</th>
                     <th>EventCount</th>
                     <th>Latest event</th>
                     <th>Latest severity</th>
                     <th>RTE alerts</th>
+                    <th>Trust alerts</th>
                     <th>Incidents</th>
                     <th>Status</th>
                     <th class="app-table-actions-col">Links</th>
@@ -91,6 +93,7 @@
                         <td>@item.DisplayName</td>
                         <td>@item.Environment</td>
                         <td><span class="app-badge badge-neutral">@item.TrustStatus</span></td>
+                        <td><span class="app-badge badge-neutral">@item.EnforcementAction</span></td>
                         <td>@(item.LastSeenUtc?.ToMoscowDisplay() ?? "—")</td>
                         <td><span class="app-badge badge-neutral">@item.EventCount</span></td>
                         <td>
@@ -123,6 +126,7 @@
                             }
                         </td>
                         <td><span class="app-badge badge-neutral">@item.RelatedRteAlertCount</span></td>
+                        <td><span class="app-badge badge-neutral">@item.RelatedSensorTrustAlertCount</span></td>
                         <td><span class="app-badge badge-neutral">@item.RelatedIncidentCount</span></td>
                         <td>
                             <span class="app-status @DisplayText.StatusClass(item.Status)">

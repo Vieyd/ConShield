@@ -6,6 +6,9 @@ param(
     [string]$RegistryPath = '.\config\sensor-registry.default.json',
     [string]$SensorId = 'demo-falco-linux-01',
     [string]$SourceSystem = 'conshield.falco-linux-sensor',
+    [switch]$SimulateUnknownSensor,
+    [switch]$SimulateRevokedSensor,
+    [switch]$SimulateDisabledSensor,
     [ValidateRange(1, 3650)]
     [int]$MaxEventAgeDays = 3650,
     [switch]$NoSubmit
@@ -193,6 +196,31 @@ function Get-SensorTrust {
     }
 }
 
+function Get-EnforcementAction {
+    param([Parameter(Mandatory = $true)][string]$TrustStatus)
+
+    switch ($TrustStatus) {
+        'Trusted' { return 'AcceptTrusted' }
+        'Revoked' { return 'FlagRevokedWithAlert' }
+        'Disabled' { return 'FlagDisabledWithAlert' }
+        default { return 'AcceptUnknownWithAlert' }
+    }
+}
+
+function Get-ExpectedRule {
+    param(
+        [Parameter(Mandatory = $true)][string]$TrustStatus,
+        [Parameter(Mandatory = $true)][string]$MappedExpectedRule
+    )
+
+    switch ($TrustStatus) {
+        'Trusted' { return $MappedExpectedRule }
+        'Revoked' { return 'SENSOR-002' }
+        'Disabled' { return 'SENSOR-002' }
+        default { return 'SENSOR-001' }
+    }
+}
+
 function Invoke-Collector {
     param(
         [Parameter(Mandatory = $true)][string]$RepoRoot,
@@ -215,6 +243,27 @@ function Invoke-Collector {
 }
 
 try {
+    $simulationCount = @($SimulateUnknownSensor, $SimulateRevokedSensor, $SimulateDisabledSensor) |
+        Where-Object { $_ } |
+        Measure-Object |
+        Select-Object -ExpandProperty Count
+    if ($simulationCount -gt 1) {
+        throw 'Specify only one sensor trust simulation mode.'
+    }
+
+    if ($SimulateUnknownSensor) {
+        $SensorId = 'demo-falco-unknown-01'
+        $SourceSystem = 'conshield.falco-unknown-sensor'
+    }
+    elseif ($SimulateRevokedSensor) {
+        $SensorId = 'demo-falco-revoked-01'
+        $SourceSystem = 'conshield.falco-revoked-sensor'
+    }
+    elseif ($SimulateDisabledSensor) {
+        $SensorId = 'demo-falco-disabled-01'
+        $SourceSystem = 'conshield.falco-disabled-sensor'
+    }
+
     $repoRoot = Resolve-RepositoryRoot
     $resolvedFixture = Resolve-RepoPath -RepoRoot $repoRoot -Path $FixturePath
     $resolvedMapping = Resolve-RepoPath -RepoRoot $repoRoot -Path $MappingPath
@@ -232,7 +281,9 @@ try {
     $sensorTrust = Get-SensorTrust -RepoRoot $repoRoot -Path $RegistryPath -SensorId $SensorId -SourceSystem $SourceSystem
     $mappedRule = Find-MappedRule -Fixture $fixture -Mapping $mapping
     $eventType = if ($null -ne $mappedRule) { [string]$mappedRule.eventType } else { 'container.runtime.unmapped' }
-    $expectedRule = if ($null -ne $mappedRule -and [bool]$mappedRule.correlate) { 'RTE-001' } else { '-' }
+    $mappedExpectedRule = if ($null -ne $mappedRule -and [bool]$mappedRule.correlate) { 'RTE-001' } else { '-' }
+    $enforcementAction = Get-EnforcementAction -TrustStatus $sensorTrust.TrustStatus
+    $expectedRule = Get-ExpectedRule -TrustStatus $sensorTrust.TrustStatus -MappedExpectedRule $mappedExpectedRule
     $containerId = [string]$fixture.output_fields.'container.id'
     $processName = [string]$fixture.output_fields.'proc.name'
     $safeEventId = Get-Sha256Short -Value ('{0}|{1}|{2}|{3}' -f $fixture.time, $fixture.rule, $containerId, $processName)
@@ -250,6 +301,7 @@ try {
     Write-Output ('Fixture: {0}' -f (Split-Path -Leaf $resolvedFixture))
     Write-Output ('SensorId: {0}' -f $sensorTrust.SensorId)
     Write-Output ('Sensor trust: {0}' -f $sensorTrust.TrustStatus)
+    Write-Output ('Enforcement: {0}' -f $enforcementAction)
     Write-Output ('Mapped event type: {0}' -f $eventType)
     Write-Output ('SourceSystem: {0}' -f $SourceSystem)
     Write-Output ('ExternalEventId: hash:{0}' -f $safeEventId)

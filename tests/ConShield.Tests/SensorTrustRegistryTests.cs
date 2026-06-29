@@ -35,8 +35,10 @@ public sealed class SensorTrustRegistryTests
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("ConShield sensor registry validation", result.Output, StringComparison.Ordinal);
         Assert.Contains("Config: config/sensor-registry.default.json", result.Output, StringComparison.Ordinal);
-        Assert.Contains("Sensors: 1", result.Output, StringComparison.Ordinal);
-        Assert.Contains("Trusted: 1", result.Output, StringComparison.Ordinal);
+        Assert.Contains("Sensors: 4", result.Output, StringComparison.Ordinal);
+        Assert.Contains("Trusted: 2", result.Output, StringComparison.Ordinal);
+        Assert.Contains("Revoked: 1", result.Output, StringComparison.Ordinal);
+        Assert.Contains("Disabled: 1", result.Output, StringComparison.Ordinal);
         Assert.Contains("demo-falco-linux-01: OK", result.Output, StringComparison.Ordinal);
         Assert.Contains("Result: PASS", result.Output, StringComparison.Ordinal);
         AssertSafeOutput(result.Output);

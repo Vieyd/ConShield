@@ -46,11 +46,42 @@ The validator checks:
 - source system
 - environment
 - trust status
+- enforcement action
 - expected event types
 - last seen and event counts
 - related `RTE-001` alerts and incidents
+- related `SENSOR-001` / `SENSOR-002` trust enforcement alerts
 
-Unknown runtime sources are shown as `Unknown`. The local demo Falco source `conshield.falco-linux-sensor` maps to `demo-falco-linux-01` with `Trusted` status.
+Unknown runtime sources are shown as `Unknown`. The local demo Falco sources `conshield.falco-linux-sensor` and `conshield.falco-runtime-collector` map to trusted synthetic registry entries.
+
+## Trust enforcement
+
+Sensor Trust Enforcement v1 makes trust status affect SIEM correlation while keeping ingestion deterministic and safe:
+
+| Status | Enforcement action | SIEM behavior |
+| --- | --- | --- |
+| `Trusted` | `AcceptTrusted` | Normal runtime path; approved mappings can create `RTE-001`. |
+| `Unknown` | `AcceptUnknownWithAlert` | Runtime event is accepted and flagged with deterministic `SENSOR-001`; no incident is created by default. |
+| `Revoked` | `FlagRevokedWithAlert` | Runtime event is flagged with deterministic `SENSOR-002`; a critical incident is created. |
+| `Disabled` | `FlagDisabledWithAlert` | Runtime event is flagged with deterministic `SENSOR-002`; a critical incident is created. |
+
+This layer is intentionally not full mTLS. Future certificate-bound enrollment can tighten transport/authentication, but this PR keeps the local demo CI-safe and does not require real certificates, private keys, Fedora/Falco, live Docker, live Trivy DB, or external internet.
+
+Simulate enforcement modes without submitting events:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -SimulateUnknownSensor `
+  -NoSubmit
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -SimulateRevokedSensor `
+  -NoSubmit
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -SimulateDisabledSensor `
+  -NoSubmit
+```
 
 ## Local demo flow
 
@@ -65,4 +96,4 @@ The replay script prints only a safe sensor identity summary: `SensorId`, trust 
 
 ## Evidence
 
-The defense evidence exporter includes `Sensor Trust Evidence` with registry counts and sanitized sensor metadata. It excludes raw runtime payload JSON, raw additional data, local secrets, logs, real certificate material, private keys, screenshots, and generated artifacts from source control.
+The defense evidence exporter includes `Sensor Trust Evidence` with registry counts and sanitized sensor metadata. It also includes `Sensor Trust Enforcement Evidence` with aggregate `SENSOR-001` / `SENSOR-002` counts and incidents. It excludes raw runtime payload JSON, raw additional data, local secrets, logs, real certificate material, private keys, screenshots, and generated artifacts from source control.

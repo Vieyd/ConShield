@@ -406,6 +406,30 @@ try {
         Add-ReadinessCheck -Name 'Sensor registry validation' -Status 'FAIL' -Detail 'default sensor registry config did not validate' -Hint 'Run scripts\Test-ConShieldSensorRegistry.ps1 directly for safe detailed output.'
     }
 
+    $unknownTrustReplay = Invoke-CapturedCommand `
+        -FilePath 'pwsh' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '.\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1', '-SimulateUnknownSensor', '-NoSubmit') `
+        -WorkingDirectory $repoRoot
+    $unknownTrustResult = ($unknownTrustReplay.Output | Where-Object { $_ -match '^Result:\s+' } | Select-Object -Last 1)
+    if ($unknownTrustReplay.ExitCode -eq 0 -and $unknownTrustResult -match 'PASS' -and ($unknownTrustReplay.Output -join "`n") -match 'SENSOR-001') {
+        Add-ReadinessCheck -Name 'Sensor trust enforcement unknown' -Status 'PASS' -Detail 'Expected rule: SENSOR-001'
+    }
+    else {
+        Add-ReadinessCheck -Name 'Sensor trust enforcement unknown' -Status 'FAIL' -Detail 'unknown sensor simulation did not return SENSOR-001' -Hint 'Run scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 -SimulateUnknownSensor -NoSubmit.'
+    }
+
+    $revokedTrustReplay = Invoke-CapturedCommand `
+        -FilePath 'pwsh' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '.\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1', '-SimulateRevokedSensor', '-NoSubmit') `
+        -WorkingDirectory $repoRoot
+    $revokedTrustResult = ($revokedTrustReplay.Output | Where-Object { $_ -match '^Result:\s+' } | Select-Object -Last 1)
+    if ($revokedTrustReplay.ExitCode -eq 0 -and $revokedTrustResult -match 'PASS' -and ($revokedTrustReplay.Output -join "`n") -match 'SENSOR-002') {
+        Add-ReadinessCheck -Name 'Sensor trust enforcement revoked' -Status 'PASS' -Detail 'Expected rule: SENSOR-002'
+    }
+    else {
+        Add-ReadinessCheck -Name 'Sensor trust enforcement revoked' -Status 'FAIL' -Detail 'revoked sensor simulation did not return SENSOR-002' -Hint 'Run scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 -SimulateRevokedSensor -NoSubmit.'
+    }
+
     if ($SkipScenario) {
         Add-ReadinessCheck -Name 'Defense scenario' -Status 'SKIP' -Detail 'requested by -SkipScenario'
     }

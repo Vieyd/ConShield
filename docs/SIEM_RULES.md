@@ -27,12 +27,14 @@ Expected successful output:
 ```text
 ConShield SIEM rules validation
 Config: config/siem-rules.default.json
-Rules: 5
-Enabled: 5
+Rules: 7
+Enabled: 7
 Disabled: 0
 IMG-001: OK
 POL-001: OK
 RTE-001: OK
+SENSOR-001: OK
+SENSOR-002: OK
 LIFE-001: OK
 LIFE-002: OK
 Result: PASS
@@ -46,7 +48,7 @@ Each rule supports these fields:
 
 | Field | Purpose |
 |---|---|
-| `id` | Stable rule identifier. Configurable SIEM rules v1 supports `IMG-001`, `POL-001`, `RTE-001`, `LIFE-001`, and `LIFE-002`. |
+| `id` | Stable rule identifier. Configurable SIEM rules v1 supports `IMG-001`, `POL-001`, `RTE-001`, `SENSOR-001`, `SENSOR-002`, `LIFE-001`, and `LIFE-002`. |
 | `name` | Safe display name used for alerts and incidents. |
 | `description` | Safe operator-facing description of the rule purpose. |
 | `enabled` | Optional; defaults to `true`. Disabled rules do not create alerts or incidents. |
@@ -69,6 +71,8 @@ Unknown fields fail validation so rule behavior stays deterministic.
 | `IMG-001` | `conshield.image-scanner` | `container.image.scan.completed` | Creates a critical alert/incident when critical image scan findings meet the threshold. |
 | `POL-001` | `conshield.container-guard` | `container.image.policy.evaluated` | Creates a critical alert/incident when the policy decision is `Block`. |
 | `RTE-001` | `conshield.falco-runtime-collector`, `conshield.falco-linux-sensor` | `container.runtime.*` approved mappings listed in config | Creates a high/critical alert/incident for approved Falco-compatible runtime mappings. |
+| `SENSOR-001` | `conshield.sensor-trust` | `sensor.trust.unknown-runtime-source` | Creates a high alert without an incident when a runtime event comes from an unknown sensor source. |
+| `SENSOR-002` | `conshield.sensor-trust` | `sensor.trust.revoked-or-disabled-runtime-source` | Creates a critical alert and incident when a runtime event comes from a revoked or disabled sensor source. |
 | `LIFE-001` | `conshield.sensor-lifecycle` | `sensor.revoked` | Creates a warning alert/incident when a sensor identity is revoked. |
 | `LIFE-002` | `conshield.sensor-lifecycle` | `sensor.credential.rotated`, `sensor.credential.revoked` | Creates a warning alert/incident after repeated credential lifecycle changes for one sensor. |
 
