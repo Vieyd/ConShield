@@ -15,17 +15,23 @@ public class SiemCorrelationService : ISiemCorrelationService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly ISecurityEventWriter _eventWriter;
+    private readonly ISiemRuleProvider _ruleProvider;
 
-    public SiemCorrelationService(ApplicationDbContext dbContext, ISecurityEventWriter eventWriter)
+    public SiemCorrelationService(
+        ApplicationDbContext dbContext,
+        ISecurityEventWriter eventWriter,
+        ISiemRuleProvider? ruleProvider = null)
     {
         _dbContext = dbContext;
         _eventWriter = eventWriter;
+        _ruleProvider = ruleProvider ?? new FileSystemSiemRuleProvider(Directory.GetCurrentDirectory());
     }
 
     public async Task<CorrelationRunResult> RunAsync(CancellationToken cancellationToken = default)
     {
         var result = new CorrelationRunResult();
         var now = DateTime.UtcNow;
+        var configurableRules = _ruleProvider.GetRules();
 
         var recentLoginFailures = await _dbContext.SecurityEvents
             .Where(x => x.EventType == SecurityEventType.LoginFailure && x.OccurredAtUtc >= now.AddMinutes(-2))
@@ -35,6 +41,7 @@ public class SiemCorrelationService : ISiemCorrelationService
             ruleCode: "BF-001",
             ruleName: "Повторные неуспешные попытки входа",
             severity: EventSeverity.High,
+            incidentSeverity: EventSeverity.High,
             descriptionFactory: group => $"Зафиксировано {group.Count} неуспешных попыток входа для учетной записи {group.Key} за последние 2 минуты.",
             eventIdsFactory: group => group.EventIds,
             groups: recentLoginFailures
@@ -61,6 +68,7 @@ public class SiemCorrelationService : ISiemCorrelationService
             ruleCode: "UE-001",
             ruleName: "Массовые изменения записей UserExceptions",
             severity: EventSeverity.Critical,
+            incidentSeverity: EventSeverity.Critical,
             descriptionFactory: group => $"Пользователь {group.Key} выполнил {group.Count} операций изменения или удаления UserExceptions за последние 30 секунд.",
             eventIdsFactory: group => group.EventIds,
             groups: recentUserExceptionChanges
@@ -92,6 +100,7 @@ public class SiemCorrelationService : ISiemCorrelationService
             ruleCode: "CR-001",
             ruleName: "Повторные критические события с одного источника",
             severity: EventSeverity.Critical,
+            incidentSeverity: EventSeverity.Critical,
             descriptionFactory: group => $"С источника {group.Key} зарегистрировано {group.Count} критических события за последние 5 минут.",
             eventIdsFactory: group => group.EventIds,
             groups: recentCriticalEvents
@@ -109,151 +118,146 @@ public class SiemCorrelationService : ISiemCorrelationService
 
         Merge(result, created3);
 
-        var recentImageScanEvents = await _dbContext.SecurityEvents
-            .Where(x => x.EventType == SecurityEventType.ExternalEvent
-                        && x.ExternalEventType == "container.image.scan.completed"
-                        && x.Severity == EventSeverity.Critical
-                        && x.OccurredAtUtc >= now.AddHours(-24))
-            .ToListAsync(cancellationToken);
+        if (configurableRules.GetEnabledRule("IMG-001") is { } imageRule)
+        {
+            var recentImageScanEvents = await _dbContext.SecurityEvents
+                .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                            && imageRule.EffectiveEventTypes.Contains(x.ExternalEventType!)
+                            && imageRule.EffectiveSourceSystems.Contains(x.SourceSystem!)
+                            && x.Severity >= imageRule.EffectiveMinimumSeverity
+                            && x.OccurredAtUtc >= now.AddMinutes(-imageRule.TimeWindowMinutes))
+                .ToListAsync(cancellationToken);
 
-        var created4 = await ProcessRuleAsync(
-            ruleCode: "IMG-001",
-            ruleName: "Критические уязвимости в контейнерном образе",
-            severity: EventSeverity.Critical,
-            descriptionFactory: group => group.Description,
-            eventIdsFactory: group => group.EventIds,
-            groups: recentImageScanEvents
-                .Select(TryCreateImageScanCandidate)
-                .Where(x => x is not null)
-                .Select(x => x!)
-                .ToList(),
-            createIncident: true,
-            cancellationToken: cancellationToken);
+            Merge(result, await ProcessRuleAsync(
+                rule: imageRule,
+                descriptionFactory: group => group.Description,
+                eventIdsFactory: group => group.EventIds,
+                groups: recentImageScanEvents
+                    .Select(x => TryCreateImageScanCandidate(x, imageRule.Threshold))
+                    .Where(x => x is not null)
+                    .Select(x => x!)
+                    .ToList(),
+                cancellationToken: cancellationToken));
+        }
 
-        Merge(result, created4);
+        if (configurableRules.GetEnabledRule("POL-001") is { } policyRule)
+        {
+            var recentPolicyEvents = await _dbContext.SecurityEvents
+                .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                            && policyRule.EffectiveEventTypes.Contains(x.ExternalEventType!)
+                            && policyRule.EffectiveSourceSystems.Contains(x.SourceSystem!)
+                            && x.Severity >= policyRule.EffectiveMinimumSeverity
+                            && x.OccurredAtUtc >= now.AddMinutes(-policyRule.TimeWindowMinutes))
+                .ToListAsync(cancellationToken);
 
-        var recentPolicyEvents = await _dbContext.SecurityEvents
-            .Where(x => x.EventType == SecurityEventType.ExternalEvent
-                        && x.ExternalEventType == "container.image.policy.evaluated"
-                        && x.OccurredAtUtc >= now.AddHours(-24))
-            .ToListAsync(cancellationToken);
+            Merge(result, await ProcessRuleAsync(
+                rule: policyRule,
+                descriptionFactory: group => group.Description,
+                eventIdsFactory: group => group.EventIds,
+                groups: recentPolicyEvents
+                    .Select(TryCreatePolicyGateCandidate)
+                    .Where(x => x is not null)
+                    .Select(x => x!)
+                    .ToList(),
+                cancellationToken: cancellationToken));
+        }
 
-        var created5 = await ProcessRuleAsync(
-            ruleCode: "POL-001",
-            ruleName: "Блокировка контейнерного образа политикой",
-            severity: EventSeverity.Critical,
-            descriptionFactory: group => group.Description,
-            eventIdsFactory: group => group.EventIds,
-            groups: recentPolicyEvents
-                .Select(TryCreatePolicyGateCandidate)
-                .Where(x => x is not null)
-                .Select(x => x!)
-                .ToList(),
-            createIncident: true,
-            cancellationToken: cancellationToken);
+        if (configurableRules.GetEnabledRule("RTE-001") is { } runtimeRule)
+        {
+            var runtimeEventTypes = runtimeRule.EffectiveEventTypes.ToHashSet(StringComparer.Ordinal);
+            var recentRuntimeEvents = await _dbContext.SecurityEvents
+                .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                            && runtimeRule.EffectiveEventTypes.Contains(x.ExternalEventType!)
+                            && runtimeRule.EffectiveSourceSystems.Contains(x.SourceSystem!)
+                            && x.Severity >= runtimeRule.EffectiveMinimumSeverity
+                            && x.OccurredAtUtc >= now.AddMinutes(-runtimeRule.TimeWindowMinutes))
+                .ToListAsync(cancellationToken);
 
-        Merge(result, created5);
-
-        var recentRuntimeEvents = await _dbContext.SecurityEvents
-            .Where(x => x.EventType == SecurityEventType.ExternalEvent
-                        && (x.SourceSystem == SecuritySourceSystems.FalcoRuntimeCollector
-                            || x.SourceSystem == SecuritySourceSystems.FalcoLinuxSensor)
-                        && (x.Severity == EventSeverity.High || x.Severity == EventSeverity.Critical)
-                        && x.OccurredAtUtc >= now.AddMinutes(-10))
-            .ToListAsync(cancellationToken);
-
-        var created6 = await ProcessRuleAsync(
-            ruleCode: "RTE-001",
-            ruleName: "Container runtime threat detected",
-            severity: EventSeverity.High,
-            descriptionFactory: group => group.Description,
-            eventIdsFactory: group => group.EventIds,
-            groups: recentRuntimeEvents
-                .Select(TryCreateRuntimeCandidate)
-                .Where(x => x is not null)
-                .Select(x => x!)
-                .GroupBy(x => x.Key, StringComparer.Ordinal)
-                .Select(group =>
-                {
-                    var candidates = group.ToList();
-                    var mostSevere = candidates.MaxBy(x => x.Severity) ?? candidates[0];
-                    return new RuleCandidate
+            Merge(result, await ProcessRuleAsync(
+                rule: runtimeRule,
+                descriptionFactory: group => group.Description,
+                eventIdsFactory: group => group.EventIds,
+                groups: recentRuntimeEvents
+                    .Select(x => TryCreateRuntimeCandidate(x, runtimeEventTypes))
+                    .Where(x => x is not null)
+                    .Select(x => x!)
+                    .GroupBy(x => x.Key, StringComparer.Ordinal)
+                    .Select(group =>
                     {
-                        Key = group.Key,
-                        Count = candidates.Count,
-                        Description = mostSevere.Description,
-                        EventIds = candidates.SelectMany(x => x.EventIds).Distinct().Order().ToList(),
-                        Severity = candidates.Max(x => x.Severity)
-                    };
-                })
-                .ToList(),
-            createIncident: true,
-            cancellationToken: cancellationToken);
+                        var candidates = group.ToList();
+                        var mostSevere = candidates.MaxBy(x => x.Severity) ?? candidates[0];
+                        return new RuleCandidate
+                        {
+                            Key = group.Key,
+                            Count = candidates.Count,
+                            Description = mostSevere.Description,
+                            EventIds = candidates.SelectMany(x => x.EventIds).Distinct().Order().ToList(),
+                            Severity = candidates.Max(x => x.Severity)
+                        };
+                    })
+                    .ToList(),
+                cancellationToken: cancellationToken));
+        }
 
-        Merge(result, created6);
+        if (configurableRules.GetEnabledRule("LIFE-001") is { } sensorRevokedRule)
+        {
+            var recentSensorRevocations = await _dbContext.SecurityEvents
+                .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                            && sensorRevokedRule.EffectiveEventTypes.Contains(x.ExternalEventType!)
+                            && sensorRevokedRule.EffectiveSourceSystems.Contains(x.SourceSystem!)
+                            && x.Severity >= sensorRevokedRule.EffectiveMinimumSeverity
+                            && x.OccurredAtUtc >= now.AddMinutes(-sensorRevokedRule.TimeWindowMinutes))
+                .ToListAsync(cancellationToken);
 
-        var recentSensorRevocations = await _dbContext.SecurityEvents
-            .Where(x => x.EventType == SecurityEventType.ExternalEvent
-                        && x.SourceSystem == SecuritySourceSystems.SensorLifecycle
-                        && x.ExternalEventType == SensorLifecycleEventTypes.SensorRevoked
-                        && x.OccurredAtUtc >= now.AddHours(-24))
-            .ToListAsync(cancellationToken);
+            Merge(result, await ProcessRuleAsync(
+                rule: sensorRevokedRule,
+                descriptionFactory: group => group.Description,
+                eventIdsFactory: group => group.EventIds,
+                groups: recentSensorRevocations
+                    .Select(TryCreateSensorRevokedCandidate)
+                    .Where(x => x is not null)
+                    .Select(x => x!)
+                    .ToList(),
+                cancellationToken: cancellationToken));
+        }
 
-        var created7 = await ProcessRuleAsync(
-            ruleCode: "LIFE-001",
-            ruleName: "Sensor identity revoked",
-            severity: EventSeverity.Warning,
-            descriptionFactory: group => group.Description,
-            eventIdsFactory: group => group.EventIds,
-            groups: recentSensorRevocations
-                .Select(TryCreateSensorRevokedCandidate)
-                .Where(x => x is not null)
-                .Select(x => x!)
-                .ToList(),
-            createIncident: true,
-            cancellationToken: cancellationToken);
+        if (configurableRules.GetEnabledRule("LIFE-002") is { } credentialLifecycleRule)
+        {
+            var recentCredentialLifecycleEvents = await _dbContext.SecurityEvents
+                .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                            && credentialLifecycleRule.EffectiveEventTypes.Contains(x.ExternalEventType!)
+                            && credentialLifecycleRule.EffectiveSourceSystems.Contains(x.SourceSystem!)
+                            && x.Severity >= credentialLifecycleRule.EffectiveMinimumSeverity
+                            && x.OccurredAtUtc >= now.AddMinutes(-credentialLifecycleRule.TimeWindowMinutes))
+                .ToListAsync(cancellationToken);
 
-        Merge(result, created7);
-
-        var recentCredentialLifecycleEvents = await _dbContext.SecurityEvents
-            .Where(x => x.EventType == SecurityEventType.ExternalEvent
-                        && x.SourceSystem == SecuritySourceSystems.SensorLifecycle
-                        && (x.ExternalEventType == SensorLifecycleEventTypes.SensorCredentialRotated
-                            || x.ExternalEventType == SensorLifecycleEventTypes.SensorCredentialRevoked)
-                        && x.OccurredAtUtc >= now.AddMinutes(-15))
-            .ToListAsync(cancellationToken);
-
-        var created8 = await ProcessRuleAsync(
-            ruleCode: "LIFE-002",
-            ruleName: "Repeated sensor credential lifecycle changes",
-            severity: EventSeverity.Warning,
-            descriptionFactory: group => group.Description,
-            eventIdsFactory: group => group.EventIds,
-            groups: recentCredentialLifecycleEvents
-                .Select(TryCreateCredentialLifecycleCandidate)
-                .Where(x => x is not null)
-                .Select(x => x!)
-                .GroupBy(x => x.Key, StringComparer.Ordinal)
-                .Select(group =>
-                {
-                    var candidates = group.OrderBy(x => x.EventIds.Min()).ToList();
-                    var displayName = candidates
-                        .Select(x => x.DisplayName)
-                        .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
-                    return new RuleCandidate
+            Merge(result, await ProcessRuleAsync(
+                rule: credentialLifecycleRule,
+                descriptionFactory: group => group.Description,
+                eventIdsFactory: group => group.EventIds,
+                groups: recentCredentialLifecycleEvents
+                    .Select(TryCreateCredentialLifecycleCandidate)
+                    .Where(x => x is not null)
+                    .Select(x => x!)
+                    .GroupBy(x => x.Key, StringComparer.Ordinal)
+                    .Select(group =>
                     {
-                        Key = group.Key,
-                        Count = candidates.Count,
-                        Description = $"Sensor credential lifecycle changed {candidates.Count} times in 15 minutes for sensor {group.Key}{FormatDisplayName(displayName)}. Source events: {string.Join(", ", candidates.SelectMany(x => x.EventIds).Distinct().Order())}.",
-                        EventIds = candidates.SelectMany(x => x.EventIds).Distinct().Order().ToList()
-                    };
-                })
-                .Where(x => x.Count >= 3)
-                .ToList(),
-            createIncident: true,
-            cancellationToken: cancellationToken);
-
-        Merge(result, created8);
+                        var candidates = group.OrderBy(x => x.EventIds.Min()).ToList();
+                        var displayName = candidates
+                            .Select(x => x.DisplayName)
+                            .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+                        return new RuleCandidate
+                        {
+                            Key = group.Key,
+                            Count = candidates.Count,
+                            Description = $"Sensor credential lifecycle changed {candidates.Count} times in {credentialLifecycleRule.TimeWindowMinutes} minutes for sensor {group.Key}{FormatDisplayName(displayName)}. Source events: {string.Join(", ", candidates.SelectMany(x => x.EventIds).Distinct().Order())}.",
+                            EventIds = candidates.SelectMany(x => x.EventIds).Distinct().Order().ToList()
+                        };
+                    })
+                    .Where(x => x.Count >= credentialLifecycleRule.Threshold)
+                    .ToList(),
+                cancellationToken: cancellationToken));
+        }
         return result;
     }
 
@@ -261,6 +265,7 @@ public class SiemCorrelationService : ISiemCorrelationService
         string ruleCode,
         string ruleName,
         EventSeverity severity,
+        EventSeverity? incidentSeverity,
         Func<RuleCandidate, string> descriptionFactory,
         Func<RuleCandidate, List<long>> eventIdsFactory,
         List<RuleCandidate> groups,
@@ -286,6 +291,7 @@ public class SiemCorrelationService : ISiemCorrelationService
             }
 
             var effectiveSeverity = group.Severity ?? severity;
+            var effectiveIncidentSeverity = group.Severity ?? incidentSeverity ?? effectiveSeverity;
 
             var alert = new SiemAlertRecord
             {
@@ -319,7 +325,7 @@ public class SiemCorrelationService : ISiemCorrelationService
                 {
                     CreatedAtUtc = DateTime.UtcNow,
                     Name = $"[{ruleCode}] {ruleName}",
-                    Severity = effectiveSeverity,
+                    Severity = effectiveIncidentSeverity,
                     Status = IncidentStatuses.New,
                     SourceEventId = group.EventIds.FirstOrDefault(),
                     Notes = alert.Description
@@ -334,7 +340,7 @@ public class SiemCorrelationService : ISiemCorrelationService
                 await _eventWriter.WriteAsync(new SecurityEventWriteRequest
                 {
                     EventType = SecurityEventType.IncidentCreated,
-                    Severity = effectiveSeverity,
+                    Severity = effectiveIncidentSeverity,
                     UserName = "siem-engine",
                     Description = $"По правилу {ruleCode} автоматически создан инцидент #{incident.Id}.",
                     AdditionalData = new
@@ -352,6 +358,23 @@ public class SiemCorrelationService : ISiemCorrelationService
 
         return result;
     }
+
+    private Task<CorrelationRunResult> ProcessRuleAsync(
+        ConfigurableSiemRule rule,
+        Func<RuleCandidate, string> descriptionFactory,
+        Func<RuleCandidate, List<long>> eventIdsFactory,
+        List<RuleCandidate> groups,
+        CancellationToken cancellationToken) =>
+        ProcessRuleAsync(
+            ruleCode: rule.Id,
+            ruleName: rule.Name,
+            severity: rule.EffectiveAlertSeverity,
+            incidentSeverity: rule.EffectiveIncidentSeverity,
+            descriptionFactory: descriptionFactory,
+            eventIdsFactory: eventIdsFactory,
+            groups: groups,
+            createIncident: rule.Incident.Create,
+            cancellationToken: cancellationToken);
 
     private async Task<IDbContextTransaction?> BeginCorrelationTransactionAsync(
         string triggerKey,
@@ -393,7 +416,7 @@ public class SiemCorrelationService : ISiemCorrelationService
         public string? DisplayName { get; set; }
     }
 
-    private static RuleCandidate? TryCreateImageScanCandidate(SecurityEventEntry entry)
+    private static RuleCandidate? TryCreateImageScanCandidate(SecurityEventEntry entry, int criticalThreshold)
     {
         if (string.IsNullOrWhiteSpace(entry.AdditionalDataJson))
             return null;
@@ -406,7 +429,7 @@ public class SiemCorrelationService : ISiemCorrelationService
                 return null;
 
             var criticalCount = ReadNonNegativeInt(root, "criticalCount");
-            if (criticalCount < 1)
+            if (criticalCount < criticalThreshold)
                 return null;
 
             var imageReference = ReadString(root, "imageReference", 512);
@@ -495,18 +518,9 @@ public class SiemCorrelationService : ISiemCorrelationService
         }
     }
 
-    private static RuleCandidate? TryCreateRuntimeCandidate(SecurityEventEntry entry)
+    private static RuleCandidate? TryCreateRuntimeCandidate(SecurityEventEntry entry, IReadOnlySet<string> approvedEventTypes)
     {
-        var approved = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "container.runtime.shell_spawned",
-            "container.runtime.binary_path_write",
-            "container.runtime.etc_write",
-            "container.runtime.setuid_change",
-            "container.runtime.suspicious_network_tool",
-            "container.runtime.privileged_container_started"
-        };
-        if (entry.ExternalEventType is null || !approved.Contains(entry.ExternalEventType))
+        if (entry.ExternalEventType is null || !approvedEventTypes.Contains(entry.ExternalEventType))
             return null;
         if (string.IsNullOrWhiteSpace(entry.AdditionalDataJson))
             return null;

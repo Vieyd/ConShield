@@ -16,6 +16,7 @@ src/**/appsettings.Development.json
 src/**/appsettings.Local.json
 src/ConShield.Collector/collector.local.json
 src/ConShield.ImageScanner/scanner.local.json
+config/siem-rules.local.json
 *.env
 .env
 .env.*

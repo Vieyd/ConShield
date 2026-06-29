@@ -91,6 +91,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddScoped<IUserExceptionService, UserExceptionService>();
+builder.Services.AddSingleton<ISiemRuleProvider>(_ => new FileSystemSiemRuleProvider(builder.Environment.ContentRootPath));
 builder.Services.AddScoped<ISiemCorrelationService, SiemCorrelationService>();
 builder.Services.AddScoped<IRuntimeSensorHealthService, RuntimeSensorHealthService>();
 builder.Services.AddScoped<IExternalSecurityEventIngestionService, ExternalSecurityEventIngestionService>();

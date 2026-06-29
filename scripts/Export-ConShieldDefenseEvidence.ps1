@@ -130,6 +130,65 @@ function Test-PortOpen {
     }
 }
 
+function Get-SiemRulesEvidence {
+    param([Parameter(Mandatory = $true)][string]$RepoRoot)
+
+    $path = Join-Path $RepoRoot 'config\siem-rules.default.json'
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        return [pscustomobject]@{
+            Summary = @([pscustomobject]@{
+                ConfigSource = 'config/siem-rules.default.json'
+                RulesLoaded = 0
+                EnabledRules = 0
+                DisabledRules = 0
+                RuleIds = '-'
+                Status = 'Missing'
+            })
+            Rules = @()
+        }
+    }
+
+    try {
+        $config = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -Depth 12
+        $rules = @($config.rules)
+        return [pscustomobject]@{
+            Summary = @([pscustomobject]@{
+                ConfigSource = 'config/siem-rules.default.json'
+                RulesLoaded = $rules.Count
+                EnabledRules = @($rules | Where-Object { $null -eq $_.enabled -or $_.enabled -eq $true }).Count
+                DisabledRules = @($rules | Where-Object { $_.enabled -eq $false }).Count
+                RuleIds = (($rules | ForEach-Object { [string]$_.id }) -join ', ')
+                Status = 'Loaded'
+            })
+            Rules = @($rules | ForEach-Object {
+                [pscustomobject]@{
+                    RuleId = ConvertTo-SafeCell -Value $_.id -MaxLength 32
+                    Enabled = if ($null -eq $_.enabled -or $_.enabled -eq $true) { 'true' } else { 'false' }
+                    SourceSystems = ConvertTo-SafeCell -Value (@($_.sourceSystems) -join ', ') -MaxLength 160
+                    EventTypes = ConvertTo-SafeCell -Value (@($_.eventTypes) -join ', ') -MaxLength 180
+                    MinimumSeverity = ConvertTo-SafeCell -Value $_.minimumSeverity -MaxLength 32
+                    AlertSeverity = ConvertTo-SafeCell -Value $_.alertSeverity -MaxLength 32
+                    Threshold = ConvertTo-SafeCell -Value $_.threshold -MaxLength 16
+                    TimeWindowMinutes = ConvertTo-SafeCell -Value $_.timeWindowMinutes -MaxLength 16
+                }
+            })
+        }
+    }
+    catch {
+        return [pscustomobject]@{
+            Summary = @([pscustomobject]@{
+                ConfigSource = 'config/siem-rules.default.json'
+                RulesLoaded = 0
+                EnabledRules = 0
+                DisabledRules = 0
+                RuleIds = '-'
+                Status = 'Invalid'
+            })
+            Rules = @()
+        }
+    }
+}
+
 function Import-NpgsqlClient {
     param([string]$RepoRoot)
 
@@ -262,6 +321,7 @@ function Invoke-DefenseScenario {
 }
 
 $repoRoot = Resolve-RepositoryRoot
+$siemRulesEvidence = Get-SiemRulesEvidence -RepoRoot $repoRoot
 $resolvedOutputPath = if ([System.IO.Path]::IsPathRooted($OutputMarkdownPath)) {
     $OutputMarkdownPath
 }
@@ -518,6 +578,15 @@ $lines.Add('') | Out-Null
 $lines.Add('## Correlation rules demonstrated') | Out-Null
 $lines.Add('') | Out-Null
 Add-MarkdownTable -Lines $lines -Headers @('RuleCode', 'Count') -Rows $tables.Rules
+$lines.Add('') | Out-Null
+
+$lines.Add('## SIEM Rules Evidence') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('ConfigSource', 'RulesLoaded', 'EnabledRules', 'DisabledRules', 'RuleIds', 'Status') -Rows $siemRulesEvidence.Summary
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('RuleId', 'Enabled', 'SourceSystems', 'EventTypes', 'MinimumSeverity', 'AlertSeverity', 'Threshold', 'TimeWindowMinutes') -Rows $siemRulesEvidence.Rules
+$lines.Add('') | Out-Null
+$lines.Add('- SIEM rule evidence is summarized from `config/siem-rules.default.json`; raw event payloads and local secrets are excluded.') | Out-Null
 $lines.Add('') | Out-Null
 
 $lines.Add('## Operator Workflow') | Out-Null
