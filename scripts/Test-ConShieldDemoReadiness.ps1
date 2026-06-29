@@ -370,6 +370,18 @@ try {
         Add-ReadinessCheck -Name 'EventConsumer' -Status 'FAIL' -Detail 'process not detected' -Hint 'Start apps with Start-ConShield.ps1 -StartApps.'
     }
 
+    $siemRules = Invoke-CapturedCommand `
+        -FilePath 'pwsh' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '.\scripts\Test-ConShieldSiemRules.ps1') `
+        -WorkingDirectory $repoRoot
+    $siemRulesResult = ($siemRules.Output | Where-Object { $_ -match '^Result:\s+' } | Select-Object -Last 1)
+    if ($siemRules.ExitCode -eq 0 -and $siemRulesResult -match 'PASS') {
+        Add-ReadinessCheck -Name 'SIEM rules validation' -Status 'PASS' -Detail 'Result: PASS'
+    }
+    else {
+        Add-ReadinessCheck -Name 'SIEM rules validation' -Status 'FAIL' -Detail 'default SIEM rules config did not validate' -Hint 'Run scripts\Test-ConShieldSiemRules.ps1 directly for safe detailed output.'
+    }
+
     if ($SkipScenario) {
         Add-ReadinessCheck -Name 'Defense scenario' -Status 'SKIP' -Detail 'requested by -SkipScenario'
     }

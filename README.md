@@ -86,6 +86,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScen
 
 The default scenario does not require Fedora, Falco, Kubernetes, or a real enrolled runtime sensor. It uses marked synthetic demo data to demonstrate image scan (`IMG-001`), policy gate (`POL-001`), runtime (`RTE-001`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence, and the Security Summary report.
 
+### Configurable SIEM rules
+
+ConShield loads the configurable demo SIEM rules from [`config/siem-rules.default.json`](config/siem-rules.default.json). The committed default config preserves the existing `IMG-001`, `POL-001`, `RTE-001`, `LIFE-001`, and `LIFE-002` behavior. Optional local overrides can use `config/siem-rules.local.json`, which is ignored by Git and must not contain secrets.
+
+Validate the rules without Docker, Fedora/Falco, live Trivy DB, network access, or real credentials:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSiemRules.ps1
+```
+
+For the field reference and safety notes, see [`docs/SIEM_RULES.md`](docs/SIEM_RULES.md).
+
 Result meanings:
 
 - `PASS`: required demo evidence was demonstrated.
@@ -352,6 +364,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScen
 
 Default scenario не требует Fedora, Falco, Kubernetes или настоящего enrolled runtime sensor. Он использует помеченные synthetic demo data, чтобы показать image scan (`IMG-001`), policy gate (`POL-001`), runtime (`RTE-001`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence и Security Summary report.
 
+### Конфигурируемые правила SIEM
+
+ConShield загружает конфигурируемые demo SIEM rules из [`config/siem-rules.default.json`](config/siem-rules.default.json). Закоммиченный default config сохраняет текущее поведение `IMG-001`, `POL-001`, `RTE-001`, `LIFE-001` и `LIFE-002`. Optional local overrides можно хранить в `config/siem-rules.local.json`; этот файл игнорируется Git и не должен содержать secrets.
+
+Проверьте правила без Docker, Fedora/Falco, live Trivy DB, network access или real credentials:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSiemRules.ps1
+```
+
+Описание полей и safety notes находятся в [`docs/SIEM_RULES.md`](docs/SIEM_RULES.md).
+
 Значения результата:
 
 - `PASS`: обязательное demo evidence подтверждено.
@@ -443,7 +467,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseE
   -OutputMarkdownPath .\artifacts\local\defense-evidence.md
 ```
 
-Exporter writes only safe aggregate and metadata fields. Он включает health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, Protected Run Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation и operator checklists. Он намеренно не выводит raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots и generated reports в source control.
+Exporter выводит только безопасные aggregate и metadata fields. Он включает health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, Protected Run Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation и operator checklists. Он намеренно не выводит raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots или generated reports в source control.
 
 Храните generated Markdown under `artifacts/local/` или в другом ignored local path.
 

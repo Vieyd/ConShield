@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "IMG-001",
+      "name": "Critical image scan finding",
+      "description": "Creates a SIEM alert when a deterministic image scan event contains critical findings.",
+      "enabled": true,
+      "sourceSystems": [ "conshield.image-scanner" ],
+      "eventTypes": [ "container.image.scan.completed" ],
+      "minimumSeverity": "Critical",
+      "threshold": 1,
+      "timeWindowMinutes": 1440,
+      "groupingKey": "image",
+      "alertSeverity": "Critical",
+      "incident": {
+        "create": true,
+        "severity": "Critical"
+      }
+    },
+    {
+      "id": "POL-001",
+      "name": "Container image blocked by policy",
+      "description": "Creates a SIEM alert when the protected container policy gate blocks an image.",
+      "enabled": true,
+      "sourceSystems": [ "conshield.container-guard" ],
+      "eventTypes": [ "container.image.policy.evaluated" ],
+      "minimumSeverity": "Warning",
+      "threshold": 1,
+      "timeWindowMinutes": 1440,
+      "groupingKey": "policy-image",
+      "alertSeverity": "Critical",
+      "incident": {
+        "create": true,
+        "severity": "Critical"
+      }
+    },
+    {
+      "id": "RTE-001",
+      "name": "Container runtime threat detected",
+      "description": "Creates a SIEM alert for approved Falco-compatible runtime mappings with high or critical severity.",
+      "enabled": true,
+      "sourceSystems": [
+        "conshield.falco-runtime-collector",
+        "conshield.falco-linux-sensor"
+      ],
+      "eventTypes": [
+        "container.runtime.shell_spawned",
+        "container.runtime.binary_path_write",
+        "container.runtime.etc_write",
+        "container.runtime.setuid_change",
+        "container.runtime.suspicious_network_tool",
+        "container.runtime.privileged_container_started"
+      ],
+      "minimumSeverity": "High",
+      "threshold": 1,
+      "timeWindowMinutes": 10,
+      "groupingKey": "runtime-container-mapping-process",
+      "alertSeverity": "High",
+      "incident": {
+        "create": true,
+        "severity": "High"
+      }
+    },
+    {
+      "id": "LIFE-001",
+      "name": "Sensor identity revoked",
+      "description": "Creates a SIEM alert when a runtime sensor identity is revoked.",
+      "enabled": true,
+      "sourceSystems": [ "conshield.sensor-lifecycle" ],
+      "eventTypes": [ "sensor.revoked" ],
+      "minimumSeverity": "Info",
+      "threshold": 1,
+      "timeWindowMinutes": 1440,
+      "groupingKey": "sensor-id",
+      "alertSeverity": "Warning",
+      "incident": {
+        "create": true,
+        "severity": "Warning"
+      }
+    },
+    {
+      "id": "LIFE-002",
+      "name": "Repeated sensor credential lifecycle changes",
+      "description": "Creates a SIEM alert when a sensor has repeated credential lifecycle changes in a short window.",
+      "enabled": true,
+      "sourceSystems": [ "conshield.sensor-lifecycle" ],
+      "eventTypes": [
+        "sensor.credential.rotated",
+        "sensor.credential.revoked"
+      ],
+      "minimumSeverity": "Info",
+      "threshold": 3,
+      "timeWindowMinutes": 15,
+      "groupingKey": "sensor-id",
+      "alertSeverity": "Warning",
+      "incident": {
+        "create": true,
+        "severity": "Warning"
+      }
+    }
+  ]
+}
