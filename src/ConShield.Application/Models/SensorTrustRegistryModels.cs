@@ -16,6 +16,34 @@ public static class SensorTrustStatuses
     };
 }
 
+public static class SensorTrustEnforcementActions
+{
+    public const string AcceptTrusted = "AcceptTrusted";
+    public const string AcceptUnknownWithAlert = "AcceptUnknownWithAlert";
+    public const string FlagRevokedWithAlert = "FlagRevokedWithAlert";
+    public const string FlagDisabledWithAlert = "FlagDisabledWithAlert";
+}
+
+public static class SensorTrustEnforcement
+{
+    public static string ActionFor(string trustStatus) =>
+        trustStatus switch
+        {
+            SensorTrustStatuses.Trusted => SensorTrustEnforcementActions.AcceptTrusted,
+            SensorTrustStatuses.Revoked => SensorTrustEnforcementActions.FlagRevokedWithAlert,
+            SensorTrustStatuses.Disabled => SensorTrustEnforcementActions.FlagDisabledWithAlert,
+            _ => SensorTrustEnforcementActions.AcceptUnknownWithAlert
+        };
+
+    public static string ExpectedRuleFor(string trustStatus) =>
+        trustStatus switch
+        {
+            SensorTrustStatuses.Trusted => "RTE-001",
+            SensorTrustStatuses.Revoked or SensorTrustStatuses.Disabled => "SENSOR-002",
+            _ => "SENSOR-001"
+        };
+}
+
 public sealed record SensorTrustRegistryEntry(
     string SensorId,
     string DisplayName,

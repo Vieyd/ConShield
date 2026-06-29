@@ -98,6 +98,40 @@
         "create": true,
         "severity": "Warning"
       }
+    },
+    {
+      "id": "SENSOR-001",
+      "name": "Unknown runtime sensor source",
+      "description": "Creates a SIEM alert when a runtime/Falco event arrives from a source that is not trusted in the sensor registry.",
+      "enabled": true,
+      "sourceSystems": [ "conshield.sensor-trust" ],
+      "eventTypes": [ "sensor.trust.unknown-runtime-source" ],
+      "minimumSeverity": "Warning",
+      "threshold": 1,
+      "timeWindowMinutes": 1440,
+      "groupingKey": "source-system",
+      "alertSeverity": "High",
+      "incident": {
+        "create": false,
+        "severity": "High"
+      }
+    },
+    {
+      "id": "SENSOR-002",
+      "name": "Revoked or disabled runtime sensor source",
+      "description": "Creates a SIEM alert and incident when a runtime/Falco event arrives from a revoked or disabled sensor registry entry.",
+      "enabled": true,
+      "sourceSystems": [ "conshield.sensor-trust" ],
+      "eventTypes": [ "sensor.trust.revoked-or-disabled-runtime-source" ],
+      "minimumSeverity": "High",
+      "threshold": 1,
+      "timeWindowMinutes": 1440,
+      "groupingKey": "sensor-id",
+      "alertSeverity": "Critical",
+      "incident": {
+        "create": true,
+        "severity": "Critical"
+      }
     }
   ]
 }

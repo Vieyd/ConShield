@@ -119,11 +119,15 @@ public class WebUiLocalizationPolishTests
         Assert.Equal("Угроза во время выполнения контейнера", DisplayText.RuleName("RTE-001"));
         Assert.Equal("Критические уязвимости в контейнерном образе", DisplayText.RuleName("IMG-001"));
         Assert.Equal("Блокировка контейнерного образа политикой", DisplayText.RuleName("POL-001"));
+        Assert.Equal("Неизвестный runtime-сенсор", DisplayText.RuleName("SENSOR-001"));
+        Assert.Equal("Отозванный или отключенный runtime-сенсор", DisplayText.RuleName("SENSOR-002"));
 
         var rules = SiemRuleCatalog.Rules.ToDictionary(rule => rule.RuleCode);
         Assert.Equal("Отзыв идентификатора сенсора", rules["LIFE-001"].RuleName);
         Assert.Equal("Повторные изменения учетных данных сенсора", rules["LIFE-002"].RuleName);
         Assert.Equal("Угроза во время выполнения контейнера", rules["RTE-001"].RuleName);
+        Assert.Equal("Неизвестный runtime-сенсор", rules["SENSOR-001"].RuleName);
+        Assert.Equal("Отозванный или отключенный runtime-сенсор", rules["SENSOR-002"].RuleName);
     }
 
     [Fact]

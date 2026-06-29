@@ -90,7 +90,9 @@ public static class SiemRulesConfigurationLoader
         "POL-001",
         "RTE-001",
         "LIFE-001",
-        "LIFE-002"
+        "LIFE-002",
+        "SENSOR-001",
+        "SENSOR-002"
     };
 
     public static (SiemRulesConfiguration? Configuration, SiemRulesValidationResult Validation) TryLoadFile(string path)
@@ -271,6 +273,36 @@ public static class SiemRulesConfigurationLoader
                 GroupingKey = "sensor-id",
                 AlertSeverity = "Warning",
                 Incident = new ConfigurableSiemIncidentRule { Create = true, Severity = "Warning" }
+            },
+            new ConfigurableSiemRule
+            {
+                Id = "SENSOR-001",
+                Name = "Unknown runtime sensor source",
+                Description = "Creates a SIEM alert when a runtime/Falco event arrives from a source that is not trusted in the sensor registry.",
+                Enabled = true,
+                SourceSystems = ["conshield.sensor-trust"],
+                EventTypes = ["sensor.trust.unknown-runtime-source"],
+                MinimumSeverity = "Warning",
+                Threshold = 1,
+                TimeWindowMinutes = 1440,
+                GroupingKey = "source-system",
+                AlertSeverity = "High",
+                Incident = new ConfigurableSiemIncidentRule { Create = false, Severity = "High" }
+            },
+            new ConfigurableSiemRule
+            {
+                Id = "SENSOR-002",
+                Name = "Revoked or disabled runtime sensor source",
+                Description = "Creates a SIEM alert and incident when a runtime/Falco event arrives from a revoked or disabled sensor registry entry.",
+                Enabled = true,
+                SourceSystems = ["conshield.sensor-trust"],
+                EventTypes = ["sensor.trust.revoked-or-disabled-runtime-source"],
+                MinimumSeverity = "High",
+                Threshold = 1,
+                TimeWindowMinutes = 1440,
+                GroupingKey = "sensor-id",
+                AlertSeverity = "Critical",
+                Incident = new ConfigurableSiemIncidentRule { Create = true, Severity = "Critical" }
             }
         ]
     };

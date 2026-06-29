@@ -485,6 +485,8 @@ $tables = @{
     ProtectedRunRules = @()
     ContainerPolicyDecisions = @()
     ContainerPolicyPolAlerts = @()
+    SensorTrustEnforcementAlerts = @()
+    SensorTrustEnforcementIncidents = @()
 }
 
 if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
@@ -522,6 +524,9 @@ if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
         $tables.ProtectedRunRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" in (''IMG-001'', ''POL-001'', ''LIFE-001'') group by "RuleCode" order by "RuleCode";')
         $tables.ContainerPolicyDecisions = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.container-guard'' and coalesce("ExternalEventType", '''') = ''container.image.policy.evaluated'' order by "OccurredAtUtc" desc limit 10;')
         $tables.ContainerPolicyPolAlerts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" = ''POL-001'' group by "RuleCode";')
+        $tables.SensorTrustEnforcementAlerts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" in (''SENSOR-001'', ''SENSOR-002'') group by "RuleCode" order by "RuleCode";')
+        $tables.SensorTrustEnforcementIncidents = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select count(*)::int as "Count" from "Incidents" incident join "SiemAlerts" alert on incident."Id" = alert."IncidentId" where alert."RuleCode" in (''SENSOR-001'', ''SENSOR-002'');')
+        $tables.SensorTrustEnforcementAlertSources = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select coalesce(se."SourceSystem", ''unknown-runtime-source'') as "SourceSystem", count(distinct alert."Id")::int as "Count" from "SiemAlerts" alert join "SecurityEvents" se on position(''Source event #'' || se."Id"::text in alert."Description") > 0 where alert."RuleCode" in (''SENSOR-001'', ''SENSOR-002'') group by coalesce(se."SourceSystem", ''unknown-runtime-source'');')
     }
     catch {
         $queryError = ConvertTo-SafeCell -Value $_.Exception.Message -MaxLength 180
@@ -538,6 +543,13 @@ foreach ($sensor in @($sensorTrustEvidence.Sensors)) {
     }
 }
 
+$sensorTrustAlertCountBySource = @{}
+foreach ($row in @($tables.SensorTrustEnforcementAlertSources)) {
+    if (-not [string]::IsNullOrWhiteSpace([string]$row.SourceSystem)) {
+        $sensorTrustAlertCountBySource[[string]$row.SourceSystem] = [int]$row.Count
+    }
+}
+
 $tables.RuntimeSensorHealth = @($tables.RuntimeSensorHealth | ForEach-Object {
     $sourceSystem = [string]$_.SourceSystem
     $sensor = if ($registryBySource.ContainsKey($sourceSystem)) { $registryBySource[$sourceSystem] } else { $null }
@@ -547,11 +559,18 @@ $tables.RuntimeSensorHealth = @($tables.RuntimeSensorHealth | ForEach-Object {
         DisplayName = if ($null -ne $sensor) { $sensor.DisplayName } else { $_.SourceSystem }
         Environment = if ($null -ne $sensor) { $sensor.Environment } else { '-' }
         TrustStatus = if ($null -ne $sensor) { $sensor.TrustStatus } else { 'Unknown' }
+        EnforcementAction = switch ($(if ($null -ne $sensor) { $sensor.TrustStatus } else { 'Unknown' })) {
+            'Trusted' { 'AcceptTrusted' }
+            'Revoked' { 'FlagRevokedWithAlert' }
+            'Disabled' { 'FlagDisabledWithAlert' }
+            default { 'AcceptUnknownWithAlert' }
+        }
         Status = $_.Status
         LastSeenUtc = $_.LastSeenUtc
         EventCount = $_.EventCount
         LatestEventType = $_.LatestEventType
         RelatedRteAlertCount = $_.RelatedRteAlertCount
+        RelatedSensorTrustAlertCount = if ($sensorTrustAlertCountBySource.ContainsKey($sourceSystem)) { $sensorTrustAlertCountBySource[$sourceSystem] } else { 0 }
         RelatedIncidentCount = $_.RelatedIncidentCount
     }
 })
@@ -710,6 +729,23 @@ $lines.Add('') | Out-Null
 $lines.Add('- Sensor trust evidence is summarized from `config/sensor-registry.default.json`; runtime payloads, local secrets, certificates, private keys, and logs are excluded.') | Out-Null
 $lines.Add('') | Out-Null
 
+$lines.Add('## Sensor Trust Enforcement Evidence') | Out-Null
+$lines.Add('') | Out-Null
+$lines.Add('Trusted runtime sources keep the normal `RTE-001` path. Unknown sources produce `SENSOR-001`; revoked or disabled sources produce `SENSOR-002`. In v1, untrusted runtime events are flagged with deterministic alerts instead of being silently dropped; full mTLS enforcement is future work.') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('SourceSystem', 'SensorId', 'TrustStatus', 'EnforcementAction', 'EventCount', 'LatestEventType', 'RelatedSensorTrustAlertCount') -Rows $tables.RuntimeSensorHealth
+$lines.Add('') | Out-Null
+$lines.Add('### SENSOR-001 / SENSOR-002 alerts') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('RuleCode', 'Count', 'LatestCreatedAtUtc') -Rows $tables.SensorTrustEnforcementAlerts
+$lines.Add('') | Out-Null
+$lines.Add('### Related sensor-trust incidents') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('Count') -Rows $tables.SensorTrustEnforcementIncidents
+$lines.Add('') | Out-Null
+$lines.Add('- Sensor trust enforcement evidence uses safe rule counts and source metadata only; raw runtime payloads, raw additional data, certificates, private keys, and secrets are excluded.') | Out-Null
+$lines.Add('') | Out-Null
+
 $lines.Add('## Runtime Sensor Evidence') | Out-Null
 $lines.Add('') | Out-Null
 if (@($tables.RuntimeSensorSummary).Count -eq 0) {
@@ -735,7 +771,7 @@ if (@($tables.RuntimeSensorHealth).Count -eq 0 -or @($tables.RuntimeSensorHealth
     $lines.Add('No runtime sensor activity was found in the current evidence window.') | Out-Null
 }
 else {
-    Add-MarkdownTable -Lines $lines -Headers @('SensorId', 'SourceSystem', 'DisplayName', 'Environment', 'TrustStatus', 'Status', 'LastSeenUtc', 'EventCount', 'LatestEventType', 'RelatedRteAlertCount', 'RelatedIncidentCount') -Rows $tables.RuntimeSensorHealth
+    Add-MarkdownTable -Lines $lines -Headers @('SensorId', 'SourceSystem', 'DisplayName', 'Environment', 'TrustStatus', 'EnforcementAction', 'Status', 'LastSeenUtc', 'EventCount', 'LatestEventType', 'RelatedRteAlertCount', 'RelatedSensorTrustAlertCount', 'RelatedIncidentCount') -Rows $tables.RuntimeSensorHealth
 }
 $lines.Add('') | Out-Null
 

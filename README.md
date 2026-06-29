@@ -84,11 +84,11 @@ Run the safe local defense scenario:
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1
 ```
 
-The default scenario does not require Fedora, Falco, Kubernetes, or a real enrolled runtime sensor. It uses marked synthetic demo data to demonstrate image scan (`IMG-001`), policy gate (`POL-001`), runtime (`RTE-001`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence, and the Security Summary report.
+The default scenario does not require Fedora, Falco, Kubernetes, or a real enrolled runtime sensor. It uses marked synthetic demo data to demonstrate image scan (`IMG-001`), policy gate (`POL-001`), runtime (`RTE-001`), sensor trust enforcement (`SENSOR-001`/`SENSOR-002`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence, and the Security Summary report.
 
 ### Configurable SIEM rules
 
-ConShield loads the configurable demo SIEM rules from [`config/siem-rules.default.json`](config/siem-rules.default.json). The committed default config preserves the existing `IMG-001`, `POL-001`, `RTE-001`, `LIFE-001`, and `LIFE-002` behavior. Optional local overrides can use `config/siem-rules.local.json`, which is ignored by Git and must not contain secrets.
+ConShield loads the configurable demo SIEM rules from [`config/siem-rules.default.json`](config/siem-rules.default.json). The committed default config preserves the existing `IMG-001`, `POL-001`, `RTE-001`, `SENSOR-001`, `SENSOR-002`, `LIFE-001`, and `LIFE-002` behavior. Optional local overrides can use `config/siem-rules.local.json`, which is ignored by Git and must not contain secrets.
 
 Validate the rules without Docker, Fedora/Falco, live Trivy DB, network access, or real credentials:
 
@@ -239,6 +239,20 @@ Falco-compatible JSON fixture -> runtime mapping -> external event ingestion
 -> Security Event -> RTE-001 SIEM alert -> Incident -> evidence export
 ```
 
+Trust enforcement can be simulated locally without submitting events:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -SimulateUnknownSensor `
+  -NoSubmit
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -SimulateRevokedSensor `
+  -NoSubmit
+```
+
+Trusted sensors keep the normal `RTE-001` path. Unknown sources produce `SENSOR-001`; revoked or disabled sources produce `SENSOR-002`. This v1 enforcement layer flags untrusted runtime events with deterministic SIEM evidence and does not implement full mTLS.
+
 The local replay path does not install or require Fedora, Falco Operator, Kubernetes, or a real sensor node. The real Fedora/Falco deployment kit lives under `deploy/falco-linux`, but it is not required for the default local demo.
 
 ### Runtime Sensor Health
@@ -249,11 +263,11 @@ Runtime Sensor Health is available at:
 http://127.0.0.1:5080/RuntimeSensors
 ```
 
-It derives source health from existing Security Events, `RTE-001` alerts, and incidents. The view shows `SourceSystem`, `LastSeenUtc`, `EventCount`, latest event metadata, related RTE alert count, related incident count, and `Active` / `Stale` / `NoData` status. It does not require a new database migration or a real Fedora/Falco node for local validation.
+It derives source health from existing Security Events, `RTE-001` alerts, `SENSOR-001`/`SENSOR-002` trust alerts, and incidents. The view shows `SourceSystem`, `LastSeenUtc`, `EventCount`, latest event metadata, trust status, enforcement action, related RTE alert count, related sensor trust alert count, related incident count, and `Active` / `Stale` / `NoData` status. It does not require a new database migration or a real Fedora/Falco node for local validation.
 
 ### Sensor Trust Registry
 
-Known runtime sensor sources are validated with [`config/sensor-registry.default.json`](config/sensor-registry.default.json). The local demo Falco source maps to `demo-falco-linux-01` with `Trusted` status; sources not in the registry are shown as `Unknown` in Runtime Sensor Health and evidence.
+Known runtime sensor sources are validated with [`config/sensor-registry.default.json`](config/sensor-registry.default.json). The local demo Falco sources map to trusted synthetic registry entries; sources not in the registry are shown as `Unknown` in Runtime Sensor Health and evidence. The default registry also includes safe revoked and disabled demo sources for deterministic `SENSOR-002` validation.
 
 Validate the registry offline:
 
@@ -261,7 +275,7 @@ Validate the registry offline:
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSensorRegistry.ps1
 ```
 
-The registry is a preparation layer for future certificate-bound enrollment. It does not implement full mTLS and must not contain real certificates, private keys, secrets, API keys, connection strings, env values, raw runtime payloads, logs, screenshots, or generated local artifacts. Details are documented in [`docs/SENSOR_TRUST_REGISTRY.md`](docs/SENSOR_TRUST_REGISTRY.md).
+The registry is a preparation layer for future certificate-bound enrollment. Trust enforcement v1 accepts trusted runtime events normally, raises `SENSOR-001` for unknown runtime sources, and raises `SENSOR-002` plus an incident for revoked or disabled runtime sources. It does not implement full mTLS and must not contain real certificates, private keys, secrets, API keys, connection strings, env values, raw runtime payloads, logs, screenshots, or generated local artifacts. Details are documented in [`docs/SENSOR_TRUST_REGISTRY.md`](docs/SENSOR_TRUST_REGISTRY.md).
 
 ### Validation
 
@@ -386,11 +400,11 @@ Incidents: http://127.0.0.1:5080/Incidents
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1
 ```
 
-Default scenario не требует Fedora, Falco, Kubernetes или настоящего enrolled runtime sensor. Он использует помеченные synthetic demo data, чтобы показать image scan (`IMG-001`), policy gate (`POL-001`), runtime (`RTE-001`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence и Security Summary report.
+Default scenario не требует Fedora, Falco, Kubernetes или настоящего enrolled runtime sensor. Он использует помеченные synthetic demo data, чтобы показать image scan (`IMG-001`), policy gate (`POL-001`), runtime (`RTE-001`), enforcement доверия сенсоров (`SENSOR-001`/`SENSOR-002`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence и Security Summary report.
 
 ### Конфигурируемые правила SIEM
 
-ConShield загружает конфигурируемые demo SIEM rules из [`config/siem-rules.default.json`](config/siem-rules.default.json). Закоммиченный default config сохраняет текущее поведение `IMG-001`, `POL-001`, `RTE-001`, `LIFE-001` и `LIFE-002`. Optional local overrides можно хранить в `config/siem-rules.local.json`; этот файл игнорируется Git и не должен содержать secrets.
+ConShield загружает конфигурируемые demo SIEM rules из [`config/siem-rules.default.json`](config/siem-rules.default.json). Закоммиченный default config сохраняет текущее поведение `IMG-001`, `POL-001`, `RTE-001`, `SENSOR-001`, `SENSOR-002`, `LIFE-001` и `LIFE-002`. Optional local overrides можно хранить в `config/siem-rules.local.json`; этот файл игнорируется Git и не должен содержать secrets.
 
 Проверьте правила без Docker, Fedora/Falco, live Trivy DB, network access или real credentials:
 
@@ -541,6 +555,20 @@ Falco-compatible JSON fixture -> runtime mapping -> external event ingestion
 -> Security Event -> RTE-001 SIEM alert -> Incident -> evidence export
 ```
 
+Trust enforcement можно симулировать локально без отправки событий:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -SimulateUnknownSensor `
+  -NoSubmit
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -SimulateRevokedSensor `
+  -NoSubmit
+```
+
+Trusted sensors сохраняют обычный путь `RTE-001`. Unknown sources создают `SENSOR-001`; revoked или disabled sources создают `SENSOR-002`. Этот v1 enforcement-слой фиксирует untrusted runtime events в deterministic SIEM evidence и не реализует full mTLS.
+
 Local replay path does not install or require Fedora, Falco Operator, Kubernetes или настоящий sensor node. Real Fedora/Falco deployment kit находится в `deploy/falco-linux`, но для default local demo он не нужен.
 
 ### Runtime Sensor Health
@@ -551,11 +579,11 @@ Runtime Sensor Health доступен здесь:
 http://127.0.0.1:5080/RuntimeSensors
 ```
 
-Он рассчитывает health источников из существующих Security Events, `RTE-001` alerts и incidents. View показывает `SourceSystem`, `LastSeenUtc`, `EventCount`, metadata последнего события, количество связанных RTE alerts, количество связанных incidents и статус `Active` / `Stale` / `NoData`. Для локальной проверки не нужна новая database migration или настоящий Fedora/Falco node.
+Он рассчитывает health источников из существующих Security Events, `RTE-001` alerts, trust alerts `SENSOR-001`/`SENSOR-002` и incidents. View показывает `SourceSystem`, `LastSeenUtc`, `EventCount`, metadata последнего события, trust status, enforcement action, количество связанных RTE alerts, количество связанных sensor trust alerts, количество связанных incidents и статус `Active` / `Stale` / `NoData`. Для локальной проверки не нужна новая database migration или настоящий Fedora/Falco node.
 
 ### Реестр доверия сенсоров
 
-Известные источники runtime-сенсоров проверяются через [`config/sensor-registry.default.json`](config/sensor-registry.default.json). Локальный демонстрационный источник Falco сопоставляется с `demo-falco-linux-01` со статусом `Trusted`; источники вне реестра показываются как `Unknown` в Runtime Sensor Health и evidence.
+Известные источники runtime-сенсоров проверяются через [`config/sensor-registry.default.json`](config/sensor-registry.default.json). Локальные демонстрационные источники Falco сопоставляются с trusted synthetic registry entries; источники вне реестра показываются как `Unknown` в Runtime Sensor Health и evidence. Default registry также содержит безопасные revoked и disabled demo sources для deterministic проверки `SENSOR-002`.
 
 Проверьте registry офлайн:
 
@@ -563,7 +591,7 @@ http://127.0.0.1:5080/RuntimeSensors
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSensorRegistry.ps1
 ```
 
-Реестр — подготовительный слой под будущую привязку enrollment к сертификатам. Он не реализует full mTLS и не должен содержать настоящие сертификаты, private keys, secrets, API keys, connection strings, env values, raw runtime payloads, logs, screenshots или generated local artifacts. Подробности описаны в [`docs/SENSOR_TRUST_REGISTRY.md`](docs/SENSOR_TRUST_REGISTRY.md).
+Реестр — подготовительный слой под будущую привязку enrollment к сертификатам. Trust enforcement v1 принимает trusted runtime events обычным путём, создаёт `SENSOR-001` для unknown runtime sources и создаёт `SENSOR-002` плюс incident для revoked или disabled runtime sources. Он не реализует full mTLS и не должен содержать настоящие сертификаты, private keys, secrets, API keys, connection strings, env values, raw runtime payloads, logs, screenshots или generated local artifacts. Подробности описаны в [`docs/SENSOR_TRUST_REGISTRY.md`](docs/SENSOR_TRUST_REGISTRY.md).
 
 ### Проверки
 

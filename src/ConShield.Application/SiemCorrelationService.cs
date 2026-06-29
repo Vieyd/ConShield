@@ -16,15 +16,18 @@ public class SiemCorrelationService : ISiemCorrelationService
     private readonly ApplicationDbContext _dbContext;
     private readonly ISecurityEventWriter _eventWriter;
     private readonly ISiemRuleProvider _ruleProvider;
+    private readonly SensorTrustRegistry _sensorTrustRegistry;
 
     public SiemCorrelationService(
         ApplicationDbContext dbContext,
         ISecurityEventWriter eventWriter,
-        ISiemRuleProvider? ruleProvider = null)
+        ISiemRuleProvider? ruleProvider = null,
+        SensorTrustRegistry? sensorTrustRegistry = null)
     {
         _dbContext = dbContext;
         _eventWriter = eventWriter;
         _ruleProvider = ruleProvider ?? new FileSystemSiemRuleProvider(Directory.GetCurrentDirectory());
+        _sensorTrustRegistry = sensorTrustRegistry ?? LoadRegistrySafely();
     }
 
     public async Task<CorrelationRunResult> RunAsync(CancellationToken cancellationToken = default)
@@ -199,6 +202,38 @@ public class SiemCorrelationService : ISiemCorrelationService
                 cancellationToken: cancellationToken));
         }
 
+        if (configurableRules.GetEnabledRule("SENSOR-001") is { } unknownSensorRule)
+        {
+            var recentRuntimeSensorEvents = await GetRecentRuntimeSensorEventsAsync(now, unknownSensorRule.TimeWindowMinutes, cancellationToken);
+
+            Merge(result, await ProcessRuleAsync(
+                rule: unknownSensorRule,
+                descriptionFactory: group => group.Description,
+                eventIdsFactory: group => group.EventIds,
+                groups: recentRuntimeSensorEvents
+                    .Select(x => TryCreateSensorTrustCandidate(x, _sensorTrustRegistry, SensorTrustStatuses.Unknown))
+                    .Where(x => x is not null)
+                    .Select(x => x!)
+                    .ToList(),
+                cancellationToken: cancellationToken));
+        }
+
+        if (configurableRules.GetEnabledRule("SENSOR-002") is { } revokedDisabledSensorRule)
+        {
+            var recentRuntimeSensorEvents = await GetRecentRuntimeSensorEventsAsync(now, revokedDisabledSensorRule.TimeWindowMinutes, cancellationToken);
+
+            Merge(result, await ProcessRuleAsync(
+                rule: revokedDisabledSensorRule,
+                descriptionFactory: group => group.Description,
+                eventIdsFactory: group => group.EventIds,
+                groups: recentRuntimeSensorEvents
+                    .Select(x => TryCreateSensorTrustCandidate(x, _sensorTrustRegistry, SensorTrustStatuses.Revoked, SensorTrustStatuses.Disabled))
+                    .Where(x => x is not null)
+                    .Select(x => x!)
+                    .ToList(),
+                cancellationToken: cancellationToken));
+        }
+
         if (configurableRules.GetEnabledRule("LIFE-001") is { } sensorRevokedRule)
         {
             var recentSensorRevocations = await _dbContext.SecurityEvents
@@ -260,6 +295,17 @@ public class SiemCorrelationService : ISiemCorrelationService
         }
         return result;
     }
+
+    private Task<List<SecurityEventEntry>> GetRecentRuntimeSensorEventsAsync(
+        DateTime now,
+        int timeWindowMinutes,
+        CancellationToken cancellationToken) =>
+        _dbContext.SecurityEvents
+            .Where(x => x.EventType == SecurityEventType.ExternalEvent
+                        && x.OccurredAtUtc >= now.AddMinutes(-timeWindowMinutes)
+                        && ((x.SourceSystem != null && x.SourceSystem.ToLower().Contains("falco"))
+                            || (x.ExternalEventType != null && (x.ExternalEventType.ToLower().Contains("runtime") || x.ExternalEventType.ToLower().Contains("falco")))))
+            .ToListAsync(cancellationToken);
 
     private async Task<CorrelationRunResult> ProcessRuleAsync(
         string ruleCode,
@@ -581,6 +627,37 @@ public class SiemCorrelationService : ISiemCorrelationService
         }
     }
 
+    private static RuleCandidate? TryCreateSensorTrustCandidate(
+        SecurityEventEntry entry,
+        SensorTrustRegistry registry,
+        params string[] targetStatuses)
+    {
+        if (string.IsNullOrWhiteSpace(entry.SourceSystem))
+            return null;
+
+        var registryEntry = registry.FindBySourceSystem(entry.SourceSystem);
+        var trustStatus = registryEntry?.Status ?? SensorTrustStatuses.Unknown;
+        if (!targetStatuses.Contains(trustStatus, StringComparer.Ordinal))
+            return null;
+
+        var sensorId = registryEntry?.SensorId ?? "-";
+        var enforcementAction = SensorTrustEnforcement.ActionFor(trustStatus);
+        var trigger = trustStatus == SensorTrustStatuses.Unknown
+            ? NormalizeTriggerValue(entry.SourceSystem)
+            : NormalizeTriggerValue(string.IsNullOrWhiteSpace(sensorId) || sensorId == "-" ? entry.SourceSystem : sensorId);
+        var expectedEventType = entry.ExternalEventType ?? "runtime-event";
+
+        return new RuleCandidate
+        {
+            Key = $"{trustStatus}:{trigger}",
+            Count = 1,
+            Description = $"Sensor trust enforcement {enforcementAction}: trustStatus={trustStatus}, sensorId={sensorId}, sourceSystem={entry.SourceSystem}, eventType={expectedEventType}. Source event #{entry.Id}.",
+            EventIds = [entry.Id],
+            Severity = trustStatus == SensorTrustStatuses.Unknown ? EventSeverity.High : EventSeverity.Critical,
+            DisplayName = registryEntry?.DisplayName
+        };
+    }
+
     private static RuleCandidate? TryCreateSensorRevokedCandidate(SecurityEventEntry entry)
     {
         var lifecycleData = TryReadLifecycleData(entry);
@@ -706,6 +783,18 @@ public class SiemCorrelationService : ISiemCorrelationService
 
     private static string SafeUnknown(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "unknown" : value;
+
+    private static SensorTrustRegistry LoadRegistrySafely()
+    {
+        try
+        {
+            return SensorTrustRegistryLoader.LoadDefault();
+        }
+        catch
+        {
+            return SensorTrustRegistry.Empty;
+        }
+    }
 
     private sealed record LifecycleAuditData(
         string? SensorId,

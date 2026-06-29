@@ -86,6 +86,26 @@ public static class SiemRuleCatalog
             ConditionText = "3 и более событий sensor.credential.rotated/sensor.credential.revoked для одного сенсора",
             WindowText = "15 минут",
             TriggerEntityText = "Публичный ID сенсора"
+        },
+        new SiemRuleDefinition
+        {
+            RuleCode = "SENSOR-001",
+            RuleName = "Неизвестный runtime-сенсор",
+            Severity = EventSeverity.High,
+            Description = "Правило выявляет runtime/Falco-события от источника, отсутствующего в реестре доверия сенсоров.",
+            ConditionText = "trustStatus = Unknown",
+            WindowText = "24 часа",
+            TriggerEntityText = "SourceSystem runtime-события"
+        },
+        new SiemRuleDefinition
+        {
+            RuleCode = "SENSOR-002",
+            RuleName = "Отозванный или отключенный runtime-сенсор",
+            Severity = EventSeverity.Critical,
+            Description = "Правило выявляет runtime/Falco-события от источника со статусом Revoked или Disabled.",
+            ConditionText = "trustStatus = Revoked или Disabled",
+            WindowText = "24 часа",
+            TriggerEntityText = "SensorId или SourceSystem"
         }
     ];
 }

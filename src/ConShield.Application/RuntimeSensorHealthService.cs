@@ -71,6 +71,11 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
             .Select(x => new RuntimeAlertProjection(x.Id, x.SourceEventIdsJson, x.IncidentId))
             .ToListAsync(cancellationToken);
 
+        var sensorTrustAlerts = await _dbContext.SiemAlerts
+            .Where(x => x.RuleCode == "SENSOR-001" || x.RuleCode == "SENSOR-002")
+            .Select(x => new RuntimeAlertProjection(x.Id, x.SourceEventIdsJson, x.IncidentId))
+            .ToListAsync(cancellationToken);
+
         var incidents = await _dbContext.Incidents
             .Where(x => x.SourceEventId.HasValue)
             .Select(x => new RuntimeIncidentProjection(x.Id, x.SourceEventId!.Value))
@@ -91,6 +96,7 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
             sourceEventIds ??= new HashSet<long>();
 
             var relatedAlertIds = new HashSet<long>();
+            var relatedSensorTrustAlertIds = new HashSet<long>();
             var relatedIncidentIds = new HashSet<long>();
             foreach (var alert in rteAlerts)
             {
@@ -99,6 +105,17 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
                     continue;
 
                 relatedAlertIds.Add(alert.Id);
+                if (alert.IncidentId.HasValue)
+                    relatedIncidentIds.Add(alert.IncidentId.Value);
+            }
+
+            foreach (var alert in sensorTrustAlerts)
+            {
+                var alertEventIds = ReadSourceEventIds(alert.SourceEventIdsJson);
+                if (!alertEventIds.Overlaps(sourceEventIds))
+                    continue;
+
+                relatedSensorTrustAlertIds.Add(alert.Id);
                 if (alert.IncidentId.HasValue)
                     relatedIncidentIds.Add(alert.IncidentId.Value);
             }
@@ -115,6 +132,7 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
                 registrySensor?.DisplayName ?? DisplayName(sourceSystem),
                 registrySensor?.Environment ?? "-",
                 registrySensor?.Status ?? SensorTrustStatuses.Unknown,
+                SensorTrustEnforcement.ActionFor(registrySensor?.Status ?? SensorTrustStatuses.Unknown),
                 registrySensor?.ExpectedEventTypes ?? Array.Empty<string>(),
                 latest?.OccurredAtUtc,
                 eventsForSource.Count,
@@ -122,6 +140,7 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
                 latest?.ExternalEventType,
                 latest?.Severity,
                 relatedAlertIds.Count,
+                relatedSensorTrustAlertIds.Count,
                 relatedIncidentIds.Count,
                 Status(latest?.OccurredAtUtc, activeThresholdUtc)));
         }
