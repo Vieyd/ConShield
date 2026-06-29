@@ -394,6 +394,18 @@ try {
         Add-ReadinessCheck -Name 'Container policy validation' -Status 'FAIL' -Detail 'default container policy config did not validate' -Hint 'Run scripts\Test-ConShieldContainerPolicy.ps1 directly for safe detailed output.'
     }
 
+    $sensorRegistry = Invoke-CapturedCommand `
+        -FilePath 'pwsh' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '.\scripts\Test-ConShieldSensorRegistry.ps1') `
+        -WorkingDirectory $repoRoot
+    $sensorRegistryResult = ($sensorRegistry.Output | Where-Object { $_ -match '^Result:\s+' } | Select-Object -Last 1)
+    if ($sensorRegistry.ExitCode -eq 0 -and $sensorRegistryResult -match 'PASS') {
+        Add-ReadinessCheck -Name 'Sensor registry validation' -Status 'PASS' -Detail 'Result: PASS'
+    }
+    else {
+        Add-ReadinessCheck -Name 'Sensor registry validation' -Status 'FAIL' -Detail 'default sensor registry config did not validate' -Hint 'Run scripts\Test-ConShieldSensorRegistry.ps1 directly for safe detailed output.'
+    }
+
     if ($SkipScenario) {
         Add-ReadinessCheck -Name 'Defense scenario' -Status 'SKIP' -Detail 'requested by -SkipScenario'
     }

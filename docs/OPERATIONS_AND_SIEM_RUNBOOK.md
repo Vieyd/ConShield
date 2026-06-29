@@ -176,6 +176,16 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadin
 
 The script prints compact PASS/FAIL statuses and safe hints only. Do not commit generated evidence, local logs, screenshots, `.env` files, `appsettings.Development.json`, API keys, passwords, tokens, cookies, raw `AdditionalDataJson`, raw payload JSON, or connection strings.
 
+## Sensor trust registry
+
+Runtime/Falco source trust is configured in `config/sensor-registry.default.json` and validated with:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSensorRegistry.ps1
+```
+
+During investigation, open `/RuntimeSensors` to confirm whether a runtime source is `Trusted`, `Unknown`, `Revoked`, or `Disabled`. The demo Falco source `conshield.falco-linux-sensor` should appear as trusted after replay. Unknown, revoked, or disabled sources should be treated as identity-control evidence and reviewed with related `RTE-001` alerts and incidents. The registry does not implement full mTLS and must not contain real certificates, private keys, secrets, connection strings, or raw runtime payloads.
+
 ## Local demo data reset
 
 Before a clean defense run, preview and then confirm a local-only operational reset:

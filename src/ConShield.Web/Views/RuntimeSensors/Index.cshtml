@@ -17,8 +17,8 @@
 </div>
 
 <div class="alert alert-info py-2">
-    Runtime Sensor Health is derived from ingested runtime/Falco events. Страница показывает только агрегаты,
-    ссылки и безопасные metadata; raw JSON, <code>AdditionalDataJson</code>, payload, API keys, env values и логи не отображаются.
+    Runtime Sensor Health is derived from ingested runtime/Falco events and the sensor trust registry. Страница показывает только агрегаты,
+    ссылки и безопасные metadata; raw JSON, payload, API keys, env values, certificates, private keys и логи не отображаются.
 </div>
 
 <div class="row g-3 mb-4">
@@ -66,7 +66,10 @@
                 <thead>
                 <tr>
                     <th>SourceSystem</th>
+                    <th>SensorId</th>
                     <th>DisplayName</th>
+                    <th>Environment</th>
+                    <th>Trust</th>
                     <th>LastSeenUtc</th>
                     <th>EventCount</th>
                     <th>Latest event</th>
@@ -84,7 +87,10 @@
                         <td>
                             <code class="app-technical-code app-technical-code--truncate" title="@item.SourceSystem">@DisplayText.ShortTechnicalValue(item.SourceSystem)</code>
                         </td>
+                        <td><code class="app-technical-code app-technical-code--truncate" title="@item.SensorId">@DisplayText.ShortTechnicalValue(item.SensorId)</code></td>
                         <td>@item.DisplayName</td>
+                        <td>@item.Environment</td>
+                        <td><span class="app-badge badge-neutral">@item.TrustStatus</span></td>
                         <td>@(item.LastSeenUtc?.ToMoscowDisplay() ?? "—")</td>
                         <td><span class="app-badge badge-neutral">@item.EventCount</span></td>
                         <td>

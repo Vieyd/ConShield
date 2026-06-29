@@ -18,6 +18,7 @@ src/ConShield.Collector/collector.local.json
 src/ConShield.ImageScanner/scanner.local.json
 config/siem-rules.local.json
 config/container-policy.local.json
+config/sensor-registry.local.json
 *.env
 .env
 .env.*

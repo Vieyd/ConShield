@@ -3,6 +3,8 @@ param(
     [string]$BaseUrl = 'http://127.0.0.1:5080',
     [string]$FixturePath = '.\tests\TestData\Falco\terminal-shell-container.json',
     [string]$MappingPath = '.\config\runtime\falco-mapping-v1.json',
+    [string]$RegistryPath = '.\config\sensor-registry.default.json',
+    [string]$SensorId = 'demo-falco-linux-01',
     [string]$SourceSystem = 'conshield.falco-linux-sensor',
     [ValidateRange(1, 3650)]
     [int]$MaxEventAgeDays = 3650,
@@ -141,6 +143,56 @@ function Find-MappedRule {
     return $null
 }
 
+function Get-SensorTrust {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepoRoot,
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$SensorId,
+        [Parameter(Mandatory = $true)][string]$SourceSystem
+    )
+
+    $resolvedRegistry = Resolve-RepoPath -RepoRoot $RepoRoot -Path $Path
+    if (-not (Test-Path -LiteralPath $resolvedRegistry -PathType Leaf)) {
+        return [pscustomobject]@{
+            SensorId = $SensorId
+            DisplayName = '-'
+            SourceSystem = $SourceSystem
+            TrustStatus = 'Unknown'
+        }
+    }
+
+    try {
+        $registry = Get-Content -LiteralPath $resolvedRegistry -Raw -Encoding UTF8 | ConvertFrom-Json -Depth 20
+        $matches = @($registry.sensors | Where-Object {
+            [string]$_.sensorId -eq $SensorId -or [string]$_.sourceSystem -eq $SourceSystem
+        } | Select-Object -First 1)
+        $sensor = if ($matches.Count -gt 0) { $matches[0] } else { $null }
+        if ($null -eq $sensor -or [string]::IsNullOrWhiteSpace([string]$sensor.status)) {
+            return [pscustomobject]@{
+                SensorId = $SensorId
+                DisplayName = '-'
+                SourceSystem = $SourceSystem
+                TrustStatus = 'Unknown'
+            }
+        }
+
+        return [pscustomobject]@{
+            SensorId = [string]$sensor.sensorId
+            DisplayName = [string]$sensor.displayName
+            SourceSystem = [string]$sensor.sourceSystem
+            TrustStatus = [string]$sensor.status
+        }
+    }
+    catch {
+        return [pscustomobject]@{
+            SensorId = $SensorId
+            DisplayName = '-'
+            SourceSystem = $SourceSystem
+            TrustStatus = 'Unknown'
+        }
+    }
+}
+
 function Invoke-Collector {
     param(
         [Parameter(Mandatory = $true)][string]$RepoRoot,
@@ -177,6 +229,7 @@ try {
 
     $fixture = Get-Content -LiteralPath $resolvedFixture -Raw | ConvertFrom-Json
     $mapping = Get-Content -LiteralPath $resolvedMapping -Raw | ConvertFrom-Json
+    $sensorTrust = Get-SensorTrust -RepoRoot $repoRoot -Path $RegistryPath -SensorId $SensorId -SourceSystem $SourceSystem
     $mappedRule = Find-MappedRule -Fixture $fixture -Mapping $mapping
     $eventType = if ($null -ne $mappedRule) { [string]$mappedRule.eventType } else { 'container.runtime.unmapped' }
     $expectedRule = if ($null -ne $mappedRule -and [bool]$mappedRule.correlate) { 'RTE-001' } else { '-' }
@@ -186,8 +239,8 @@ try {
 
     Write-Output 'ConShield Falco runtime replay'
 
-    $webOk = Test-WebRoute -Url ($BaseUrl.TrimEnd('/') + '/Operations/Health')
-    Write-Output ('Web: {0}' -f $(if ($webOk) { 'OK' } else { 'FAIL' }))
+    $webOk = if ($NoSubmit) { $true } else { Test-WebRoute -Url ($BaseUrl.TrimEnd('/') + '/Operations/Health') }
+    Write-Output ('Web: {0}' -f $(if ($NoSubmit) { 'SKIP' } elseif ($webOk) { 'OK' } else { 'FAIL' }))
     if (-not $webOk) {
         Write-Output 'Start local services with: pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit'
         Write-Output 'Result: FAIL'
@@ -195,6 +248,8 @@ try {
     }
 
     Write-Output ('Fixture: {0}' -f (Split-Path -Leaf $resolvedFixture))
+    Write-Output ('SensorId: {0}' -f $sensorTrust.SensorId)
+    Write-Output ('Sensor trust: {0}' -f $sensorTrust.TrustStatus)
     Write-Output ('Mapped event type: {0}' -f $eventType)
     Write-Output ('SourceSystem: {0}' -f $SourceSystem)
     Write-Output ('ExternalEventId: hash:{0}' -f $safeEventId)
