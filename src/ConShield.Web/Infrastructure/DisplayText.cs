@@ -101,6 +101,9 @@ public static partial class DisplayText
         "RTE-001" => "Угроза во время выполнения контейнера",
         "SENSOR-001" => "Неизвестный runtime-сенсор",
         "SENSOR-002" => "Отозванный или отключенный runtime-сенсор",
+        "SIGN-001" => "Отсутствует подпись runtime-сенсора",
+        "SIGN-002" => "Недействительная подпись runtime-сенсора",
+        "SIGN-003" => "Устаревшая или повторная подпись runtime-сенсора",
         "UE-001" => "Массовые изменения исключений доступа",
         _ => string.IsNullOrWhiteSpace(fallback) ? ruleCode ?? "—" : fallback
     };
@@ -112,6 +115,9 @@ public static partial class DisplayText
         "RTE-001" => "сопоставленное runtime-событие, корреляция включена, критичность высокая/критическая",
         "SENSOR-001" => "runtime-событие от источника со статусом доверия Unknown",
         "SENSOR-002" => "runtime-событие от источника со статусом доверия Revoked или Disabled",
+        "SIGN-001" => "signatureStatus = Missing",
+        "SIGN-002" => "signatureStatus = Invalid или UnknownKey",
+        "SIGN-003" => "signatureStatus = Stale или ReplayDetected",
         "LIFE-001" => "система-источник = conshield.sensor-lifecycle и внешний тип события = sensor.revoked",
         "LIFE-002" => "3 и более событий sensor.credential.rotated/sensor.credential.revoked для одного сенсора",
         _ => LocalizeTechnicalPhrase(fallback)
@@ -123,6 +129,7 @@ public static partial class DisplayText
         "POL-001" => "Политика + digest/reference образа",
         "RTE-001" => "Контейнер + сопоставление + процесс",
         "SENSOR-001" or "SENSOR-002" => "Источник runtime-сенсора",
+        "SIGN-001" or "SIGN-002" or "SIGN-003" => "SensorId или SourceSystem",
         "LIFE-001" or "LIFE-002" => "Публичный ID сенсора",
         _ => LocalizeTechnicalPhrase(fallback)
     };
@@ -138,6 +145,9 @@ public static partial class DisplayText
         "RTE-001" => "Правило выявляет подтвержденные Falco-compatible runtime-события для контейнеров.",
         "SENSOR-001" => "Правило выявляет runtime-события от неизвестного источника сенсора.",
         "SENSOR-002" => "Правило выявляет runtime-события от отозванного или отключенного сенсора.",
+        "SIGN-001" => "Правило выявляет runtime-события без обязательной подписи сенсора.",
+        "SIGN-002" => "Правило выявляет runtime-события с недействительной подписью сенсора.",
+        "SIGN-003" => "Правило выявляет runtime-события с устаревшей или повторной подписью сенсора.",
         "UE-001" => "Правило выявляет подозрительную серию операций изменения или удаления исключений доступа.",
         _ => LocalizeTechnicalPhrase(fallback)
     };
@@ -184,6 +194,18 @@ public static partial class DisplayText
             text = text.Replace("sensorId=", "sensorId=", StringComparison.Ordinal);
             text = text.Replace("sourceSystem=", "sourceSystem=", StringComparison.Ordinal);
             text = text.Replace("eventType=", "eventType=", StringComparison.Ordinal);
+            return text;
+        }
+
+        if (string.Equals(ruleCode, "SIGN-001", StringComparison.Ordinal)
+            || string.Equals(ruleCode, "SIGN-002", StringComparison.Ordinal)
+            || string.Equals(ruleCode, "SIGN-003", StringComparison.Ordinal))
+        {
+            text = text.Replace("Signed sensor event", "Подписанное событие сенсора", StringComparison.Ordinal);
+            text = text.Replace("signatureStatus=", "статус подписи=", StringComparison.Ordinal);
+            text = text.Replace("sensorId=", "sensorId=", StringComparison.Ordinal);
+            text = text.Replace("sourceSystem=", "sourceSystem=", StringComparison.Ordinal);
+            text = text.Replace("keyId=", "keyId=", StringComparison.Ordinal);
             return text;
         }
 

@@ -18,6 +18,14 @@ public sealed class RuntimeCollectorOptions
     public int MaxRetries { get; init; } = 3;
     public int MaxEventAgeDays { get; init; } = 30;
     public string SourceSystem { get; init; } = ConShield.RuntimeDetection.RuntimeDetectionConstants.SourceSystem;
+    public string? SignatureSensorId { get; init; }
+    public string? SignatureStatus { get; init; }
+    public string? SignatureKeyId { get; init; }
+    public string? SignatureNonce { get; init; }
+    public string? SignatureTimestampUtc { get; init; }
+    public string? SignatureAlgorithm { get; init; }
+    public string? SignatureCanonicalPayloadHash { get; init; }
+    public string? SignatureVerificationReason { get; init; }
 }
 
 public enum RuntimeCollectorExitCode

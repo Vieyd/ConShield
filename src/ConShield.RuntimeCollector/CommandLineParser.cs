@@ -13,7 +13,15 @@ public static class CommandLineParser
         "submit-timeout-seconds",
         "max-retries",
         "max-event-age-days",
-        "source-system"
+        "source-system",
+        "signature-sensor-id",
+        "signature-status",
+        "signature-key-id",
+        "signature-nonce",
+        "signature-timestamp-utc",
+        "signature-algorithm",
+        "signature-canonical-payload-hash",
+        "signature-verification-reason"
     };
 
     private static readonly HashSet<string> FlagOptions = new(StringComparer.OrdinalIgnoreCase)
@@ -64,6 +72,13 @@ public static class CommandLineParser
         sourceSystem = sourceSystem.Trim();
         if (sourceSystem.Length is < 1 or > 128 || sourceSystem.Any(char.IsControl))
             return ParseResult.Invalid("--source-system must be a non-empty safe value up to 128 characters.");
+
+        var signatureStatus = Get(values, "signature-status");
+        if (!string.IsNullOrWhiteSpace(signatureStatus)
+            && !ConShield.RuntimeDetection.RuntimeSignatureStatuses.All.Contains(signatureStatus))
+        {
+            return ParseResult.Invalid("--signature-status must be a supported safe signature status.");
+        }
 
         var endpoint = Get(values, "endpoint")
             ?? Environment.GetEnvironmentVariable("CONSHIELD_ENDPOINT")
@@ -118,7 +133,15 @@ public static class CommandLineParser
             SubmitTimeoutSeconds = ReadInt(values, "submit-timeout-seconds", 1, 300, 30),
             MaxRetries = ReadInt(values, "max-retries", 1, 10, 3),
             MaxEventAgeDays = ReadInt(values, "max-event-age-days", 1, 3650, 30),
-            SourceSystem = sourceSystem
+            SourceSystem = sourceSystem,
+            SignatureSensorId = SafeOptional(Get(values, "signature-sensor-id"), 128),
+            SignatureStatus = SafeOptional(signatureStatus, 32),
+            SignatureKeyId = SafeOptional(Get(values, "signature-key-id"), 128),
+            SignatureNonce = SafeOptional(Get(values, "signature-nonce"), 128),
+            SignatureTimestampUtc = SafeOptional(Get(values, "signature-timestamp-utc"), 64),
+            SignatureAlgorithm = SafeOptional(Get(values, "signature-algorithm"), 64),
+            SignatureCanonicalPayloadHash = SafeOptional(Get(values, "signature-canonical-payload-hash"), 128),
+            SignatureVerificationReason = SafeOptional(Get(values, "signature-verification-reason"), 160)
         });
     }
 
@@ -137,6 +160,18 @@ public static class CommandLineParser
     {
         var safe = new string(value.Where(ch => !char.IsControl(ch)).ToArray()).Trim();
         return safe.Length <= 64 ? safe : safe[..64];
+    }
+
+    private static string? SafeOptional(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var safe = new string(value.Where(ch => !char.IsControl(ch)).ToArray()).Trim();
+        if (safe.Length == 0)
+            return null;
+
+        return safe.Length <= maxLength ? safe : safe[..maxLength];
     }
 }
 

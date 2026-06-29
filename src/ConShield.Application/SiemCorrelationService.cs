@@ -234,6 +234,54 @@ public class SiemCorrelationService : ISiemCorrelationService
                 cancellationToken: cancellationToken));
         }
 
+        if (configurableRules.GetEnabledRule("SIGN-001") is { } missingSignatureRule)
+        {
+            var recentRuntimeSensorEvents = await GetRecentRuntimeSensorEventsAsync(now, missingSignatureRule.TimeWindowMinutes, cancellationToken);
+
+            Merge(result, await ProcessRuleAsync(
+                rule: missingSignatureRule,
+                descriptionFactory: group => group.Description,
+                eventIdsFactory: group => group.EventIds,
+                groups: recentRuntimeSensorEvents
+                    .Select(x => TryCreateSignatureCandidate(x, SignedSensorEventStatuses.Missing))
+                    .Where(x => x is not null)
+                    .Select(x => x!)
+                    .ToList(),
+                cancellationToken: cancellationToken));
+        }
+
+        if (configurableRules.GetEnabledRule("SIGN-002") is { } invalidSignatureRule)
+        {
+            var recentRuntimeSensorEvents = await GetRecentRuntimeSensorEventsAsync(now, invalidSignatureRule.TimeWindowMinutes, cancellationToken);
+
+            Merge(result, await ProcessRuleAsync(
+                rule: invalidSignatureRule,
+                descriptionFactory: group => group.Description,
+                eventIdsFactory: group => group.EventIds,
+                groups: recentRuntimeSensorEvents
+                    .Select(x => TryCreateSignatureCandidate(x, SignedSensorEventStatuses.Invalid, SignedSensorEventStatuses.UnknownKey))
+                    .Where(x => x is not null)
+                    .Select(x => x!)
+                    .ToList(),
+                cancellationToken: cancellationToken));
+        }
+
+        if (configurableRules.GetEnabledRule("SIGN-003") is { } staleReplaySignatureRule)
+        {
+            var recentRuntimeSensorEvents = await GetRecentRuntimeSensorEventsAsync(now, staleReplaySignatureRule.TimeWindowMinutes, cancellationToken);
+
+            Merge(result, await ProcessRuleAsync(
+                rule: staleReplaySignatureRule,
+                descriptionFactory: group => group.Description,
+                eventIdsFactory: group => group.EventIds,
+                groups: recentRuntimeSensorEvents
+                    .Select(x => TryCreateSignatureCandidate(x, SignedSensorEventStatuses.Stale, SignedSensorEventStatuses.ReplayDetected))
+                    .Where(x => x is not null)
+                    .Select(x => x!)
+                    .ToList(),
+                cancellationToken: cancellationToken));
+        }
+
         if (configurableRules.GetEnabledRule("LIFE-001") is { } sensorRevokedRule)
         {
             var recentSensorRevocations = await _dbContext.SecurityEvents
@@ -583,6 +631,12 @@ public class SiemCorrelationService : ISiemCorrelationService
                 return null;
             if (!ReadBool(root, "correlate"))
                 return null;
+            var signatureStatus = TryReadSignatureStatus(root);
+            if (signatureStatus is not null
+                && signatureStatus is not SignedSensorEventStatuses.Valid and not SignedSensorEventStatuses.NotRequired)
+            {
+                return null;
+            }
             var mappingId = ReadString(root, "mappingId", 128);
             var mappingVersion = ReadString(root, "mappingVersion", 64);
             var mappingSha = ReadString(root, "mappingSha256", 64);
@@ -658,6 +712,30 @@ public class SiemCorrelationService : ISiemCorrelationService
         };
     }
 
+    private static RuleCandidate? TryCreateSignatureCandidate(
+        SecurityEventEntry entry,
+        params string[] targetStatuses)
+    {
+        var signature = TryReadSignatureData(entry);
+        if (signature is null || !targetStatuses.Contains(signature.Status, StringComparer.Ordinal))
+            return null;
+
+        var sensorId = string.IsNullOrWhiteSpace(signature.SensorId) ? "-" : signature.SensorId;
+        var trigger = NormalizeTriggerValue(sensorId == "-" ? entry.SourceSystem ?? $"source-event-{entry.Id}" : sensorId);
+        var keyId = string.IsNullOrWhiteSpace(signature.KeyId) ? "-" : signature.KeyId;
+        var reason = string.IsNullOrWhiteSpace(signature.Reason) ? "signature verification failed" : signature.Reason;
+        var severity = signature.Status == SignedSensorEventStatuses.Missing ? EventSeverity.High : EventSeverity.Critical;
+
+        return new RuleCandidate
+        {
+            Key = $"{signature.Status}:{trigger}",
+            Count = 1,
+            Description = $"Signed sensor event signatureStatus={signature.Status}: sensorId={sensorId}, sourceSystem={entry.SourceSystem ?? "-"}, keyId={keyId}, reason={reason}. Source event #{entry.Id}.",
+            EventIds = [entry.Id],
+            Severity = severity
+        };
+    }
+
     private static RuleCandidate? TryCreateSensorRevokedCandidate(SecurityEventEntry entry)
     {
         var lifecycleData = TryReadLifecycleData(entry);
@@ -717,6 +795,44 @@ public class SiemCorrelationService : ISiemCorrelationService
         {
             return null;
         }
+    }
+
+    private static SignatureAuditData? TryReadSignatureData(SecurityEventEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.AdditionalDataJson))
+            return null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(entry.AdditionalDataJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return null;
+            if (!root.TryGetProperty("signature", out var signature) || signature.ValueKind != JsonValueKind.Object)
+                return null;
+
+            var status = ReadString(signature, "signatureStatus", 32);
+            if (string.IsNullOrWhiteSpace(status))
+                return null;
+
+            return new SignatureAuditData(
+                ReadString(signature, "sensorId", 128),
+                ReadString(signature, "signatureKeyId", 128),
+                status,
+                ReadString(signature, "signatureVerificationReason", 160));
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string? TryReadSignatureStatus(JsonElement root)
+    {
+        if (!root.TryGetProperty("signature", out var signature) || signature.ValueKind != JsonValueKind.Object)
+            return null;
+
+        return ReadString(signature, "signatureStatus", 32);
     }
 
     private static int ReadNonNegativeInt(JsonElement root, string propertyName)
@@ -801,4 +917,10 @@ public class SiemCorrelationService : ISiemCorrelationService
         string? DisplayName,
         string? RequestedBy,
         int? RevokedCredentialCount);
+
+    private sealed record SignatureAuditData(
+        string? SensorId,
+        string? KeyId,
+        string Status,
+        string? Reason);
 }

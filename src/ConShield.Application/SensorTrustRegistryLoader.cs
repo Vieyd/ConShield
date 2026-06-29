@@ -48,7 +48,7 @@ public static class SensorTrustRegistryLoader
             var jsonSensor = document.RootElement.GetProperty("sensors")[index];
             ValidateAllowedProperties(
                 jsonSensor,
-                ["sensorId", "displayName", "sourceSystem", "environment", "status", "expectedEventTypes", "fingerprintSha256", "notes"],
+                ["sensorId", "displayName", "sourceSystem", "environment", "status", "expectedEventTypes", "signatureRequired", "signingKeyId", "fingerprintSha256", "notes"],
                 $"sensor[{index}]");
 
             var sensor = dto.Sensors[index];
@@ -78,6 +78,12 @@ public static class SensorTrustRegistryLoader
             if (fingerprint is not null && LooksLikeCertificateMaterial(fingerprint))
                 throw new InvalidDataException($"{sensorId}: fingerprintSha256 must not contain certificate or private key material");
 
+            var signingKeyId = string.IsNullOrWhiteSpace(sensor.SigningKeyId)
+                ? null
+                : Safe(sensor.SigningKeyId!, 128);
+            if (signingKeyId is not null && LooksLikeCertificateMaterial(signingKeyId))
+                throw new InvalidDataException($"{sensorId}: signingKeyId must not contain certificate or private key material");
+
             var notes = string.IsNullOrWhiteSpace(sensor.Notes) ? null : Safe(sensor.Notes!, 256);
             sensors.Add(new SensorTrustRegistryEntry(
                 sensorId,
@@ -86,6 +92,8 @@ public static class SensorTrustRegistryLoader
                 environment,
                 status,
                 expectedEventTypes,
+                sensor.SignatureRequired,
+                signingKeyId,
                 fingerprint,
                 notes));
         }
@@ -154,6 +162,8 @@ public static class SensorTrustRegistryLoader
         string? Environment,
         string? Status,
         List<string>? ExpectedEventTypes,
+        bool SignatureRequired,
+        string? SigningKeyId,
         string? FingerprintSha256,
         string? Notes);
 }

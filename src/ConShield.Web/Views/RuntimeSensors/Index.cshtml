@@ -75,8 +75,11 @@
                     <th>EventCount</th>
                     <th>Latest event</th>
                     <th>Latest severity</th>
+                    <th>Signature</th>
+                    <th>Signature key</th>
                     <th>RTE alerts</th>
                     <th>Trust alerts</th>
+                    <th>SIGN alerts</th>
                     <th>Incidents</th>
                     <th>Status</th>
                     <th class="app-table-actions-col">Links</th>
@@ -125,8 +128,17 @@
                                 <span>—</span>
                             }
                         </td>
+                        <td>
+                            <span class="app-badge badge-neutral">@item.SignatureStatus</span>
+                            @if (!string.IsNullOrWhiteSpace(item.LastSignatureFailure))
+                            {
+                                <span class="app-display-secondary">@item.LastSignatureFailure</span>
+                            }
+                        </td>
+                        <td><code class="app-technical-code app-technical-code--truncate" title="@item.SignatureKeyId">@DisplayText.ShortTechnicalValue(item.SignatureKeyId)</code></td>
                         <td><span class="app-badge badge-neutral">@item.RelatedRteAlertCount</span></td>
                         <td><span class="app-badge badge-neutral">@item.RelatedSensorTrustAlertCount</span></td>
+                        <td><span class="app-badge badge-neutral">@item.RelatedSignatureAlertCount</span></td>
                         <td><span class="app-badge badge-neutral">@item.RelatedIncidentCount</span></td>
                         <td>
                             <span class="app-status @DisplayText.StatusClass(item.Status)">

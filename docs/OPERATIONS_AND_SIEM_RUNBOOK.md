@@ -184,7 +184,7 @@ Runtime/Falco source trust is configured in `config/sensor-registry.default.json
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSensorRegistry.ps1
 ```
 
-During investigation, open `/RuntimeSensors` to confirm whether a runtime source is `Trusted`, `Unknown`, `Revoked`, or `Disabled`. The demo Falco source `conshield.falco-linux-sensor` should appear as trusted after replay. Unknown, revoked, or disabled sources should be treated as identity-control evidence and reviewed with related `RTE-001` alerts and incidents. The registry does not implement full mTLS and must not contain real certificates, private keys, secrets, connection strings, or raw runtime payloads.
+During investigation, open `/RuntimeSensors` to confirm whether a runtime source is `Trusted`, `Unknown`, `Revoked`, or `Disabled`. The demo Falco source `conshield.falco-linux-sensor` should appear as trusted after replay. Unknown, revoked, or disabled sources should be treated as identity-control evidence and reviewed with related `RTE-001`, `SENSOR-001`, or `SENSOR-002` alerts and incidents. Signed Sensor Events v1 adds deterministic signature status checks: `SIGN-001` means missing signature metadata, `SIGN-002` means invalid or unknown-key signature metadata, and `SIGN-003` means stale or replayed signature metadata. The registry does not implement full mTLS and must not contain real certificates, private keys, real signing keys, secrets, connection strings, or raw runtime payloads.
 
 ## Local demo data reset
 
@@ -264,7 +264,7 @@ Execution is explicit. No Docker container starts unless `-Execute` is present a
 
 ## Runtime Sensor Health
 
-Runtime Sensor Health is a read-only UI/evidence view derived from ingested runtime/Falco-compatible security events. It shows SourceSystem, last seen time, event count, latest event metadata, related `RTE-001` alerts, related incidents, and `Active` / `Stale` / `NoData` status. It does not require a real Fedora VM for local validation.
+Runtime Sensor Health is a read-only UI/evidence view derived from ingested runtime/Falco-compatible security events. It shows SourceSystem, last seen time, event count, latest event metadata, trust status, signature status, related `RTE-001` / `SENSOR-*` / `SIGN-*` alerts, related incidents, and `Active` / `Stale` / `NoData` status. It does not require a real Fedora VM for local validation.
 
 Safe local validation:
 

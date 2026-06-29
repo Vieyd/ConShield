@@ -106,6 +106,36 @@ public static class SiemRuleCatalog
             ConditionText = "trustStatus = Revoked или Disabled",
             WindowText = "24 часа",
             TriggerEntityText = "SensorId или SourceSystem"
+        },
+        new SiemRuleDefinition
+        {
+            RuleCode = "SIGN-001",
+            RuleName = "Отсутствует подпись runtime-сенсора",
+            Severity = EventSeverity.High,
+            Description = "Правило выявляет runtime/Falco-события без обязательной signed sensor metadata.",
+            ConditionText = "signatureStatus = Missing",
+            WindowText = "24 часа",
+            TriggerEntityText = "SensorId или SourceSystem"
+        },
+        new SiemRuleDefinition
+        {
+            RuleCode = "SIGN-002",
+            RuleName = "Недействительная подпись runtime-сенсора",
+            Severity = EventSeverity.Critical,
+            Description = "Правило выявляет runtime/Falco-события с недействительной подписью.",
+            ConditionText = "signatureStatus = Invalid или UnknownKey",
+            WindowText = "24 часа",
+            TriggerEntityText = "SensorId или SourceSystem"
+        },
+        new SiemRuleDefinition
+        {
+            RuleCode = "SIGN-003",
+            RuleName = "Устаревшая или повторная подпись runtime-сенсора",
+            Severity = EventSeverity.Critical,
+            Description = "Правило выявляет runtime/Falco-события с устаревшей или повторной подписью.",
+            ConditionText = "signatureStatus = Stale или ReplayDetected",
+            WindowText = "24 часа",
+            TriggerEntityText = "SensorId или SourceSystem"
         }
     ];
 }

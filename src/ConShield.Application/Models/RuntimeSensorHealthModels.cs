@@ -30,6 +30,11 @@ public sealed record RuntimeSensorHealthRow(
     EventSeverity? LatestSeverity,
     int RelatedRteAlertCount,
     int RelatedSensorTrustAlertCount,
+    int RelatedSignatureAlertCount,
+    string SignatureStatus,
+    string? SignatureKeyId,
+    DateTime? LastSignedEventUtc,
+    string? LastSignatureFailure,
     int RelatedIncidentCount,
     string Status);
 

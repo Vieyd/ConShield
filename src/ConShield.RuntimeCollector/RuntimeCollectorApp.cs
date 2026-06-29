@@ -64,6 +64,7 @@ public static class RuntimeCollectorApp
                 }
                 counters.Parsed++;
                 var runtimeEvent = normalizer.Normalize(parsedLine.Alert!, mapping.Policy!, options.SourceSystem);
+                runtimeEvent = AttachSignatureMetadata(runtimeEvent, options);
                 counters.Mapped += runtimeEvent.AdditionalData.Correlate ? 1 : 0;
                 counters.Unmapped += runtimeEvent.AdditionalData.Correlate ? 0 : 1;
                 if (options.NoSubmit)
@@ -108,6 +109,37 @@ public static class RuntimeCollectorApp
 
         await stdout.WriteLineAsync($"parsed={counters.Parsed} mapped={counters.Mapped} unmapped={counters.Unmapped} accepted={counters.Accepted} duplicate={counters.Duplicate} invalid={counters.Invalid} failed={counters.Failed}");
         return counters.Failed > 0 || counters.Invalid > 0 ? RuntimeCollectorExitCode.PartialFailure : RuntimeCollectorExitCode.Success;
+    }
+
+    private static RuntimeSecurityEvent AttachSignatureMetadata(RuntimeSecurityEvent runtimeEvent, RuntimeCollectorOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.SignatureStatus))
+            return runtimeEvent;
+
+        DateTime? timestampUtc = null;
+        if (DateTime.TryParse(
+                options.SignatureTimestampUtc,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                out var parsedTimestamp))
+        {
+            timestampUtc = DateTime.SpecifyKind(parsedTimestamp, DateTimeKind.Utc);
+        }
+
+        var metadata = new RuntimeSignatureMetadata(
+            options.SignatureSensorId ?? "-",
+            timestampUtc,
+            options.SignatureNonce,
+            options.SignatureAlgorithm,
+            options.SignatureKeyId,
+            options.SignatureCanonicalPayloadHash,
+            options.SignatureStatus,
+            options.SignatureVerificationReason);
+
+        return runtimeEvent with
+        {
+            AdditionalData = runtimeEvent.AdditionalData with { Signature = metadata }
+        };
     }
 
     private sealed class Counters

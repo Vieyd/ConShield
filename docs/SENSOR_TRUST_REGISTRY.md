@@ -51,6 +51,7 @@ The validator checks:
 - last seen and event counts
 - related `RTE-001` alerts and incidents
 - related `SENSOR-001` / `SENSOR-002` trust enforcement alerts
+- signature status, signature key id, and related `SIGN-001` / `SIGN-002` / `SIGN-003` alerts
 
 Unknown runtime sources are shown as `Unknown`. The local demo Falco sources `conshield.falco-linux-sensor` and `conshield.falco-runtime-collector` map to trusted synthetic registry entries.
 
@@ -66,6 +67,10 @@ Sensor Trust Enforcement v1 makes trust status affect SIEM correlation while kee
 | `Disabled` | `FlagDisabledWithAlert` | Runtime event is flagged with deterministic `SENSOR-002`; a critical incident is created. |
 
 This layer is intentionally not full mTLS. Future certificate-bound enrollment can tighten transport/authentication, but this PR keeps the local demo CI-safe and does not require real certificates, private keys, Fedora/Falco, live Docker, live Trivy DB, or external internet.
+
+## Signed sensor events
+
+The registry may contain only signing metadata such as `signatureRequired` and `signingKeyId`. It must not contain raw signing material. Signed Sensor Events v1 uses deterministic demo metadata to classify `Valid`, `Missing`, `Invalid`, `Stale`, and `ReplayDetected` signatures and correlate `SIGN-001`, `SIGN-002`, or `SIGN-003` as needed. See `docs/SIGNED_SENSOR_EVENTS.md`.
 
 Simulate enforcement modes without submitting events:
 
@@ -92,8 +97,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseE
   -OutputMarkdownPath .\artifacts\local\defense-evidence-sensor-trust.md
 ```
 
-The replay script prints only a safe sensor identity summary: `SensorId`, trust status, source system, mapped runtime type, expected rule, and result.
+The replay script prints only a safe sensor identity summary: `SensorId`, trust status, signature status, signature key id, source system, mapped runtime type, expected rules, and result.
 
 ## Evidence
 
-The defense evidence exporter includes `Sensor Trust Evidence` with registry counts and sanitized sensor metadata. It also includes `Sensor Trust Enforcement Evidence` with aggregate `SENSOR-001` / `SENSOR-002` counts and incidents. It excludes raw runtime payload JSON, raw additional data, local secrets, logs, real certificate material, private keys, screenshots, and generated artifacts from source control.
+The defense evidence exporter includes `Sensor Trust Evidence` with registry counts and sanitized sensor metadata. It also includes `Sensor Trust Enforcement Evidence` with aggregate `SENSOR-001` / `SENSOR-002` counts and incidents, plus `Signed Sensor Event Evidence` for sanitized `SIGN-001` / `SIGN-002` / `SIGN-003` counts. It excludes raw runtime payload JSON, raw additional data, local secrets, logs, real certificate material, private keys, signing material, screenshots, and generated artifacts from source control.

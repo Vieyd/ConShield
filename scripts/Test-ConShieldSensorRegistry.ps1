@@ -150,7 +150,7 @@ try {
 
         Test-AllowedProperties `
             -InputObject $sensor `
-            -Allowed @('sensorId', 'displayName', 'sourceSystem', 'environment', 'status', 'expectedEventTypes', 'fingerprintSha256', 'notes') `
+            -Allowed @('sensorId', 'displayName', 'sourceSystem', 'environment', 'status', 'expectedEventTypes', 'signatureRequired', 'signingKeyId', 'fingerprintSha256', 'notes') `
             -Label $label `
             -Errors $errors
 
@@ -170,6 +170,7 @@ try {
         }
 
         Test-NoCertificateMaterial -Value ([string](Get-OptionalPropertyValue -InputObject $sensor -Name 'fingerprintSha256')) -Label ('{0}.fingerprintSha256' -f $label) -Errors $errors
+        Test-NoCertificateMaterial -Value ([string](Get-OptionalPropertyValue -InputObject $sensor -Name 'signingKeyId')) -Label ('{0}.signingKeyId' -f $label) -Errors $errors
     }
 
     foreach ($duplicate in @($ids | Group-Object | Where-Object { $_.Name -and $_.Count -gt 1 })) {
