@@ -247,6 +247,66 @@ function Get-ContainerPolicyEvidence {
     }
 }
 
+function Get-SensorTrustEvidence {
+    param([Parameter(Mandatory = $true)][string]$RepoRoot)
+
+    $path = Join-Path $RepoRoot 'config\sensor-registry.default.json'
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        return [pscustomobject]@{
+            Summary = @([pscustomobject]@{
+                ConfigSource = 'config/sensor-registry.default.json'
+                SensorsLoaded = 0
+                Trusted = 0
+                Unknown = 0
+                Revoked = 0
+                Disabled = 0
+                Status = 'Missing'
+            })
+            Sensors = @()
+        }
+    }
+
+    try {
+        $config = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json -Depth 20
+        $sensors = @($config.sensors)
+        return [pscustomobject]@{
+            Summary = @([pscustomobject]@{
+                ConfigSource = 'config/sensor-registry.default.json'
+                SensorsLoaded = $sensors.Count
+                Trusted = @($sensors | Where-Object { $_.status -eq 'Trusted' }).Count
+                Unknown = @($sensors | Where-Object { $_.status -eq 'Unknown' }).Count
+                Revoked = @($sensors | Where-Object { $_.status -eq 'Revoked' }).Count
+                Disabled = @($sensors | Where-Object { $_.status -eq 'Disabled' }).Count
+                Status = 'Loaded'
+            })
+            Sensors = @($sensors | ForEach-Object {
+                [pscustomobject]@{
+                    SensorId = ConvertTo-SafeCell -Value $_.sensorId -MaxLength 80
+                    DisplayName = ConvertTo-SafeCell -Value $_.displayName -MaxLength 120
+                    SourceSystem = ConvertTo-SafeCell -Value $_.sourceSystem -MaxLength 120
+                    Environment = ConvertTo-SafeCell -Value $_.environment -MaxLength 80
+                    TrustStatus = ConvertTo-SafeCell -Value $_.status -MaxLength 32
+                    ExpectedEventTypes = ConvertTo-SafeCell -Value (@($_.expectedEventTypes) -join ', ') -MaxLength 180
+                }
+            })
+        }
+    }
+    catch {
+        return [pscustomobject]@{
+            Summary = @([pscustomobject]@{
+                ConfigSource = 'config/sensor-registry.default.json'
+                SensorsLoaded = 0
+                Trusted = 0
+                Unknown = 0
+                Revoked = 0
+                Disabled = 0
+                Status = 'Invalid'
+            })
+            Sensors = @()
+        }
+    }
+}
+
 function Import-NpgsqlClient {
     param([string]$RepoRoot)
 
@@ -381,6 +441,7 @@ function Invoke-DefenseScenario {
 $repoRoot = Resolve-RepositoryRoot
 $siemRulesEvidence = Get-SiemRulesEvidence -RepoRoot $repoRoot
 $containerPolicyEvidence = Get-ContainerPolicyEvidence -RepoRoot $repoRoot
+$sensorTrustEvidence = Get-SensorTrustEvidence -RepoRoot $repoRoot
 $resolvedOutputPath = if ([System.IO.Path]::IsPathRooted($OutputMarkdownPath)) {
     $OutputMarkdownPath
 }
@@ -469,6 +530,31 @@ if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
 else {
     $queryError = "Local database configuration was not found. Run Start-ConShield.ps1 after preparing .conshield.local.env."
 }
+
+$registryBySource = @{}
+foreach ($sensor in @($sensorTrustEvidence.Sensors)) {
+    if (-not [string]::IsNullOrWhiteSpace([string]$sensor.SourceSystem)) {
+        $registryBySource[[string]$sensor.SourceSystem] = $sensor
+    }
+}
+
+$tables.RuntimeSensorHealth = @($tables.RuntimeSensorHealth | ForEach-Object {
+    $sourceSystem = [string]$_.SourceSystem
+    $sensor = if ($registryBySource.ContainsKey($sourceSystem)) { $registryBySource[$sourceSystem] } else { $null }
+    [pscustomobject]@{
+        SensorId = if ($null -ne $sensor) { $sensor.SensorId } else { '-' }
+        SourceSystem = $_.SourceSystem
+        DisplayName = if ($null -ne $sensor) { $sensor.DisplayName } else { $_.SourceSystem }
+        Environment = if ($null -ne $sensor) { $sensor.Environment } else { '-' }
+        TrustStatus = if ($null -ne $sensor) { $sensor.TrustStatus } else { 'Unknown' }
+        Status = $_.Status
+        LastSeenUtc = $_.LastSeenUtc
+        EventCount = $_.EventCount
+        LatestEventType = $_.LatestEventType
+        RelatedRteAlertCount = $_.RelatedRteAlertCount
+        RelatedIncidentCount = $_.RelatedIncidentCount
+    }
+})
 
 $result = 'PASS'
 if (-not $health.Web -or -not $health.PostgreSQL) {
@@ -615,6 +701,15 @@ $lines.Add('') | Out-Null
 $lines.Add('- Container policy evidence is summarized from `config/container-policy.default.json`; raw Trivy JSON, raw event payloads, raw additional data, Docker logs, and local secrets are excluded.') | Out-Null
 $lines.Add('') | Out-Null
 
+$lines.Add('## Sensor Trust Evidence') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('ConfigSource', 'SensorsLoaded', 'Trusted', 'Unknown', 'Revoked', 'Disabled', 'Status') -Rows $sensorTrustEvidence.Summary
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('SensorId', 'DisplayName', 'SourceSystem', 'Environment', 'TrustStatus', 'ExpectedEventTypes') -Rows $sensorTrustEvidence.Sensors
+$lines.Add('') | Out-Null
+$lines.Add('- Sensor trust evidence is summarized from `config/sensor-registry.default.json`; runtime payloads, local secrets, certificates, private keys, and logs are excluded.') | Out-Null
+$lines.Add('') | Out-Null
+
 $lines.Add('## Runtime Sensor Evidence') | Out-Null
 $lines.Add('') | Out-Null
 if (@($tables.RuntimeSensorSummary).Count -eq 0) {
@@ -640,7 +735,7 @@ if (@($tables.RuntimeSensorHealth).Count -eq 0 -or @($tables.RuntimeSensorHealth
     $lines.Add('No runtime sensor activity was found in the current evidence window.') | Out-Null
 }
 else {
-    Add-MarkdownTable -Lines $lines -Headers @('SourceSystem', 'Status', 'LastSeenUtc', 'EventCount', 'LatestEventType', 'RelatedRteAlertCount', 'RelatedIncidentCount') -Rows $tables.RuntimeSensorHealth
+    Add-MarkdownTable -Lines $lines -Headers @('SensorId', 'SourceSystem', 'DisplayName', 'Environment', 'TrustStatus', 'Status', 'LastSeenUtc', 'EventCount', 'LatestEventType', 'RelatedRteAlertCount', 'RelatedIncidentCount') -Rows $tables.RuntimeSensorHealth
 }
 $lines.Add('') | Out-Null
 

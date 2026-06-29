@@ -16,8 +16,12 @@ public sealed record RuntimeSensorHealthOptions(DateTime NowUtc, TimeSpan Active
 }
 
 public sealed record RuntimeSensorHealthRow(
+    string SensorId,
     string SourceSystem,
     string DisplayName,
+    string Environment,
+    string TrustStatus,
+    IReadOnlyList<string> ExpectedEventTypes,
     DateTime? LastSeenUtc,
     int EventCount,
     long? LatestEventId,

@@ -37,7 +37,17 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRun
   -FixturePath .\tests\TestData\Falco\write-below-etc-container.json
 ```
 
-The script prints only a safe summary: Web status, fixture name, mapped runtime event type, source system, a short hash identifier, ingestion status, expected SIEM rule, and result. It does not print API keys, sensor credentials, connection strings, environment values, raw Falco payload JSON, raw `AdditionalDataJson`, logs, screenshots, or generated evidence artifacts.
+The script prints only a safe summary: Web status, fixture name, sensor id, sensor trust status, mapped runtime event type, source system, a short hash identifier, ingestion status, expected SIEM rule, and result. It does not print API keys, sensor credentials, connection strings, environment values, raw Falco payload JSON, raw additional data, logs, screenshots, or generated evidence artifacts.
+
+## Sensor trust registry
+
+The default local replay source `conshield.falco-linux-sensor` maps to `demo-falco-linux-01` in `config/sensor-registry.default.json` with `Trusted` status. Validate the registry before a demo:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSensorRegistry.ps1
+```
+
+Unknown runtime sources are shown as `Unknown` in `/RuntimeSensors` and evidence. Revoked or disabled sources are represented safely by status only. This is a preparation layer for future mTLS and does not store or issue real certificates.
 
 ## Runtime Sensor Health
 
@@ -45,7 +55,7 @@ Open `/RuntimeSensors` after replay to verify Runtime Sensor Health. The page de
 
 The page shows:
 
-- source system and display name;
+- sensor id, source system, display name, environment, and trust status;
 - last seen UTC/Moscow time;
 - runtime event count and latest event metadata;
 - related `RTE-001` alert count;

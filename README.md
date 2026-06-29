@@ -251,6 +251,18 @@ http://127.0.0.1:5080/RuntimeSensors
 
 It derives source health from existing Security Events, `RTE-001` alerts, and incidents. The view shows `SourceSystem`, `LastSeenUtc`, `EventCount`, latest event metadata, related RTE alert count, related incident count, and `Active` / `Stale` / `NoData` status. It does not require a new database migration or a real Fedora/Falco node for local validation.
 
+### Sensor Trust Registry
+
+Known runtime sensor sources are validated with [`config/sensor-registry.default.json`](config/sensor-registry.default.json). The local demo Falco source maps to `demo-falco-linux-01` with `Trusted` status; sources not in the registry are shown as `Unknown` in Runtime Sensor Health and evidence.
+
+Validate the registry offline:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSensorRegistry.ps1
+```
+
+The registry is a preparation layer for future certificate-bound enrollment. It does not implement full mTLS and must not contain real certificates, private keys, secrets, API keys, connection strings, env values, raw runtime payloads, logs, screenshots, or generated local artifacts. Details are documented in [`docs/SENSOR_TRUST_REGISTRY.md`](docs/SENSOR_TRUST_REGISTRY.md).
+
 ### Validation
 
 Common local checks:
@@ -540,6 +552,18 @@ http://127.0.0.1:5080/RuntimeSensors
 ```
 
 Он рассчитывает health источников из существующих Security Events, `RTE-001` alerts и incidents. View показывает `SourceSystem`, `LastSeenUtc`, `EventCount`, metadata последнего события, количество связанных RTE alerts, количество связанных incidents и статус `Active` / `Stale` / `NoData`. Для локальной проверки не нужна новая database migration или настоящий Fedora/Falco node.
+
+### Реестр доверия сенсоров
+
+Известные источники runtime-сенсоров проверяются через [`config/sensor-registry.default.json`](config/sensor-registry.default.json). Локальный демонстрационный источник Falco сопоставляется с `demo-falco-linux-01` со статусом `Trusted`; источники вне реестра показываются как `Unknown` в Runtime Sensor Health и evidence.
+
+Проверьте registry офлайн:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSensorRegistry.ps1
+```
+
+Реестр — подготовительный слой под будущую привязку enrollment к сертификатам. Он не реализует full mTLS и не должен содержать настоящие сертификаты, private keys, secrets, API keys, connection strings, env values, raw runtime payloads, logs, screenshots или generated local artifacts. Подробности описаны в [`docs/SENSOR_TRUST_REGISTRY.md`](docs/SENSOR_TRUST_REGISTRY.md).
 
 ### Проверки
 

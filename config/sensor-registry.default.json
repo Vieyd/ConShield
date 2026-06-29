@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "sensors": [
+    {
+      "sensorId": "demo-falco-linux-01",
+      "displayName": "Demo Falco Linux Sensor",
+      "sourceSystem": "conshield.falco-linux-sensor",
+      "environment": "local-demo",
+      "status": "Trusted",
+      "expectedEventTypes": [
+        "container.runtime.shell_spawned",
+        "container.runtime.etc_write"
+      ],
+      "fingerprintSha256": "demo-synthetic-fingerprint-placeholder",
+      "notes": "Synthetic demo sensor for local replay."
+    }
+  ]
+}

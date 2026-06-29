@@ -19,10 +19,17 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
     ];
 
     private readonly ApplicationDbContext _dbContext;
+    private readonly SensorTrustRegistry _sensorTrustRegistry;
 
     public RuntimeSensorHealthService(ApplicationDbContext dbContext)
+        : this(dbContext, LoadRegistrySafely())
+    {
+    }
+
+    public RuntimeSensorHealthService(ApplicationDbContext dbContext, SensorTrustRegistry sensorTrustRegistry)
     {
         _dbContext = dbContext;
+        _sensorTrustRegistry = sensorTrustRegistry;
     }
 
     public async Task<RuntimeSensorHealthResult> GetAsync(
@@ -52,6 +59,7 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
                 StringComparer.Ordinal);
 
         var sourceSystems = SuggestedSourceSystems
+            .Concat(_sensorTrustRegistry.Sensors.Select(x => x.SourceSystem))
             .Concat(runtimeEvents.Select(x => x.SourceSystem))
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.Ordinal)
@@ -71,6 +79,7 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
         var rows = new List<RuntimeSensorHealthRow>();
         foreach (var sourceSystem in sourceSystems)
         {
+            var registrySensor = _sensorTrustRegistry.FindBySourceSystem(sourceSystem);
             var eventsForSource = runtimeEvents
                 .Where(x => string.Equals(x.SourceSystem, sourceSystem, StringComparison.Ordinal))
                 .OrderByDescending(x => x.OccurredAtUtc)
@@ -101,8 +110,12 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
             }
 
             rows.Add(new RuntimeSensorHealthRow(
+                registrySensor?.SensorId ?? "-",
                 sourceSystem,
-                DisplayName(sourceSystem),
+                registrySensor?.DisplayName ?? DisplayName(sourceSystem),
+                registrySensor?.Environment ?? "-",
+                registrySensor?.Status ?? SensorTrustStatuses.Unknown,
+                registrySensor?.ExpectedEventTypes ?? Array.Empty<string>(),
                 latest?.OccurredAtUtc,
                 eventsForSource.Count,
                 latest?.Id,
@@ -139,6 +152,18 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
         ContainerRuntimeSourceSystem => "Container runtime launch monitor",
         _ => sourceSystem
     };
+
+    private static SensorTrustRegistry LoadRegistrySafely()
+    {
+        try
+        {
+            return SensorTrustRegistryLoader.LoadDefault();
+        }
+        catch
+        {
+            return SensorTrustRegistry.Empty;
+        }
+    }
 
     private static HashSet<long> ReadSourceEventIds(string? sourceEventIdsJson)
     {
