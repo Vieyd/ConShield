@@ -132,6 +132,57 @@
         "create": true,
         "severity": "Critical"
       }
+    },
+    {
+      "id": "SIGN-001",
+      "name": "Missing runtime sensor signature",
+      "description": "Creates a SIEM alert when a runtime/Falco event is marked as missing signed sensor event metadata.",
+      "enabled": true,
+      "sourceSystems": [ "conshield.sensor-signature" ],
+      "eventTypes": [ "sensor.signature.missing" ],
+      "minimumSeverity": "Warning",
+      "threshold": 1,
+      "timeWindowMinutes": 1440,
+      "groupingKey": "sensor-id",
+      "alertSeverity": "High",
+      "incident": {
+        "create": false,
+        "severity": "High"
+      }
+    },
+    {
+      "id": "SIGN-002",
+      "name": "Invalid runtime sensor signature",
+      "description": "Creates a SIEM alert and incident when a runtime/Falco event is marked as having an invalid signature.",
+      "enabled": true,
+      "sourceSystems": [ "conshield.sensor-signature" ],
+      "eventTypes": [ "sensor.signature.invalid" ],
+      "minimumSeverity": "High",
+      "threshold": 1,
+      "timeWindowMinutes": 1440,
+      "groupingKey": "sensor-id",
+      "alertSeverity": "Critical",
+      "incident": {
+        "create": true,
+        "severity": "Critical"
+      }
+    },
+    {
+      "id": "SIGN-003",
+      "name": "Stale or replayed runtime sensor signature",
+      "description": "Creates a SIEM alert and incident when a runtime/Falco event is marked as stale or replayed.",
+      "enabled": true,
+      "sourceSystems": [ "conshield.sensor-signature" ],
+      "eventTypes": [ "sensor.signature.stale-or-replay" ],
+      "minimumSeverity": "High",
+      "threshold": 1,
+      "timeWindowMinutes": 1440,
+      "groupingKey": "sensor-id",
+      "alertSeverity": "Critical",
+      "incident": {
+        "create": true,
+        "severity": "Critical"
+      }
     }
   ]
 }

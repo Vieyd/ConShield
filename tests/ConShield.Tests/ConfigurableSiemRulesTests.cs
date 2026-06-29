@@ -22,9 +22,9 @@ public sealed class ConfigurableSiemRulesTests
         Assert.NotNull(load.Configuration);
         Assert.True(load.Validation.IsValid, string.Join(Environment.NewLine, load.Validation.Errors));
         Assert.Equal(1, load.Configuration!.Version);
-        Assert.Equal(7, load.Configuration.Rules.Count);
+        Assert.Equal(10, load.Configuration.Rules.Count);
         Assert.Equal(
-            new[] { "IMG-001", "LIFE-001", "LIFE-002", "POL-001", "RTE-001", "SENSOR-001", "SENSOR-002" },
+            new[] { "IMG-001", "LIFE-001", "LIFE-002", "POL-001", "RTE-001", "SENSOR-001", "SENSOR-002", "SIGN-001", "SIGN-002", "SIGN-003" },
             load.Configuration.Rules.Select(x => x.Id).Order(StringComparer.Ordinal).ToArray());
         Assert.Equal(load.Configuration.Rules.Count, load.Configuration.Rules.Select(x => x.Id).Distinct(StringComparer.Ordinal).Count());
         Assert.All(load.Configuration.Rules, rule =>
@@ -148,10 +148,10 @@ public sealed class ConfigurableSiemRulesTests
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("ConShield SIEM rules validation", result.Output, StringComparison.Ordinal);
         Assert.Contains("Config: config/siem-rules.default.json", result.Output, StringComparison.Ordinal);
-        Assert.Contains("Rules: 7", result.Output, StringComparison.Ordinal);
-        Assert.Contains("Enabled: 7", result.Output, StringComparison.Ordinal);
+        Assert.Contains("Rules: 10", result.Output, StringComparison.Ordinal);
+        Assert.Contains("Enabled: 10", result.Output, StringComparison.Ordinal);
         Assert.Contains("Disabled: 0", result.Output, StringComparison.Ordinal);
-        foreach (var id in new[] { "IMG-001", "POL-001", "RTE-001", "LIFE-001", "LIFE-002", "SENSOR-001", "SENSOR-002" })
+        foreach (var id in new[] { "IMG-001", "POL-001", "RTE-001", "LIFE-001", "LIFE-002", "SENSOR-001", "SENSOR-002", "SIGN-001", "SIGN-002", "SIGN-003" })
             Assert.Contains($"{id}: OK", result.Output, StringComparison.Ordinal);
         Assert.Contains("Result: PASS", result.Output, StringComparison.Ordinal);
         AssertSafeOutput(result.Output);

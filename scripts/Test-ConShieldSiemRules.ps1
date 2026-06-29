@@ -98,7 +98,7 @@ $repoRoot = Resolve-RepositoryRoot
 $resolvedConfigPath = Resolve-RepoPath -RepoRoot $repoRoot -Path $ConfigPath
 $displayPath = [System.IO.Path]::GetRelativePath($repoRoot, $resolvedConfigPath).Replace('\', '/')
 $errors = [System.Collections.Generic.List[string]]::new()
-$requiredRuleIds = @('IMG-001', 'POL-001', 'RTE-001', 'LIFE-001', 'LIFE-002', 'SENSOR-001', 'SENSOR-002')
+$requiredRuleIds = @('IMG-001', 'POL-001', 'RTE-001', 'LIFE-001', 'LIFE-002', 'SENSOR-001', 'SENSOR-002', 'SIGN-001', 'SIGN-002', 'SIGN-003')
 $supportedRuleIds = $requiredRuleIds
 
 Write-Host 'ConShield SIEM rules validation'

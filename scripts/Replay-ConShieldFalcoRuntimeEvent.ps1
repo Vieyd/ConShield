@@ -9,6 +9,11 @@ param(
     [switch]$SimulateUnknownSensor,
     [switch]$SimulateRevokedSensor,
     [switch]$SimulateDisabledSensor,
+    [switch]$DemoSignature,
+    [switch]$SimulateMissingSignature,
+    [switch]$SimulateInvalidSignature,
+    [switch]$SimulateStaleSignature,
+    [switch]$SimulateReplaySignature,
     [ValidateRange(1, 3650)]
     [int]$MaxEventAgeDays = 3650,
     [switch]$NoSubmit
@@ -122,6 +127,46 @@ function Get-Sha256Short {
     return ([Convert]::ToHexString($hash).ToLowerInvariant()).Substring(0, 16)
 }
 
+function Get-Sha256Hex {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
+    $hash = [System.Security.Cryptography.SHA256]::HashData($bytes)
+    return [Convert]::ToHexString($hash).ToLowerInvariant()
+}
+
+function Get-DemoSignature {
+    param(
+        [Parameter(Mandatory = $true)][string]$SensorId,
+        [Parameter(Mandatory = $true)][string]$SourceSystem,
+        [Parameter(Mandatory = $true)][string]$EventType,
+        [Parameter(Mandatory = $true)][string]$TimestampUtc,
+        [Parameter(Mandatory = $true)][string]$Nonce,
+        [Parameter(Mandatory = $true)][string]$Algorithm,
+        [Parameter(Mandatory = $true)][string]$KeyId,
+        [Parameter(Mandatory = $true)][string]$CanonicalPayloadHash
+    )
+
+    $demoMaterial = 'conshield-public-demo-signing-material-v1'
+    $canonical = @(
+        $SensorId.Trim(),
+        $SourceSystem.Trim(),
+        $EventType.Trim(),
+        ([DateTime]::Parse($TimestampUtc).ToUniversalTime().ToString('O', [Globalization.CultureInfo]::InvariantCulture)),
+        $Nonce.Trim(),
+        $Algorithm.Trim(),
+        $KeyId.Trim(),
+        $CanonicalPayloadHash.Trim()
+    ) -join "`n"
+    $hmac = [System.Security.Cryptography.HMACSHA256]::new([System.Text.Encoding]::UTF8.GetBytes($demoMaterial))
+    try {
+        return [Convert]::ToHexString($hmac.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($canonical))).ToLowerInvariant()
+    }
+    finally {
+        $hmac.Dispose()
+    }
+}
+
 function Find-MappedRule {
     param(
         [Parameter(Mandatory = $true)]$Fixture,
@@ -221,6 +266,19 @@ function Get-ExpectedRule {
     }
 }
 
+function Get-SignatureExpectedRule {
+    param([Parameter(Mandatory = $true)][string]$SignatureStatus)
+
+    switch ($SignatureStatus) {
+        'Missing' { return 'SIGN-001' }
+        'Invalid' { return 'SIGN-002' }
+        'UnknownKey' { return 'SIGN-002' }
+        'Stale' { return 'SIGN-003' }
+        'ReplayDetected' { return 'SIGN-003' }
+        default { return $null }
+    }
+}
+
 function Invoke-Collector {
     param(
         [Parameter(Mandatory = $true)][string]$RepoRoot,
@@ -251,6 +309,14 @@ try {
         throw 'Specify only one sensor trust simulation mode.'
     }
 
+    $signatureSimulationCount = @($DemoSignature, $SimulateMissingSignature, $SimulateInvalidSignature, $SimulateStaleSignature, $SimulateReplaySignature) |
+        Where-Object { $_ } |
+        Measure-Object |
+        Select-Object -ExpandProperty Count
+    if ($signatureSimulationCount -gt 1) {
+        throw 'Specify only one signed sensor event simulation mode.'
+    }
+
     if ($SimulateUnknownSensor) {
         $SensorId = 'demo-falco-unknown-01'
         $SourceSystem = 'conshield.falco-unknown-sensor'
@@ -277,6 +343,7 @@ try {
     }
 
     $fixture = Get-Content -LiteralPath $resolvedFixture -Raw | ConvertFrom-Json
+    $fixtureRaw = Get-Content -LiteralPath $resolvedFixture -Raw -Encoding UTF8
     $mapping = Get-Content -LiteralPath $resolvedMapping -Raw | ConvertFrom-Json
     $sensorTrust = Get-SensorTrust -RepoRoot $repoRoot -Path $RegistryPath -SensorId $SensorId -SourceSystem $SourceSystem
     $mappedRule = Find-MappedRule -Fixture $fixture -Mapping $mapping
@@ -287,7 +354,28 @@ try {
     $containerId = [string]$fixture.output_fields.'container.id'
     $processName = [string]$fixture.output_fields.'proc.name'
     $safeEventId = Get-Sha256Short -Value ('{0}|{1}|{2}|{3}' -f $fixture.time, $fixture.rule, $containerId, $processName)
-
+    $signatureStatus = if ($DemoSignature) { 'Valid' } elseif ($SimulateMissingSignature) { 'Missing' } elseif ($SimulateInvalidSignature) { 'Invalid' } elseif ($SimulateStaleSignature) { 'Stale' } elseif ($SimulateReplaySignature) { 'ReplayDetected' } else { 'NotRequired' }
+    $signatureAlgorithm = 'HMAC-SHA256-DEMO'
+    $signatureKeyId = 'demo-signing-key-v1'
+    $signatureTimestampUtc = if ($SimulateStaleSignature) { (Get-Date).ToUniversalTime().AddHours(-2).ToString('O', [Globalization.CultureInfo]::InvariantCulture) } else { (Get-Date).ToUniversalTime().ToString('O', [Globalization.CultureInfo]::InvariantCulture) }
+    $signatureNonce = if ($SimulateReplaySignature) { 'demo-replay-nonce-0001' } else { 'demo-nonce-' + $safeEventId }
+    $canonicalPayloadHash = Get-Sha256Hex -Value $fixtureRaw
+    $signatureReason = switch ($signatureStatus) {
+        'Valid' { 'signature verified' }
+        'Missing' { 'signature value is missing' }
+        'Invalid' { 'signature mismatch' }
+        'Stale' { 'signature timestamp is outside the accepted window' }
+        'ReplayDetected' { 'signature nonce was already observed' }
+        default { 'signature is not required' }
+    }
+    if ($signatureStatus -eq 'Valid' -or $signatureStatus -eq 'Stale' -or $signatureStatus -eq 'ReplayDetected') {
+        $null = Get-DemoSignature -SensorId $sensorTrust.SensorId -SourceSystem $SourceSystem -EventType $eventType -TimestampUtc $signatureTimestampUtc -Nonce $signatureNonce -Algorithm $signatureAlgorithm -KeyId $signatureKeyId -CanonicalPayloadHash $canonicalPayloadHash
+    }
+    $signatureExpectedRule = Get-SignatureExpectedRule -SignatureStatus $signatureStatus
+    $expectedRules = @($expectedRule)
+    if ($null -ne $signatureExpectedRule) {
+        $expectedRules = @($signatureExpectedRule)
+    }
     Write-Output 'ConShield Falco runtime replay'
 
     $webOk = if ($NoSubmit) { $true } else { Test-WebRoute -Url ($BaseUrl.TrimEnd('/') + '/Operations/Health') }
@@ -302,6 +390,8 @@ try {
     Write-Output ('SensorId: {0}' -f $sensorTrust.SensorId)
     Write-Output ('Sensor trust: {0}' -f $sensorTrust.TrustStatus)
     Write-Output ('Enforcement: {0}' -f $enforcementAction)
+    Write-Output ('Signature: {0}' -f $signatureStatus)
+    Write-Output ('Signature key id: {0}' -f $(if ($signatureStatus -eq 'NotRequired') { '-' } else { $signatureKeyId }))
     Write-Output ('Mapped event type: {0}' -f $eventType)
     Write-Output ('SourceSystem: {0}' -f $SourceSystem)
     Write-Output ('ExternalEventId: hash:{0}' -f $safeEventId)
@@ -318,18 +408,30 @@ try {
         '--source-system', $SourceSystem,
         '--max-event-age-days', [string]$MaxEventAgeDays
     )
+    if ($signatureStatus -ne 'NotRequired') {
+        $baseCollectorArgs += @(
+            '--signature-sensor-id', $sensorTrust.SensorId,
+            '--signature-status', $signatureStatus,
+            '--signature-key-id', $signatureKeyId,
+            '--signature-nonce', $signatureNonce,
+            '--signature-timestamp-utc', $signatureTimestampUtc,
+            '--signature-algorithm', $signatureAlgorithm,
+            '--signature-canonical-payload-hash', $canonicalPayloadHash,
+            '--signature-verification-reason', $signatureReason
+        )
+    }
 
     $validation = Invoke-Collector -RepoRoot $repoRoot -CollectorArguments ($baseCollectorArgs + @('--no-submit'))
     if ($validation.ExitCode -ne 0) {
         Write-Output ('Validation: FAIL (collector_exit_code={0})' -f $validation.ExitCode)
-        Write-Output ('Expected rule: {0}' -f $expectedRule)
+        Write-Output ('Expected rules: {0}' -f ($expectedRules -join ','))
         Write-Output 'Result: FAIL'
         exit 1
     }
 
     if ($NoSubmit) {
         Write-Output 'Ingestion: SKIP'
-        Write-Output ('Expected rule: {0}' -f $expectedRule)
+        Write-Output ('Expected rules: {0}' -f ($expectedRules -join ','))
         Write-Output 'Result: PASS'
         exit 0
     }
@@ -342,7 +444,7 @@ try {
     if ([string]::IsNullOrWhiteSpace($env:CONSHIELD_EXTERNAL_EVENT_API_KEY)) {
         Write-Output 'Ingestion: FAIL (external ingestion credential unavailable)'
         Write-Output 'Configure the local external ingestion key or run with -NoSubmit for parser/mapping validation only.'
-        Write-Output ('Expected rule: {0}' -f $expectedRule)
+        Write-Output ('Expected rules: {0}' -f ($expectedRules -join ','))
         Write-Output 'Result: FAIL'
         exit 1
     }
@@ -354,13 +456,13 @@ try {
     $submit = Invoke-Collector -RepoRoot $repoRoot -CollectorArguments $submitArgs
     if ($submit.ExitCode -ne 0) {
         Write-Output ('Ingestion: FAIL (collector_exit_code={0})' -f $submit.ExitCode)
-        Write-Output ('Expected rule: {0}' -f $expectedRule)
+        Write-Output ('Expected rules: {0}' -f ($expectedRules -join ','))
         Write-Output 'Result: FAIL'
         exit 1
     }
 
     Write-Output 'Ingestion: OK'
-    Write-Output ('Expected rule: {0}' -f $expectedRule)
+    Write-Output ('Expected rules: {0}' -f ($expectedRules -join ','))
     Write-Output 'Run SIEM correlation from the local UI if the alert and incident are not already present.'
     Write-Output 'Result: PASS'
     exit 0

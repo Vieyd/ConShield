@@ -527,6 +527,9 @@ if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
         $tables.SensorTrustEnforcementAlerts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" in (''SENSOR-001'', ''SENSOR-002'') group by "RuleCode" order by "RuleCode";')
         $tables.SensorTrustEnforcementIncidents = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select count(*)::int as "Count" from "Incidents" incident join "SiemAlerts" alert on incident."Id" = alert."IncidentId" where alert."RuleCode" in (''SENSOR-001'', ''SENSOR-002'');')
         $tables.SensorTrustEnforcementAlertSources = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select coalesce(se."SourceSystem", ''unknown-runtime-source'') as "SourceSystem", count(distinct alert."Id")::int as "Count" from "SiemAlerts" alert join "SecurityEvents" se on position(''Source event #'' || se."Id"::text in alert."Description") > 0 where alert."RuleCode" in (''SENSOR-001'', ''SENSOR-002'') group by coalesce(se."SourceSystem", ''unknown-runtime-source'');')
+        $tables.SignedSensorEventAlerts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" in (''SIGN-001'', ''SIGN-002'', ''SIGN-003'') group by "RuleCode" order by "RuleCode";')
+        $tables.SignedSensorEventIncidents = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select count(*)::int as "Count" from "Incidents" incident join "SiemAlerts" alert on incident."Id" = alert."IncidentId" where alert."RuleCode" in (''SIGN-001'', ''SIGN-002'', ''SIGN-003'');')
+        $tables.SignedSensorEventModes = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select case "RuleCode" when ''SIGN-001'' then ''Missing'' when ''SIGN-002'' then ''Invalid'' when ''SIGN-003'' then ''StaleOrReplay'' else ''Other'' end as "SignatureStatus", count(*)::int as "Count", max("CreatedAtUtc") as "LatestOccurredAtUtc" from "SiemAlerts" where "RuleCode" in (''SIGN-001'', ''SIGN-002'', ''SIGN-003'') group by case "RuleCode" when ''SIGN-001'' then ''Missing'' when ''SIGN-002'' then ''Invalid'' when ''SIGN-003'' then ''StaleOrReplay'' else ''Other'' end order by max("CreatedAtUtc") desc;')
     }
     catch {
         $queryError = ConvertTo-SafeCell -Value $_.Exception.Message -MaxLength 180
@@ -744,6 +747,23 @@ $lines.Add('') | Out-Null
 Add-MarkdownTable -Lines $lines -Headers @('Count') -Rows $tables.SensorTrustEnforcementIncidents
 $lines.Add('') | Out-Null
 $lines.Add('- Sensor trust enforcement evidence uses safe rule counts and source metadata only; raw runtime payloads, raw additional data, certificates, private keys, and secrets are excluded.') | Out-Null
+$lines.Add('') | Out-Null
+
+$lines.Add('## Signed Sensor Event Evidence') | Out-Null
+$lines.Add('') | Out-Null
+$lines.Add('Signed Sensor Events v1 records sanitized signature metadata only: sensor id, timestamp, nonce, key id, canonical payload hash, status, and reason. It does not store or print signing material, raw runtime payloads, certificates, or private keys. Full mTLS is intentionally left for a later PR.') | Out-Null
+$lines.Add('') | Out-Null
+$lines.Add('### Signature modes observed') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('SignatureStatus', 'Count', 'LatestOccurredAtUtc') -Rows $tables.SignedSensorEventModes
+$lines.Add('') | Out-Null
+$lines.Add('### SIGN-001 / SIGN-002 / SIGN-003 alerts') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('RuleCode', 'Count', 'LatestCreatedAtUtc') -Rows $tables.SignedSensorEventAlerts
+$lines.Add('') | Out-Null
+$lines.Add('### Related signed-sensor incidents') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('Count') -Rows $tables.SignedSensorEventIncidents
 $lines.Add('') | Out-Null
 
 $lines.Add('## Runtime Sensor Evidence') | Out-Null

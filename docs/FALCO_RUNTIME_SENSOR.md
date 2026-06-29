@@ -37,7 +37,31 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRun
   -FixturePath .\tests\TestData\Falco\write-below-etc-container.json
 ```
 
-The script prints only a safe summary: Web status, fixture name, sensor id, sensor trust status, mapped runtime event type, source system, a short hash identifier, ingestion status, expected SIEM rule, and result. It does not print API keys, sensor credentials, connection strings, environment values, raw Falco payload JSON, raw additional data, logs, screenshots, or generated evidence artifacts.
+The script prints only a safe summary: Web status, fixture name, sensor id, sensor trust status, signature status, signature key id, mapped runtime event type, source system, a short hash identifier, ingestion status, expected SIEM rules, and result. It does not print API keys, sensor credentials, connection strings, environment values, raw Falco payload JSON, raw additional data, signing material, logs, screenshots, or generated evidence artifacts.
+
+## Signed sensor event replay
+
+Signed Sensor Events v1 can be validated without real Fedora/Falco or real signing keys:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -DemoSignature `
+  -NoSubmit
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -SimulateMissingSignature `
+  -NoSubmit
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -SimulateInvalidSignature `
+  -NoSubmit
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 `
+  -SimulateStaleSignature `
+  -NoSubmit
+```
+
+Expected SIEM signals are `RTE-001` for valid demo signatures, `SIGN-001` for missing signatures, `SIGN-002` for invalid signatures, and `SIGN-003` for stale or replayed signatures. Full mTLS is intentionally outside this PR.
 
 ## Sensor trust registry
 
@@ -56,9 +80,11 @@ Open `/RuntimeSensors` after replay to verify Runtime Sensor Health. The page de
 The page shows:
 
 - sensor id, source system, display name, environment, and trust status;
+- signature status and signature key id;
 - last seen UTC/Moscow time;
 - runtime event count and latest event metadata;
 - related `RTE-001` alert count;
+- related `SIGN-001` / `SIGN-002` / `SIGN-003` alert count;
 - related incident count;
 - status: `Active` for events seen within 24 hours, `Stale` for older events, or `NoData` for known runtime sources without activity.
 

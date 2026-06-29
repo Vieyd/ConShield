@@ -9,7 +9,7 @@ public sealed class FalcoRuntimeSensorPathTests
 
         Assert.Contains("tests\\TestData\\Falco\\terminal-shell-container.json", script, StringComparison.Ordinal);
         Assert.Contains("conshield.falco-linux-sensor", script, StringComparison.Ordinal);
-        Assert.Contains("Expected rule:", script, StringComparison.Ordinal);
+        Assert.Contains("Expected rules:", script, StringComparison.Ordinal);
         Assert.Contains("CONSHIELD_EXTERNAL_EVENT_API_KEY", script, StringComparison.Ordinal);
         Assert.DoesNotContain("Get-Content Env:", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Write-Output $env:", script, StringComparison.OrdinalIgnoreCase);

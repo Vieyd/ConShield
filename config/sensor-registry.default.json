@@ -11,6 +11,8 @@
         "container.runtime.shell_spawned",
         "container.runtime.etc_write"
       ],
+      "signatureRequired": true,
+      "signingKeyId": "demo-signing-key-v1",
       "fingerprintSha256": "demo-synthetic-fingerprint-placeholder",
       "notes": "Synthetic demo sensor for local replay."
     },
@@ -24,6 +26,8 @@
         "container.runtime.shell_spawned",
         "container.runtime.etc_write"
       ],
+      "signatureRequired": false,
+      "signingKeyId": "demo-signing-key-v1",
       "fingerprintSha256": "demo-runtime-collector-synthetic-fingerprint-placeholder",
       "notes": "Synthetic trusted collector source for existing local RTE tests and demos."
     },
@@ -36,6 +40,8 @@
       "expectedEventTypes": [
         "container.runtime.shell_spawned"
       ],
+      "signatureRequired": false,
+      "signingKeyId": "demo-signing-key-v1",
       "fingerprintSha256": "demo-revoked-synthetic-fingerprint-placeholder",
       "notes": "Synthetic revoked sensor for deterministic enforcement simulation."
     },
@@ -48,6 +54,8 @@
       "expectedEventTypes": [
         "container.runtime.shell_spawned"
       ],
+      "signatureRequired": false,
+      "signingKeyId": "demo-signing-key-v1",
       "fingerprintSha256": "demo-disabled-synthetic-fingerprint-placeholder",
       "notes": "Synthetic disabled sensor for deterministic enforcement simulation."
     }

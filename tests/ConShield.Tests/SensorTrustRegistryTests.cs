@@ -29,6 +29,8 @@ public sealed class SensorTrustRegistryTests
         Assert.Equal("demo-falco-linux-01", sensor.SensorId);
         Assert.Equal(SensorTrustStatuses.Trusted, sensor.Status);
         Assert.Contains("container.runtime.shell_spawned", sensor.ExpectedEventTypes);
+        Assert.True(sensor.SignatureRequired);
+        Assert.Equal("demo-signing-key-v1", sensor.SigningKeyId);
 
         var result = RunPwsh("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\\scripts\\Test-ConShieldSensorRegistry.ps1");
 
@@ -156,8 +158,8 @@ public sealed class SensorTrustRegistryTests
             "test",
             new[]
             {
-                new SensorTrustRegistryEntry("revoked-runtime", "Revoked Runtime", "conshield.revoked-falco", "test", SensorTrustStatuses.Revoked, Array.Empty<string>(), null, null),
-                new SensorTrustRegistryEntry("disabled-runtime", "Disabled Runtime", "conshield.disabled-falco", "test", SensorTrustStatuses.Disabled, Array.Empty<string>(), null, null)
+                new SensorTrustRegistryEntry("revoked-runtime", "Revoked Runtime", "conshield.revoked-falco", "test", SensorTrustStatuses.Revoked, Array.Empty<string>(), false, null, null, null),
+                new SensorTrustRegistryEntry("disabled-runtime", "Disabled Runtime", "conshield.disabled-falco", "test", SensorTrustStatuses.Disabled, Array.Empty<string>(), false, null, null, null)
             });
 
         var result = await new RuntimeSensorHealthService(db, registry)

@@ -92,7 +92,10 @@ public static class SiemRulesConfigurationLoader
         "LIFE-001",
         "LIFE-002",
         "SENSOR-001",
-        "SENSOR-002"
+        "SENSOR-002",
+        "SIGN-001",
+        "SIGN-002",
+        "SIGN-003"
     };
 
     public static (SiemRulesConfiguration? Configuration, SiemRulesValidationResult Validation) TryLoadFile(string path)
@@ -297,6 +300,51 @@ public static class SiemRulesConfigurationLoader
                 Enabled = true,
                 SourceSystems = ["conshield.sensor-trust"],
                 EventTypes = ["sensor.trust.revoked-or-disabled-runtime-source"],
+                MinimumSeverity = "High",
+                Threshold = 1,
+                TimeWindowMinutes = 1440,
+                GroupingKey = "sensor-id",
+                AlertSeverity = "Critical",
+                Incident = new ConfigurableSiemIncidentRule { Create = true, Severity = "Critical" }
+            },
+            new ConfigurableSiemRule
+            {
+                Id = "SIGN-001",
+                Name = "Missing runtime sensor signature",
+                Description = "Creates a SIEM alert when a runtime/Falco event is marked as missing signed sensor event metadata.",
+                Enabled = true,
+                SourceSystems = ["conshield.sensor-signature"],
+                EventTypes = ["sensor.signature.missing"],
+                MinimumSeverity = "Warning",
+                Threshold = 1,
+                TimeWindowMinutes = 1440,
+                GroupingKey = "sensor-id",
+                AlertSeverity = "High",
+                Incident = new ConfigurableSiemIncidentRule { Create = false, Severity = "High" }
+            },
+            new ConfigurableSiemRule
+            {
+                Id = "SIGN-002",
+                Name = "Invalid runtime sensor signature",
+                Description = "Creates a SIEM alert and incident when a runtime/Falco event is marked as having an invalid signature.",
+                Enabled = true,
+                SourceSystems = ["conshield.sensor-signature"],
+                EventTypes = ["sensor.signature.invalid"],
+                MinimumSeverity = "High",
+                Threshold = 1,
+                TimeWindowMinutes = 1440,
+                GroupingKey = "sensor-id",
+                AlertSeverity = "Critical",
+                Incident = new ConfigurableSiemIncidentRule { Create = true, Severity = "Critical" }
+            },
+            new ConfigurableSiemRule
+            {
+                Id = "SIGN-003",
+                Name = "Stale or replayed runtime sensor signature",
+                Description = "Creates a SIEM alert and incident when a runtime/Falco event is marked as stale or replayed.",
+                Enabled = true,
+                SourceSystems = ["conshield.sensor-signature"],
+                EventTypes = ["sensor.signature.stale-or-replay"],
                 MinimumSeverity = "High",
                 Threshold = 1,
                 TimeWindowMinutes = 1440,

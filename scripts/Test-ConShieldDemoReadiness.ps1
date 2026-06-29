@@ -430,6 +430,25 @@ try {
         Add-ReadinessCheck -Name 'Sensor trust enforcement revoked' -Status 'FAIL' -Detail 'revoked sensor simulation did not return SENSOR-002' -Hint 'Run scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 -SimulateRevokedSensor -NoSubmit.'
     }
 
+    foreach ($signedReplay in @(
+        @{ Name = 'Signed sensor valid'; Argument = '-DemoSignature'; Expected = 'RTE-001'; Hint = 'Run scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 -DemoSignature -NoSubmit.' },
+        @{ Name = 'Signed sensor missing'; Argument = '-SimulateMissingSignature'; Expected = 'SIGN-001'; Hint = 'Run scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 -SimulateMissingSignature -NoSubmit.' },
+        @{ Name = 'Signed sensor invalid'; Argument = '-SimulateInvalidSignature'; Expected = 'SIGN-002'; Hint = 'Run scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 -SimulateInvalidSignature -NoSubmit.' },
+        @{ Name = 'Signed sensor stale'; Argument = '-SimulateStaleSignature'; Expected = 'SIGN-003'; Hint = 'Run scripts\Replay-ConShieldFalcoRuntimeEvent.ps1 -SimulateStaleSignature -NoSubmit.' }
+    )) {
+        $replay = Invoke-CapturedCommand `
+            -FilePath 'pwsh' `
+            -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '.\scripts\Replay-ConShieldFalcoRuntimeEvent.ps1', $signedReplay.Argument, '-NoSubmit') `
+            -WorkingDirectory $repoRoot
+        $replayResult = ($replay.Output | Where-Object { $_ -match '^Result:\s+' } | Select-Object -Last 1)
+        if ($replay.ExitCode -eq 0 -and $replayResult -match 'PASS' -and ($replay.Output -join "`n") -match [regex]::Escape($signedReplay.Expected)) {
+            Add-ReadinessCheck -Name $signedReplay.Name -Status 'PASS' -Detail ('Expected rule: {0}' -f $signedReplay.Expected)
+        }
+        else {
+            Add-ReadinessCheck -Name $signedReplay.Name -Status 'FAIL' -Detail ('signed replay did not return {0}' -f $signedReplay.Expected) -Hint $signedReplay.Hint
+        }
+    }
+
     if ($SkipScenario) {
         Add-ReadinessCheck -Name 'Defense scenario' -Status 'SKIP' -Detail 'requested by -SkipScenario'
     }

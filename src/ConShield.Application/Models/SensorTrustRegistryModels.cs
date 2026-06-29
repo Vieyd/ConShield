@@ -44,6 +44,17 @@ public static class SensorTrustEnforcement
         };
 }
 
+public static class SignedSensorEventStatuses
+{
+    public const string Valid = "Valid";
+    public const string Missing = "Missing";
+    public const string Invalid = "Invalid";
+    public const string Stale = "Stale";
+    public const string ReplayDetected = "ReplayDetected";
+    public const string NotRequired = "NotRequired";
+    public const string UnknownKey = "UnknownKey";
+}
+
 public sealed record SensorTrustRegistryEntry(
     string SensorId,
     string DisplayName,
@@ -51,6 +62,8 @@ public sealed record SensorTrustRegistryEntry(
     string Environment,
     string Status,
     IReadOnlyList<string> ExpectedEventTypes,
+    bool SignatureRequired,
+    string? SigningKeyId,
     string? FingerprintSha256,
     string? Notes);
 

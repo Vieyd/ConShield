@@ -48,7 +48,8 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
                 x.OccurredAtUtc,
                 x.SourceSystem ?? "unknown-runtime-source",
                 x.ExternalEventType,
-                x.Severity))
+                x.Severity,
+                x.AdditionalDataJson))
             .ToListAsync(cancellationToken);
 
         var eventIdsBySource = runtimeEvents
@@ -76,6 +77,11 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
             .Select(x => new RuntimeAlertProjection(x.Id, x.SourceEventIdsJson, x.IncidentId))
             .ToListAsync(cancellationToken);
 
+        var signatureAlerts = await _dbContext.SiemAlerts
+            .Where(x => x.RuleCode == "SIGN-001" || x.RuleCode == "SIGN-002" || x.RuleCode == "SIGN-003")
+            .Select(x => new RuntimeAlertProjection(x.Id, x.SourceEventIdsJson, x.IncidentId))
+            .ToListAsync(cancellationToken);
+
         var incidents = await _dbContext.Incidents
             .Where(x => x.SourceEventId.HasValue)
             .Select(x => new RuntimeIncidentProjection(x.Id, x.SourceEventId!.Value))
@@ -97,6 +103,7 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
 
             var relatedAlertIds = new HashSet<long>();
             var relatedSensorTrustAlertIds = new HashSet<long>();
+            var relatedSignatureAlertIds = new HashSet<long>();
             var relatedIncidentIds = new HashSet<long>();
             foreach (var alert in rteAlerts)
             {
@@ -120,11 +127,26 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
                     relatedIncidentIds.Add(alert.IncidentId.Value);
             }
 
+            foreach (var alert in signatureAlerts)
+            {
+                var alertEventIds = ReadSourceEventIds(alert.SourceEventIdsJson);
+                if (!alertEventIds.Overlaps(sourceEventIds))
+                    continue;
+
+                relatedSignatureAlertIds.Add(alert.Id);
+                if (alert.IncidentId.HasValue)
+                    relatedIncidentIds.Add(alert.IncidentId.Value);
+            }
+
             foreach (var incident in incidents)
             {
                 if (sourceEventIds.Contains(incident.SourceEventId))
                     relatedIncidentIds.Add(incident.Id);
             }
+
+            var latestSignature = eventsForSource
+                .Select(ReadSignatureData)
+                .FirstOrDefault(x => x is not null);
 
             rows.Add(new RuntimeSensorHealthRow(
                 registrySensor?.SensorId ?? "-",
@@ -141,6 +163,13 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
                 latest?.Severity,
                 relatedAlertIds.Count,
                 relatedSensorTrustAlertIds.Count,
+                relatedSignatureAlertIds.Count,
+                latestSignature?.Status ?? "NotRequired",
+                latestSignature?.KeyId,
+                latestSignature?.TimestampUtc,
+                latestSignature is not null && latestSignature.Status is not "Valid" and not "NotRequired"
+                    ? latestSignature.Reason
+                    : null,
                 relatedIncidentIds.Count,
                 Status(latest?.OccurredAtUtc, activeThresholdUtc)));
         }
@@ -210,13 +239,63 @@ public sealed class RuntimeSensorHealthService : IRuntimeSensorHealthService
         return ids;
     }
 
+    private static SignatureProjection? ReadSignatureData(RuntimeEventProjection runtimeEvent)
+    {
+        if (string.IsNullOrWhiteSpace(runtimeEvent.AdditionalDataJson))
+            return null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(runtimeEvent.AdditionalDataJson);
+            if (!document.RootElement.TryGetProperty("signature", out var signature) || signature.ValueKind != JsonValueKind.Object)
+                return null;
+
+            var status = ReadString(signature, "signatureStatus", 32);
+            if (string.IsNullOrWhiteSpace(status))
+                return null;
+
+            return new SignatureProjection(
+                status,
+                ReadString(signature, "signatureKeyId", 128),
+                ReadDateTime(signature, "eventTimestampUtc"),
+                ReadString(signature, "signatureVerificationReason", 160));
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string? ReadString(JsonElement element, string propertyName, int maxLength)
+    {
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+            return null;
+
+        var value = property.GetString()?.Trim();
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var safe = new string(value.Where(ch => !char.IsControl(ch)).ToArray());
+        return safe.Length <= maxLength ? safe : safe[..maxLength];
+    }
+
+    private static DateTime? ReadDateTime(JsonElement element, string propertyName)
+    {
+        var value = ReadString(element, propertyName, 64);
+        return DateTime.TryParse(value, out var parsed)
+            ? DateTime.SpecifyKind(parsed.ToUniversalTime(), DateTimeKind.Utc)
+            : null;
+    }
+
     private sealed record RuntimeEventProjection(
         long Id,
         DateTime OccurredAtUtc,
         string SourceSystem,
         string? ExternalEventType,
-        EventSeverity Severity);
+        EventSeverity Severity,
+        string? AdditionalDataJson);
 
     private sealed record RuntimeAlertProjection(long Id, string? SourceEventIdsJson, long? IncidentId);
     private sealed record RuntimeIncidentProjection(long Id, long SourceEventId);
+    private sealed record SignatureProjection(string Status, string? KeyId, DateTime? TimestampUtc, string? Reason);
 }

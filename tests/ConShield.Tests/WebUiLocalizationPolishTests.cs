@@ -121,6 +121,9 @@ public class WebUiLocalizationPolishTests
         Assert.Equal("Блокировка контейнерного образа политикой", DisplayText.RuleName("POL-001"));
         Assert.Equal("Неизвестный runtime-сенсор", DisplayText.RuleName("SENSOR-001"));
         Assert.Equal("Отозванный или отключенный runtime-сенсор", DisplayText.RuleName("SENSOR-002"));
+        Assert.Equal("Отсутствует подпись runtime-сенсора", DisplayText.RuleName("SIGN-001"));
+        Assert.Equal("Недействительная подпись runtime-сенсора", DisplayText.RuleName("SIGN-002"));
+        Assert.Equal("Устаревшая или повторная подпись runtime-сенсора", DisplayText.RuleName("SIGN-003"));
 
         var rules = SiemRuleCatalog.Rules.ToDictionary(rule => rule.RuleCode);
         Assert.Equal("Отзыв идентификатора сенсора", rules["LIFE-001"].RuleName);
@@ -128,6 +131,9 @@ public class WebUiLocalizationPolishTests
         Assert.Equal("Угроза во время выполнения контейнера", rules["RTE-001"].RuleName);
         Assert.Equal("Неизвестный runtime-сенсор", rules["SENSOR-001"].RuleName);
         Assert.Equal("Отозванный или отключенный runtime-сенсор", rules["SENSOR-002"].RuleName);
+        Assert.Equal("Отсутствует подпись runtime-сенсора", rules["SIGN-001"].RuleName);
+        Assert.Equal("Недействительная подпись runtime-сенсора", rules["SIGN-002"].RuleName);
+        Assert.Equal("Устаревшая или повторная подпись runtime-сенсора", rules["SIGN-003"].RuleName);
     }
 
     [Fact]

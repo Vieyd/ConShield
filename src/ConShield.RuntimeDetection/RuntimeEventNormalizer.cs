@@ -15,6 +15,38 @@ public sealed record RuntimeSecurityEvent(
     string Description,
     RuntimeAdditionalData AdditionalData);
 
+public static class RuntimeSignatureStatuses
+{
+    public const string Valid = "Valid";
+    public const string Missing = "Missing";
+    public const string Invalid = "Invalid";
+    public const string Stale = "Stale";
+    public const string ReplayDetected = "ReplayDetected";
+    public const string NotRequired = "NotRequired";
+    public const string UnknownKey = "UnknownKey";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
+    {
+        Valid,
+        Missing,
+        Invalid,
+        Stale,
+        ReplayDetected,
+        NotRequired,
+        UnknownKey
+    };
+}
+
+public sealed record RuntimeSignatureMetadata(
+    string SensorId,
+    DateTime? EventTimestampUtc,
+    string? Nonce,
+    string? SignatureAlgorithm,
+    string? SignatureKeyId,
+    string? CanonicalPayloadHash,
+    string SignatureStatus,
+    string? SignatureVerificationReason);
+
 public sealed record RuntimeAdditionalData(
     int SchemaVersion,
     string Provider,
@@ -43,7 +75,8 @@ public sealed record RuntimeAdditionalData(
     string? FilePath,
     RuntimeNetworkData? Network,
     string? RawOutputSha256,
-    string? CommandLineSha256);
+    string? CommandLineSha256,
+    RuntimeSignatureMetadata? Signature);
 
 public sealed record RuntimeNetworkData(string? SourceIp, string? SourcePort, string? DestinationIp, string? DestinationPort);
 
@@ -106,7 +139,8 @@ public sealed class RuntimeEventNormalizer
             Field(fields, "fd.name"),
             new RuntimeNetworkData(Field(fields, "fd.sip"), Field(fields, "fd.sport"), Field(fields, "fd.dip"), Field(fields, "fd.dport")),
             rawOutputSha,
-            commandSha);
+            commandSha,
+            null);
         var description = BuildDescription(eventType, safeRule, containerId, containerName, imageReference, procName);
         return new RuntimeSecurityEvent(
             fingerprint.EventId,

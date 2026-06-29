@@ -121,10 +121,10 @@ public sealed class SensorTrustEnforcementTests
     }
 
     [Theory]
-    [InlineData("", "Sensor trust: Trusted", "Enforcement: AcceptTrusted", "Expected rule: RTE-001")]
-    [InlineData("-SimulateUnknownSensor", "Sensor trust: Unknown", "Enforcement: AcceptUnknownWithAlert", "Expected rule: SENSOR-001")]
-    [InlineData("-SimulateRevokedSensor", "Sensor trust: Revoked", "Enforcement: FlagRevokedWithAlert", "Expected rule: SENSOR-002")]
-    [InlineData("-SimulateDisabledSensor", "Sensor trust: Disabled", "Enforcement: FlagDisabledWithAlert", "Expected rule: SENSOR-002")]
+    [InlineData("", "Sensor trust: Trusted", "Enforcement: AcceptTrusted", "Expected rules: RTE-001")]
+    [InlineData("-SimulateUnknownSensor", "Sensor trust: Unknown", "Enforcement: AcceptUnknownWithAlert", "Expected rules: SENSOR-001")]
+    [InlineData("-SimulateRevokedSensor", "Sensor trust: Revoked", "Enforcement: FlagRevokedWithAlert", "Expected rules: SENSOR-002")]
+    [InlineData("-SimulateDisabledSensor", "Sensor trust: Disabled", "Enforcement: FlagDisabledWithAlert", "Expected rules: SENSOR-002")]
     public void ReplayScript_TrustModesAreDeterministicAndSafe(
         string mode,
         string expectedTrust,
