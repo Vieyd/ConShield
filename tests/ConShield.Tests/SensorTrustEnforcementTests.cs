@@ -47,6 +47,27 @@ public sealed class SensorTrustEnforcementTests
         Assert.DoesNotContain("AdditionalDataJson", alert.Description, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task ContainerLaunchResult_DoesNotCreateSensorTrustAlert()
+    {
+        await using var db = CreateDbContext();
+        db.SecurityEvents.Add(new SecurityEventEntry
+        {
+            OccurredAtUtc = DateTime.UtcNow.AddSeconds(-10),
+            EventType = SecurityEventType.ExternalEvent,
+            ExternalEventType = "container.image.launch.result",
+            Severity = EventSeverity.Info,
+            SourceSystem = "conshield.container-runtime",
+            Description = "Protected run launch result."
+        });
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db, DefaultRegistry()).RunAsync();
+
+        Assert.Equal(0, result.CreatedAlerts);
+        Assert.Empty(await db.SiemAlerts.ToListAsync());
+    }
+
     [Theory]
     [InlineData("conshield.falco-revoked-sensor", "Revoked", "FlagRevokedWithAlert")]
     [InlineData("conshield.falco-disabled-sensor", "Disabled", "FlagDisabledWithAlert")]

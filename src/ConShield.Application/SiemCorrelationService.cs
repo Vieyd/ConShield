@@ -303,7 +303,7 @@ public class SiemCorrelationService : ISiemCorrelationService
         _dbContext.SecurityEvents
             .Where(x => x.EventType == SecurityEventType.ExternalEvent
                         && x.OccurredAtUtc >= now.AddMinutes(-timeWindowMinutes)
-                        && ((x.SourceSystem != null && (x.SourceSystem.ToLower().Contains("runtime") || x.SourceSystem.ToLower().Contains("falco")))
+                        && ((x.SourceSystem != null && x.SourceSystem.ToLower().Contains("falco"))
                             || (x.ExternalEventType != null && (x.ExternalEventType.ToLower().Contains("runtime") || x.ExternalEventType.ToLower().Contains("falco")))))
             .ToListAsync(cancellationToken);
 
