@@ -27,6 +27,7 @@ ConShield.ImageScanner     Trivy-based container image scanner CLI
 ConShield.ContainerPolicy  Container policy validation and evaluation library
 ConShield.RuntimeDetection Falco-compatible parser, mapping, normalization, identity
 ConShield.RuntimeCollector CLI for stdin/file/follow runtime alert ingestion
+ConShield.Cli              Unified local CLI wrapper for demo/operator workflows
 ConShield.SensorProvisioning Local operator-only enrolled sensor credential provisioning
 tools/ConShield.DemoScenario Local synthetic demo scenario runner
 scripts/                  Local automation, validation, replay, and evidence export
@@ -147,6 +148,40 @@ http://127.0.0.1:5080/Demo
 ```
 
 The page is read-only. It shows the demo order, safe PowerShell commands, current counts, and links to Security Summary, Security Events, SIEM, Incidents, and Runtime Sensor Health. It does not execute scripts from the browser and does not display secrets, raw payloads, logs, or generated local artifacts.
+
+### Unified ConShield CLI
+
+`ConShield.Cli` provides one local entry point for the existing safe scripts. The scripts remain available and are not replaced.
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- --help
+
+dotnet run --project .\src\ConShield.Cli -- validate
+
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- run protected `
+  --image demo/insecure-api:latest `
+  --container-name conshield-demo-insecure `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --no-run `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- sensor replay `
+  --demo-signature `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- demo readiness
+
+dotnet run --project .\src\ConShield.Cli -- demo reset --confirm
+
+dotnet run --project .\src\ConShield.Cli -- evidence export `
+  --output .\artifacts\local\defense-evidence-cli.md
+```
+
+Reset requires explicit `--confirm`. Live Docker execution remains opt-in through the existing protected-run safety rules. Deterministic fixture commands do not require real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, certificates, private keys, signing keys, or real secrets. Details are documented in [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
 
 ### Image scan CLI
 
@@ -326,6 +361,7 @@ For docs-only changes, proportional checks such as `git diff --check`, README li
 
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
+- [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
 - [Falco runtime sensor](docs/FALCO_RUNTIME_SENSOR.md)
 - [Signed sensor events](docs/SIGNED_SENSOR_EVENTS.md)
 - [Security event outbox](docs/SECURITY_EVENT_OUTBOX.md)
@@ -366,6 +402,7 @@ ConShield.ImageScanner     Trivy-based container image scanner CLI
 ConShield.ContainerPolicy  Container policy validation and evaluation library
 ConShield.RuntimeDetection Falco-compatible parser, mapping, normalization, identity
 ConShield.RuntimeCollector CLI for stdin/file/follow runtime alert ingestion
+ConShield.Cli              Unified local CLI wrapper for demo/operator workflows
 ConShield.SensorProvisioning Local operator-only enrolled sensor credential provisioning
 tools/ConShield.DemoScenario Local synthetic demo scenario runner
 scripts/                  Local automation, validation, replay, and evidence export
@@ -486,6 +523,40 @@ http://127.0.0.1:5080/Demo
 ```
 
 Страница только для чтения: она показывает порядок демонстрации, безопасные PowerShell-команды, текущие счётчики и ссылки на Security Summary, Security Events, SIEM, Incidents и Runtime Sensor Health. Она не запускает scripts из браузера и не показывает secrets, raw payloads, logs или generated local artifacts.
+
+### Единый ConShield CLI
+
+`ConShield.Cli` даёт одну локальную точку входа для существующих безопасных scripts. Сами scripts остаются доступными и не заменяются.
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- --help
+
+dotnet run --project .\src\ConShield.Cli -- validate
+
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- run protected `
+  --image demo/insecure-api:latest `
+  --container-name conshield-demo-insecure `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --no-run `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- sensor replay `
+  --demo-signature `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- demo readiness
+
+dotnet run --project .\src\ConShield.Cli -- demo reset --confirm
+
+dotnet run --project .\src\ConShield.Cli -- evidence export `
+  --output .\artifacts\local\defense-evidence-cli.md
+```
+
+Reset требует явный `--confirm`. Live Docker execution остаётся opt-in через существующие safety rules protected-run workflow. Deterministic fixture-команды не требуют real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, certificates, private keys, signing keys или real secrets. Подробности описаны в [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
 
 ### Image scan CLI
 
@@ -665,6 +736,7 @@ gitleaks git --redact --no-banner
 
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
+- [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
 - [Falco runtime sensor](docs/FALCO_RUNTIME_SENSOR.md)
 - [Signed sensor events](docs/SIGNED_SENSOR_EVENTS.md)
 - [Security event outbox](docs/SECURITY_EVENT_OUTBOX.md)

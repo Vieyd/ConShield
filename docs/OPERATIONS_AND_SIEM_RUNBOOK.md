@@ -6,6 +6,30 @@ This runbook describes how an `AdminIB` operator uses ConShield operational scre
 
 For a safe diploma/demo walkthrough, use [DEMO_EVIDENCE_PACK.md](DEMO_EVIDENCE_PACK.md) together with this runbook.
 
+## Unified CLI shortcuts
+
+The existing PowerShell scripts remain the source of truth, but local operators can also use the unified CLI wrapper:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- validate
+
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- run protected `
+  --image demo/insecure-api:latest `
+  --container-name conshield-demo-insecure `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --no-run `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- sensor replay --demo-signature --no-submit
+dotnet run --project .\src\ConShield.Cli -- evidence export --output .\artifacts\local\defense-evidence-cli.md
+```
+
+`demo reset` requires explicit `--confirm`. Live Docker execution remains opt-in through the protected-run workflow. The deterministic fixture commands do not require real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, real certificates, private keys, signing keys, or secrets. See [CONSHIELD_CLI.md](CONSHIELD_CLI.md).
+
 ## Main screens
 
 - Состояние системы: `/Operations/Health`

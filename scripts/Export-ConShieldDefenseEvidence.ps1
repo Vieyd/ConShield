@@ -98,7 +98,8 @@ function Test-HttpRoute {
         return $AllowedStatusCodes -contains [int]$response.StatusCode
     }
     catch {
-        if ($_.Exception.Response -and ($AllowedStatusCodes -contains [int]$_.Exception.Response.StatusCode)) {
+        $response = $_.Exception.PSObject.Properties['Response']?.Value
+        if ($null -ne $response -and ($AllowedStatusCodes -contains [int]$response.StatusCode)) {
             return $true
         }
 

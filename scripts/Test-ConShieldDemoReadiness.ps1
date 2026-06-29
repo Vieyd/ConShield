@@ -370,6 +370,18 @@ try {
         Add-ReadinessCheck -Name 'EventConsumer' -Status 'FAIL' -Detail 'process not detected' -Hint 'Start apps with Start-ConShield.ps1 -StartApps.'
     }
 
+    $unifiedCliHelp = Invoke-CapturedCommand `
+        -FilePath 'dotnet' `
+        -Arguments @('run', '--project', '.\src\ConShield.Cli', '--', '--help') `
+        -WorkingDirectory $repoRoot
+    $unifiedCliOutput = $unifiedCliHelp.Output -join "`n"
+    if ($unifiedCliHelp.ExitCode -eq 0 -and $unifiedCliOutput -match 'ConShield CLI' -and $unifiedCliOutput -match 'sensor replay') {
+        Add-ReadinessCheck -Name 'Unified CLI help' -Status 'PASS' -Detail 'ConShield.Cli command list rendered'
+    }
+    else {
+        Add-ReadinessCheck -Name 'Unified CLI help' -Status 'FAIL' -Detail 'ConShield.Cli help did not render' -Hint 'Run dotnet run --project .\src\ConShield.Cli -- --help.'
+    }
+
     $siemRules = Invoke-CapturedCommand `
         -FilePath 'pwsh' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '.\scripts\Test-ConShieldSiemRules.ps1') `

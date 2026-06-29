@@ -66,6 +66,13 @@ public sealed class DemoController : Controller
 
     private static IReadOnlyList<DemoWalkthroughCommandViewModel> BuildCommands() =>
     [
+        new("Unified CLI help", "dotnet run --project .\\src\\ConShield.Cli -- --help", "Lists validate, demo, scan, run, sensor, and evidence commands."),
+        new("Unified CLI validate", "dotnet run --project .\\src\\ConShield.Cli -- validate", "Runs SIEM rules, container policy, and sensor registry validation in deterministic mode."),
+        new("Unified CLI image scan fixture", "dotnet run --project .\\src\\ConShield.Cli -- scan image `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --no-submit", "Deterministic image scan fixture validates IMG path without live Trivy DB or Web submit."),
+        new("Unified CLI protected run fixture", "dotnet run --project .\\src\\ConShield.Cli -- run protected `\n  --image demo/insecure-api:latest `\n  --container-name conshield-demo-insecure `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --no-run `\n  --no-submit", "Validates scan → policy → launch decision without Docker execution or Web submit."),
+        new("Unified CLI signed sensor replay", "dotnet run --project .\\src\\ConShield.Cli -- sensor replay `\n  --demo-signature `\n  --no-submit", "Validates signed runtime sensor replay without Fedora/Falco or Web submit."),
+        new("Unified CLI evidence export", "dotnet run --project .\\src\\ConShield.Cli -- evidence export `\n  --output .\\artifacts\\local\\defense-evidence-cli.md", "Exports safe evidence to ignored local artifacts when local services are available."),
+        new("Unified CLI readiness", "dotnet run --project .\\src\\ConShield.Cli -- demo readiness", "Runs the existing readiness workflow through the unified CLI."),
         new("Start local stack", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\Start-ConShield.ps1 -StartApps -OpenRabbit", "Docker services, Web, EventConsumer, and RabbitMQ UI are available."),
         new("Reset local demo data preview", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Reset-ConShieldLocalDemoData.ps1 -WhatIf", "Dry-run prints counts and Result: DRY-RUN."),
         new("Reset local demo data", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Reset-ConShieldLocalDemoData.ps1 -ConfirmReset", "Confirmed reset prints Result: PASS."),
