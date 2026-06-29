@@ -189,6 +189,64 @@ function Get-SiemRulesEvidence {
     }
 }
 
+function Get-ContainerPolicyEvidence {
+    param([Parameter(Mandatory = $true)][string]$RepoRoot)
+
+    $path = Join-Path $RepoRoot 'config\container-policy.default.json'
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        return [pscustomobject]@{
+            Summary = @([pscustomobject]@{
+                ConfigSource = 'config/container-policy.default.json'
+                DefaultDecision = '-'
+                RulesLoaded = 0
+                EnabledRules = 0
+                DisabledRules = 0
+                PolicyVersion = '-'
+                Status = 'Missing'
+            })
+            Rules = @()
+        }
+    }
+
+    try {
+        $config = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -Depth 20
+        $rules = @($config.rules)
+        return [pscustomobject]@{
+            Summary = @([pscustomobject]@{
+                ConfigSource = 'config/container-policy.default.json'
+                DefaultDecision = ConvertTo-SafeCell -Value $config.defaultDecision -MaxLength 32
+                RulesLoaded = $rules.Count
+                EnabledRules = @($rules | Where-Object { $null -eq $_.enabled -or $_.enabled -eq $true }).Count
+                DisabledRules = @($rules | Where-Object { $_.enabled -eq $false }).Count
+                PolicyVersion = ConvertTo-SafeCell -Value $config.policyVersion -MaxLength 64
+                Status = 'Loaded'
+            })
+            Rules = @($rules | ForEach-Object {
+                [pscustomobject]@{
+                    RuleId = ConvertTo-SafeCell -Value $_.id -MaxLength 64
+                    Enabled = if ($null -eq $_.enabled -or $_.enabled -eq $true) { 'true' } else { 'false' }
+                    Decision = ConvertTo-SafeCell -Value $_.decision -MaxLength 32
+                    Reason = ConvertTo-SafeCell -Value $_.reason -MaxLength 120
+                }
+            })
+        }
+    }
+    catch {
+        return [pscustomobject]@{
+            Summary = @([pscustomobject]@{
+                ConfigSource = 'config/container-policy.default.json'
+                DefaultDecision = '-'
+                RulesLoaded = 0
+                EnabledRules = 0
+                DisabledRules = 0
+                PolicyVersion = '-'
+                Status = 'Invalid'
+            })
+            Rules = @()
+        }
+    }
+}
+
 function Import-NpgsqlClient {
     param([string]$RepoRoot)
 
@@ -322,6 +380,7 @@ function Invoke-DefenseScenario {
 
 $repoRoot = Resolve-RepositoryRoot
 $siemRulesEvidence = Get-SiemRulesEvidence -RepoRoot $repoRoot
+$containerPolicyEvidence = Get-ContainerPolicyEvidence -RepoRoot $repoRoot
 $resolvedOutputPath = if ([System.IO.Path]::IsPathRooted($OutputMarkdownPath)) {
     $OutputMarkdownPath
 }
@@ -363,6 +422,8 @@ $tables = @{
     ProtectedRunLaunches = @()
     ProtectedRunPolicies = @()
     ProtectedRunRules = @()
+    ContainerPolicyDecisions = @()
+    ContainerPolicyPolAlerts = @()
 }
 
 if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
@@ -398,6 +459,8 @@ if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
         $tables.ProtectedRunLaunches = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.container-runtime'' and coalesce("ExternalEventType", '''') = ''container.image.launch.result'' order by "OccurredAtUtc" desc limit 10;')
         $tables.ProtectedRunPolicies = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.container-guard'' and coalesce("ExternalEventType", '''') = ''container.image.policy.evaluated'' order by "OccurredAtUtc" desc limit 10;')
         $tables.ProtectedRunRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" in (''IMG-001'', ''POL-001'', ''LIFE-001'') group by "RuleCode" order by "RuleCode";')
+        $tables.ContainerPolicyDecisions = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.container-guard'' and coalesce("ExternalEventType", '''') = ''container.image.policy.evaluated'' order by "OccurredAtUtc" desc limit 10;')
+        $tables.ContainerPolicyPolAlerts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" = ''POL-001'' group by "RuleCode";')
     }
     catch {
         $queryError = ConvertTo-SafeCell -Value $_.Exception.Message -MaxLength 180
@@ -533,6 +596,23 @@ else {
     $lines.Add('- Protected run path: image scan → policy decision → launch lifecycle result.') | Out-Null
     $lines.Add('- Related evidence uses safe descriptions only; raw Trivy JSON, raw payloads, raw Docker logs, and local artifacts are excluded.') | Out-Null
 }
+$lines.Add('') | Out-Null
+
+$lines.Add('## Container Policy Evidence') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('ConfigSource', 'DefaultDecision', 'RulesLoaded', 'EnabledRules', 'DisabledRules', 'PolicyVersion', 'Status') -Rows $containerPolicyEvidence.Summary
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('RuleId', 'Enabled', 'Decision', 'Reason') -Rows $containerPolicyEvidence.Rules
+$lines.Add('') | Out-Null
+$lines.Add('### Latest policy decisions') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('Id', 'OccurredAtUtc', 'Severity', 'SourceSystem', 'ExternalEventType', 'Description') -Rows $tables.ContainerPolicyDecisions
+$lines.Add('') | Out-Null
+$lines.Add('### Related POL-001 alerts') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('RuleCode', 'Count', 'LatestCreatedAtUtc') -Rows $tables.ContainerPolicyPolAlerts
+$lines.Add('') | Out-Null
+$lines.Add('- Container policy evidence is summarized from `config/container-policy.default.json`; raw Trivy JSON, raw event payloads, raw additional data, Docker logs, and local secrets are excluded.') | Out-Null
 $lines.Add('') | Out-Null
 
 $lines.Add('## Runtime Sensor Evidence') | Out-Null

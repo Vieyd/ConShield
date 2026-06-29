@@ -5,7 +5,7 @@ param(
     [string]$Command,
     [string]$FromTrivyJson,
     [string]$WebBaseUrl = 'http://127.0.0.1:5080',
-    [string]$PolicyPath = '.\config\policies\container-baseline-v1.json',
+    [string]$PolicyPath = '.\config\container-policy.default.json',
     [string]$TrivyPath = 'trivy',
     [string]$DockerPath = 'docker',
     [switch]$NoSubmit,
@@ -396,7 +396,15 @@ function Read-ContainerPolicy {
         [Parameter(Mandatory = $true)][string]$Path
     )
 
-    $resolved = Resolve-RepoPath -RepoRoot $RepoRoot -Path $Path
+    $selectedPath = $Path
+    if ($Path -eq '.\config\container-policy.default.json' -or $Path -eq './config/container-policy.default.json') {
+        $localPolicy = Join-Path $RepoRoot 'config\container-policy.local.json'
+        if (Test-Path -LiteralPath $localPolicy -PathType Leaf) {
+            $selectedPath = $localPolicy
+        }
+    }
+
+    $resolved = Resolve-RepoPath -RepoRoot $RepoRoot -Path $selectedPath
     if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
         throw 'Container policy file was not found.'
     }
@@ -414,36 +422,135 @@ function Read-ContainerPolicy {
         throw 'Container policy JSON is invalid.'
     }
 
-    if ([int]$policy.schemaVersion -ne 1) {
-        throw 'Only container policy schemaVersion 1 is supported.'
+    $displayPath = [System.IO.Path]::GetRelativePath($RepoRoot, $resolved).Replace('\', '/')
+
+    $schemaVersion = Get-OptionalPropertyValue -InputObject $policy -Name 'schemaVersion'
+    if ($null -ne $schemaVersion) {
+        if ([int]$schemaVersion -ne 1) {
+            throw 'Only container policy schemaVersion 1 is supported.'
+        }
+
+        $policyId = Get-SafeText -Value ([string]$policy.policyId) -MaxLength 128
+        $policyVersion = Get-SafeText -Value ([string]$policy.version) -MaxLength 128
+        if ([string]::IsNullOrWhiteSpace($policyId) -or [string]::IsNullOrWhiteSpace($policyVersion)) {
+            throw 'Container policy id/version is invalid.'
+        }
+
+        return [pscustomobject]@{
+            PolicyId = $policyId
+            Version = $policyVersion
+            PolicySha256 = Get-Sha256Hex -Value $json
+            ConfigSource = $displayPath
+            DefaultDecision = 'Allow'
+            Rules = @(
+                [pscustomobject]@{ Id = 'LEGACY-IMAGE-DENIED-BLOCK'; Enabled = $true; Decision = 'Block'; Reason = 'Image is denied by policy.'; Match = [pscustomobject]@{ deniedImages = @($policy.deniedImages) } },
+                [pscustomobject]@{ Id = 'LEGACY-CRITICAL-VULN-BLOCK'; Enabled = $true; Decision = 'Block'; Reason = 'Image contains critical vulnerabilities.'; Match = [pscustomobject]@{ criticalVulnerabilitiesAtLeast = $policy.thresholds.criticalBlock } },
+                [pscustomobject]@{ Id = 'LEGACY-HIGH-VULN-BLOCK'; Enabled = $true; Decision = 'Block'; Reason = 'Image contains too many high vulnerabilities.'; Match = [pscustomobject]@{ highVulnerabilitiesAtLeast = $policy.thresholds.highBlock } },
+                [pscustomobject]@{ Id = 'LEGACY-TOTAL-FINDINGS-BLOCK'; Enabled = $true; Decision = 'Block'; Reason = 'Image contains too many findings.'; Match = [pscustomobject]@{ totalFindingsAtLeast = $policy.thresholds.totalBlock } },
+                [pscustomobject]@{ Id = 'LEGACY-HIGH-VULN-WARN'; Enabled = $true; Decision = 'Warn'; Reason = 'Image contains high vulnerabilities.'; Match = [pscustomobject]@{ highVulnerabilitiesAtLeast = $policy.thresholds.highWarn } },
+                [pscustomobject]@{ Id = 'LEGACY-MEDIUM-VULN-WARN'; Enabled = $true; Decision = 'Warn'; Reason = 'Image contains medium vulnerabilities.'; Match = [pscustomobject]@{ mediumVulnerabilitiesAtLeast = $policy.thresholds.mediumWarn } },
+                [pscustomobject]@{ Id = 'LEGACY-UNKNOWN-VULN-WARN'; Enabled = $true; Decision = 'Warn'; Reason = 'Image contains unknown-severity vulnerabilities.'; Match = [pscustomobject]@{ unknownVulnerabilitiesAtLeast = $policy.thresholds.unknownWarn } }
+            )
+        }
+    }
+
+    if ([int](Get-OptionalPropertyValue -InputObject $policy -Name 'version') -ne 1) {
+        throw 'Only container policy-as-code version 1 is supported.'
     }
 
     $policyId = Get-SafeText -Value ([string]$policy.policyId) -MaxLength 128
-    $policyVersion = Get-SafeText -Value ([string]$policy.version) -MaxLength 128
+    $policyVersion = Get-SafeText -Value ([string]$policy.policyVersion) -MaxLength 128
     if ([string]::IsNullOrWhiteSpace($policyId) -or [string]::IsNullOrWhiteSpace($policyVersion)) {
         throw 'Container policy id/version is invalid.'
+    }
+
+    $defaultDecision = Get-SafeText -Value ([string]$policy.defaultDecision) -MaxLength 16
+    if ($defaultDecision -notin @('Allow', 'Warn', 'Block')) {
+        throw 'Container policy defaultDecision is invalid.'
+    }
+
+    $rules = @($policy.rules)
+    if ($rules.Count -eq 0) {
+        throw 'Container policy must contain at least one rule.'
+    }
+
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    foreach ($rule in $rules) {
+        $ruleId = Get-SafeText -Value ([string]$rule.id) -MaxLength 128
+        if ([string]::IsNullOrWhiteSpace($ruleId) -or -not $seen.Add($ruleId)) {
+            throw 'Container policy rule ids are required and unique.'
+        }
+
+        $decision = Get-SafeText -Value ([string]$rule.decision) -MaxLength 16
+        if ($decision -notin @('Allow', 'Warn', 'Block')) {
+            throw 'Container policy rule decision is invalid.'
+        }
+
+        if (($decision -in @('Warn', 'Block')) -and [string]::IsNullOrWhiteSpace([string]$rule.reason)) {
+            throw 'Container policy Warn/Block rules require a reason.'
+        }
+
+        if ($null -eq $rule.match) {
+            throw 'Container policy rule match is required.'
+        }
     }
 
     return [pscustomobject]@{
         PolicyId = $policyId
         Version = $policyVersion
         PolicySha256 = Get-Sha256Hex -Value $json
-        Thresholds = $policy.thresholds
-        DeniedImages = @($policy.deniedImages | ForEach-Object { Get-NormalizedIdentity ([string]$_) })
+        ConfigSource = $displayPath
+        DefaultDecision = $defaultDecision
+        Rules = $rules
     }
 }
 
-function Add-PolicyReasonIfReached {
+function Test-PolicyThreshold {
     param(
-        [System.Collections.Generic.List[string]]$Reasons,
-        [string]$Reason,
         [int]$Actual,
         [AllowNull()]$Threshold
     )
 
-    if ($null -ne $Threshold -and [int]$Threshold -gt 0 -and $Actual -ge [int]$Threshold) {
-        $Reasons.Add($Reason) | Out-Null
+    return ($null -ne $Threshold -and [int]$Threshold -ge 0 -and $Actual -ge [int]$Threshold)
+}
+
+function Test-PolicyRuleMatch {
+    param(
+        [Parameter(Mandatory = $true)]$Rule,
+        [Parameter(Mandatory = $true)]$Summary,
+        [Parameter(Mandatory = $true)][string]$TriggerIdentity,
+        [Parameter(Mandatory = $true)][string]$ImageReference
+    )
+
+    $match = $Rule.Match
+    $matchedAny = $false
+    foreach ($image in @(Get-OptionalPropertyValue -InputObject $match -Name 'deniedImages')) {
+        $normalized = Get-NormalizedIdentity ([string]$image)
+        if ($normalized -eq $TriggerIdentity -or $normalized -eq $ImageReference) {
+            return $true
+        }
     }
+
+    foreach ($pair in @(
+        @{ Name = 'criticalVulnerabilitiesAtLeast'; Actual = $Summary.CriticalCount },
+        @{ Name = 'highVulnerabilitiesAtLeast'; Actual = $Summary.HighCount },
+        @{ Name = 'mediumVulnerabilitiesAtLeast'; Actual = $Summary.MediumCount },
+        @{ Name = 'lowVulnerabilitiesAtLeast'; Actual = $Summary.LowCount },
+        @{ Name = 'unknownVulnerabilitiesAtLeast'; Actual = $Summary.UnknownCount },
+        @{ Name = 'totalFindingsAtLeast'; Actual = $Summary.TotalCount },
+        @{ Name = 'secretsAtLeast'; Actual = $Summary.SecretCount },
+        @{ Name = 'misconfigurationsAtLeast'; Actual = $Summary.MisconfigurationCount }
+    )) {
+        $threshold = Get-OptionalPropertyValue -InputObject $match -Name $pair.Name
+        if ($null -ne $threshold) {
+            $matchedAny = $true
+            if (-not (Test-PolicyThreshold -Actual ([int]$pair.Actual) -Threshold $threshold)) {
+                return $false
+            }
+        }
+    }
+
+    return $matchedAny
 }
 
 function Invoke-PolicyEvaluation {
@@ -455,39 +562,42 @@ function Invoke-PolicyEvaluation {
     $imageReference = Get-NormalizedIdentity $Summary.ImageReference
     $imageDigest = if ([string]::IsNullOrWhiteSpace($Summary.ImageDigest)) { $null } else { Get-NormalizedIdentity $Summary.ImageDigest }
     $triggerIdentity = if ($imageDigest) { $imageDigest } else { $imageReference }
-    $reasons = [System.Collections.Generic.List[string]]::new()
+    $matches = @($Policy.Rules | Where-Object {
+        ($null -eq $_.enabled -or $_.enabled -eq $true) -and
+        (Test-PolicyRuleMatch -Rule $_ -Summary $Summary -TriggerIdentity $triggerIdentity -ImageReference $imageReference)
+    })
 
-    if ($Policy.DeniedImages -contains $triggerIdentity -or $Policy.DeniedImages -contains $imageReference) {
-        $reasons.Add('IMAGE_DENIED') | Out-Null
+    $selectedDecision = if (($matches | Where-Object { $_.decision -eq 'Block' } | Select-Object -First 1)) {
+        'Block'
+    }
+    elseif (($matches | Where-Object { $_.decision -eq 'Warn' } | Select-Object -First 1)) {
+        'Warn'
+    }
+    elseif (($matches | Where-Object { $_.decision -eq 'Allow' } | Select-Object -First 1)) {
+        'Allow'
+    }
+    else {
+        $Policy.DefaultDecision
     }
 
-    Add-PolicyReasonIfReached -Reasons $reasons -Reason 'CRITICAL_THRESHOLD_REACHED' -Actual $Summary.CriticalCount -Threshold $Policy.Thresholds.criticalBlock
-    Add-PolicyReasonIfReached -Reasons $reasons -Reason 'HIGH_BLOCK_THRESHOLD_REACHED' -Actual $Summary.HighCount -Threshold $Policy.Thresholds.highBlock
-    Add-PolicyReasonIfReached -Reasons $reasons -Reason 'TOTAL_BLOCK_THRESHOLD_REACHED' -Actual $Summary.TotalCount -Threshold $Policy.Thresholds.totalBlock
-
-    if ($reasons.Count -gt 0) {
-        return [pscustomobject]@{
-            Decision = 'Block'
-            ReasonCodes = @($reasons)
-            TriggerIdentity = $triggerIdentity
-        }
+    $selectedRules = @($matches | Where-Object { $_.decision -eq $selectedDecision })
+    $matchedIds = @($selectedRules | ForEach-Object { Get-SafeText -Value ([string]$_.id) -MaxLength 128 })
+    $reasonCodes = if ($matchedIds.Count -gt 0) { $matchedIds } else { @('WITHIN_POLICY') }
+    $reasonSummary = if ($selectedRules.Count -gt 0) {
+        (($selectedRules | ForEach-Object { Get-SafeText -Value ([string]$_.reason) -MaxLength 160 }) -join '; ')
     }
-
-    Add-PolicyReasonIfReached -Reasons $reasons -Reason 'HIGH_WARNING_THRESHOLD_REACHED' -Actual $Summary.HighCount -Threshold $Policy.Thresholds.highWarn
-    Add-PolicyReasonIfReached -Reasons $reasons -Reason 'MEDIUM_WARNING_THRESHOLD_REACHED' -Actual $Summary.MediumCount -Threshold $Policy.Thresholds.mediumWarn
-    Add-PolicyReasonIfReached -Reasons $reasons -Reason 'UNKNOWN_WARNING_THRESHOLD_REACHED' -Actual $Summary.UnknownCount -Threshold $Policy.Thresholds.unknownWarn
-
-    if ($reasons.Count -gt 0) {
-        return [pscustomobject]@{
-            Decision = 'Warn'
-            ReasonCodes = @($reasons)
-            TriggerIdentity = $triggerIdentity
-        }
+    else {
+        'No policy rule matched.'
     }
 
     return [pscustomobject]@{
-        Decision = 'Allow'
-        ReasonCodes = @('WITHIN_POLICY')
+        Decision = $selectedDecision
+        ReasonCodes = @($reasonCodes)
+        MatchedRuleIds = @($matchedIds)
+        ReasonSummary = $reasonSummary
+        PolicyConfigSource = $Policy.ConfigSource
+        PolicyConfigSha256 = $Policy.PolicySha256
+        PolicyConfigVersion = $Policy.Version
         TriggerIdentity = $triggerIdentity
     }
 }
@@ -613,6 +723,11 @@ function New-PolicyEventPayload {
             policyId = $Policy.PolicyId
             policyVersion = $Policy.Version
             policySha256 = $Policy.PolicySha256
+            policyConfigSource = $Policy.ConfigSource
+            policyConfigVersion = $Policy.Version
+            policyConfigSha256 = $Policy.PolicySha256
+            matchedPolicyRuleIds = @($Evaluation.MatchedRuleIds)
+            reasonSummary = $Evaluation.ReasonSummary
             imageReference = $Summary.ImageReference
             imageDigest = $Summary.ImageDigest
             reportSha256 = $Summary.ReportSha256
@@ -962,6 +1077,8 @@ function Write-SafeMarkdown {
         ('- Image: {0}' -f $Summary.ImageReference),
         ('- ContainerName: {0}' -f $ContainerName),
         ('- PolicyOutcome: {0}' -f $Evaluation.Decision),
+        ('- PolicyConfig: {0}' -f $Evaluation.PolicyConfigSource),
+        ('- MatchedPolicyRules: {0}' -f (($Evaluation.MatchedRuleIds | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join ', ')),
         ('- LaunchOutcome: {0}' -f $Launch.Outcome),
         ('- IMG event: {0}' -f $ImgStatus),
         ('- POL event: {0}' -f $PolStatus),
@@ -998,6 +1115,8 @@ function Write-ProtectedRunSummary {
     Write-Output ('Container: {0}' -f $ContainerName)
     Write-Output ('Scan: {0}' -f $ScanStatus)
     Write-Output ('Policy: {0}' -f $Evaluation.Decision)
+    Write-Output ('Matched policy rules: {0}' -f $(if (@($Evaluation.MatchedRuleIds).Count -gt 0) { @($Evaluation.MatchedRuleIds) -join ',' } else { '-' }))
+    Write-Output ('Policy config: {0}' -f $Evaluation.PolicyConfigSource)
     Write-Output ('Launch: {0}' -f $launchText)
     Write-Output ('IMG event: {0}' -f $ImgStatus)
     Write-Output ('POL event: {0}' -f $PolStatus)

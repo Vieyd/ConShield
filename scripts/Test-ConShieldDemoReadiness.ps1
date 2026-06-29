@@ -382,6 +382,18 @@ try {
         Add-ReadinessCheck -Name 'SIEM rules validation' -Status 'FAIL' -Detail 'default SIEM rules config did not validate' -Hint 'Run scripts\Test-ConShieldSiemRules.ps1 directly for safe detailed output.'
     }
 
+    $containerPolicy = Invoke-CapturedCommand `
+        -FilePath 'pwsh' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '.\scripts\Test-ConShieldContainerPolicy.ps1') `
+        -WorkingDirectory $repoRoot
+    $containerPolicyResult = ($containerPolicy.Output | Where-Object { $_ -match '^Result:\s+' } | Select-Object -Last 1)
+    if ($containerPolicy.ExitCode -eq 0 -and $containerPolicyResult -match 'PASS') {
+        Add-ReadinessCheck -Name 'Container policy validation' -Status 'PASS' -Detail 'Result: PASS'
+    }
+    else {
+        Add-ReadinessCheck -Name 'Container policy validation' -Status 'FAIL' -Detail 'default container policy config did not validate' -Hint 'Run scripts\Test-ConShieldContainerPolicy.ps1 directly for safe detailed output.'
+    }
+
     if ($SkipScenario) {
         Add-ReadinessCheck -Name 'Defense scenario' -Status 'SKIP' -Detail 'requested by -SkipScenario'
     }
