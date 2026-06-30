@@ -6,6 +6,14 @@ This runbook describes how an `AdminIB` operator uses ConShield operational scre
 
 For a safe diploma/demo walkthrough, use [DEMO_EVIDENCE_PACK.md](DEMO_EVIDENCE_PACK.md) together with this runbook.
 
+Before a stabilization handoff or defense rehearsal, run the deterministic full validation wrapper:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
+```
+
+It checks repository contracts, config validation, CLI wrappers, fixture workflows, `/Demo`, evidence sections, and security guardrails without requiring Web/API, live Docker execution, live Trivy DB/network, real Fedora/Falco, external internet, real certificates, private keys, signing keys, or real secrets. Use [CONSHIELD_FULL_VALIDATION_CHECKLIST.md](CONSHIELD_FULL_VALIDATION_CHECKLIST.md) as the detailed audit checklist.
+
 ## Unified CLI shortcuts
 
 The existing PowerShell scripts remain the source of truth, but local operators can also use the unified CLI wrapper:

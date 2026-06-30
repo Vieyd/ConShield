@@ -11,6 +11,8 @@ dotnet run --project .\src\ConShield.Cli -- --help
 
 dotnet run --project .\src\ConShield.Cli -- validate
 
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
+
 dotnet run --project .\src\ConShield.Cli -- demo readiness
 
 dotnet run --project .\src\ConShield.Cli -- demo reset --confirm
@@ -58,6 +60,16 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 | `lifecycle replay` | Built-in deterministic Docker lifecycle fixture replay through existing external ingestion |
 | `sensor replay` | `Replay-ConShieldFalcoRuntimeEvent.ps1` |
 | `evidence export` | `Export-ConShieldDefenseEvidence.ps1` |
+
+## Full validation wrapper
+
+Use the full validation script before a stabilization/demo handoff:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
+```
+
+The default mode validates repository contracts, config files, CLI commands, scripts, deterministic fixtures, `/Demo` command coverage, evidence sections, and security guardrails. It does not require live Web/API, live Docker execution, live Trivy DB/network, real Fedora/Falco, external internet, browser login, real certificates, private keys, signing keys, or real secrets. The complete checklist is in [CONSHIELD_FULL_VALIDATION_CHECKLIST.md](CONSHIELD_FULL_VALIDATION_CHECKLIST.md).
 
 ## Safety rules
 

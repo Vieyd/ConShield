@@ -127,6 +127,14 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadin
 
 It verifies Git awareness, Docker services, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, the defense scenario, Docker lifecycle replay, Falco replay, Runtime Sensor Health, and evidence export. The generated evidence defaults to `artifacts/local/demo-readiness-evidence.md`, which must stay uncommitted.
 
+For a broader offline integration audit that does not require Web/API, live Docker execution, live Trivy DB/network, real Fedora/Falco, external internet, real certificates, private keys, signing keys, or real secrets, run:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
+```
+
+The full validation checklist is documented in [`docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md`](docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md).
+
 ### Reset local demo data
 
 Use this before a clean defense/demo run:
@@ -377,6 +385,8 @@ The registry is a preparation layer for future certificate-bound enrollment. Tru
 Common local checks:
 
 ```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
+
 dotnet restore
 dotnet build -c Release --no-restore
 dotnet test -c Release --no-build
@@ -400,6 +410,7 @@ For docs-only changes, proportional checks such as `git diff --check`, README li
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
+- [Full validation checklist](docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md)
 - [CI/CD container gate](docs/CICD_CONTAINER_GATE.md)
 - [Docker lifecycle collector](docs/DOCKER_LIFECYCLE_COLLECTOR.md)
 - [Falco runtime sensor](docs/FALCO_RUNTIME_SENSOR.md)
@@ -541,6 +552,14 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadin
 ```
 
 Команда проверяет Git awareness, локальные Docker services, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, defense scenario, Docker lifecycle replay, Falco replay, Runtime Sensor Health и evidence export. Generated evidence по умолчанию сохраняется в `artifacts/local/demo-readiness-evidence.md`; этот файл нельзя коммитить.
+
+Для более широкой offline integration audit без Web/API, live Docker execution, live Trivy DB/network, real Fedora/Falco, external internet, настоящих certificates, private keys, signing keys или real secrets запустите:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
+```
+
+Полный checklist описан в [`docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md`](docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md).
 
 ### Сброс локальных demo-данных
 
@@ -792,6 +811,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSensorRegi
 Обычные локальные проверки:
 
 ```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
+
 dotnet restore
 dotnet build -c Release --no-restore
 dotnet test -c Release --no-build
@@ -815,6 +836,7 @@ gitleaks git --redact --no-banner
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
+- [Full validation checklist](docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md)
 - [CI/CD container gate](docs/CICD_CONTAINER_GATE.md)
 - [Docker lifecycle collector](docs/DOCKER_LIFECYCLE_COLLECTOR.md)
 - [Falco runtime sensor](docs/FALCO_RUNTIME_SENSOR.md)
