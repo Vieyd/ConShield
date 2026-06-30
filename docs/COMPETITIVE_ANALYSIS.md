@@ -82,7 +82,7 @@ scan -> policy gate -> runtime/lifecycle -> sensor trust/signatures -> SIEM -> i
 
 ## Risks of over-positioning
 
-The safest positioning is specific and humble. Avoid claims that ConShield is a complete enterprise platform, a certified compliance product, a universal replacement for commercial CNAPP, or a guarantee of protection. The project is strongest when presented as an integrated, inspectable prototype with deterministic validation.
+The safest positioning is specific and humble. Avoid claims that ConShield is a complete enterprise platform, a formal compliance-attestation product, a universal replacement for commercial CNAPP, or a guarantee of protection. The project is strongest when presented as an integrated, inspectable prototype with deterministic validation.
 
 ## Recommended defense wording
 

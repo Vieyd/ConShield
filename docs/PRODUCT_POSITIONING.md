@@ -48,7 +48,7 @@ The default demo does not require real Fedora/Falco, live Docker execution, live
 ## What ConShield does not do
 
 - It is not an enterprise CNAPP replacement.
-- It is not a certified compliance platform.
+- It is not a formal compliance-attestation platform.
 - It is not a Kubernetes admission controller in the current version.
 - It does not implement full mTLS yet.
 - It does not provide broad enterprise multi-cluster management.
@@ -82,6 +82,8 @@ That makes it useful for demonstrating process maturity, validating regression c
 ## Academic contribution
 
 The academic contribution is the integration model rather than a claim of outperforming specialized security products. ConShield demonstrates how container scanning, policy decisions, runtime and lifecycle signals, sensor identity, signature verification, SIEM correlation, incident workflow, and evidence export can be connected in a reproducible local prototype.
+
+The structured security foundation is documented in [THREAT_MODEL.md](THREAT_MODEL.md), [ATTACKER_SCENARIOS.md](ATTACKER_SCENARIOS.md), [SECURITY_REQUIREMENTS.md](SECURITY_REQUIREMENTS.md), and [REQUIREMENTS_TRACEABILITY_MATRIX.md](REQUIREMENTS_TRACEABILITY_MATRIX.md). These documents map threats and attacker scenarios to stable requirement IDs, implemented modules, CLI/scripts, SIEM rules, evidence sections, and tests.
 
 ## Practical contribution
 
