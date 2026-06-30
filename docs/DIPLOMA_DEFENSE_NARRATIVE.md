@@ -39,6 +39,8 @@ The goal is to build and validate a reproducible local workflow that connects co
 
 The formal traceability artifacts are [THREAT_MODEL.md](THREAT_MODEL.md), [ATTACKER_SCENARIOS.md](ATTACKER_SCENARIOS.md), [SECURITY_REQUIREMENTS.md](SECURITY_REQUIREMENTS.md), [REQUIREMENTS_TRACEABILITY_MATRIX.md](REQUIREMENTS_TRACEABILITY_MATRIX.md), and [RESIDUAL_RISKS.md](RESIDUAL_RISKS.md).
 
+The visual architecture artifacts are [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_DIAGRAMS.md](ARCHITECTURE_DIAGRAMS.md), [DATA_FLOW_MODEL.md](DATA_FLOW_MODEL.md), [DEPLOYMENT_VIEW.md](DEPLOYMENT_VIEW.md), and [SEQUENCE_FLOWS.md](SEQUENCE_FLOWS.md). Use them when explaining components, trust boundaries, and the event-to-evidence flow.
+
 Russian-ready wording:
 
 > Для защиты важно показать не только интерфейс и скрипты, но и трассируемость: угрозы → сценарии атакующего → требования безопасности → реализованные модули → правила SIEM → доказательная база → тесты.
