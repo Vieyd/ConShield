@@ -22,6 +22,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoRelease
 
 The release pack is written under ignored `artifacts/local/conshield-demo-release-pack` with a zip archive next to it. It includes the published CLI, safe docs, default configs, selected helper scripts, and a release README. It excludes local overrides, generated evidence, logs, screenshots, raw payloads, nested local artifacts, and secrets. See [RELEASE_AND_DEMO_PACKAGING.md](RELEASE_AND_DEMO_PACKAGING.md).
 
+For diploma or stakeholder explanation, use [PRODUCT_POSITIONING.md](PRODUCT_POSITIONING.md), [COMPETITIVE_ANALYSIS.md](COMPETITIVE_ANALYSIS.md), and [DIPLOMA_DEFENSE_NARRATIVE.md](DIPLOMA_DEFENSE_NARRATIVE.md). The recommended wording is that ConShield is a local-first DevSecOps/SIEM control plane for container security, not a scanner-only wrapper and not a replacement for commercial CNAPP platforms.
+
 ## Unified CLI shortcuts
 
 The existing PowerShell scripts remain the source of truth, but local operators can also use the unified CLI wrapper:

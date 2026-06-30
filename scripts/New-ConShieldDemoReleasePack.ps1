@@ -305,6 +305,10 @@ try {
     Copy-Item -LiteralPath $publishRoot -Destination (Join-Path $releaseRoot 'bin\conshield-cli') -Recurse -Force
 
     $docs = @(
+        'docs\PRODUCT_POSITIONING.md',
+        'docs\COMPETITIVE_ANALYSIS.md',
+        'docs\DIPLOMA_DEFENSE_NARRATIVE.md',
+        'docs\ROADMAP_TO_PRODUCTION.md',
         'docs\RELEASE_AND_DEMO_PACKAGING.md',
         'docs\CONSHIELD_FULL_VALIDATION_CHECKLIST.md',
         'docs\CONSHIELD_CLI.md',
