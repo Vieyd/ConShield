@@ -17,6 +17,12 @@ dotnet run --project .\src\ConShield.Cli -- scan image `
   --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image demo/insecure-api:latest `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --fail-on never `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- run protected `
   --image demo/insecure-api:latest `
   --container-name conshield-demo-insecure `
@@ -193,7 +199,7 @@ Before a defense or live demo, run the safe readiness check from the repository 
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadiness.ps1
 ```
 
-The check verifies Git awareness, Docker, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, the local defense scenario, Docker lifecycle replay, Falco replay, Runtime Sensor Health, and defense evidence export. It does not require a real Fedora/Falco setup, live Docker event watching, or live Trivy DB/network, and writes generated evidence to `artifacts/local/demo-readiness-evidence.md` by default.
+The check verifies Git awareness, Docker, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, the local defense scenario, CI/CD image gate fixture, Docker lifecycle replay, Falco replay, Runtime Sensor Health, and defense evidence export. It does not require a real Fedora/Falco setup, live Docker event watching, or live Trivy DB/network, and writes generated evidence to `artifacts/local/demo-readiness-evidence.md` by default.
 
 Useful optional switches:
 
@@ -289,6 +295,21 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtecte
 ```
 
 Execution is explicit. No Docker container starts unless `-Execute` is present and policy allows it. `Block` never starts a container. `Warn` requires both `-AcceptWarning` and `-Execute`. The evidence exporter adds `Protected Run Evidence` from safe policy and launch lifecycle event descriptions only.
+
+## CI/CD container gate
+
+Use the CI/CD gate to turn a sanitized image scan result plus container policy-as-code into deterministic pipeline behavior:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image demo/insecure-api:latest `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --fail-on never `
+  --report .\artifacts\local\cicd-gate-report.md `
+  --no-submit
+```
+
+Exit codes are documented and CI-friendly: `0` means passed, `1` means failed by policy, `2` means usage/config/input error, and `3` means infrastructure error. `Block` fails when `--fail-on block`; `Warn` fails only when `--fail-on warn`; `--fail-on never` reports findings without failing. The command does not require live Trivy DB/network, live Docker run, Fedora/Falco, external internet, Kubernetes, certificates, private keys, signing keys, or secrets. See [CICD_CONTAINER_GATE.md](CICD_CONTAINER_GATE.md).
 
 ## Docker lifecycle collector
 

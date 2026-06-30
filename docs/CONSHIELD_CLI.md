@@ -19,6 +19,13 @@ dotnet run --project .\src\ConShield.Cli -- scan image `
   --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image demo/insecure-api:latest `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --fail-on never `
+  --report .\artifacts\local\cicd-gate-report.md `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- run protected `
   --image demo/insecure-api:latest `
   --container-name conshield-demo-insecure `
@@ -46,6 +53,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 | `demo readiness` | `Test-ConShieldDemoReadiness.ps1` |
 | `demo reset --confirm` | `Reset-ConShieldLocalDemoData.ps1 -ConfirmReset` |
 | `scan image` | `Invoke-ConShieldImageScan.ps1` |
+| `gate image` | Built-in CI/CD image gate for fixture scan result + container policy-as-code |
 | `run protected` | `Invoke-ConShieldProtectedRun.ps1` |
 | `lifecycle replay` | Built-in deterministic Docker lifecycle fixture replay through existing external ingestion |
 | `sensor replay` | `Replay-ConShieldFalcoRuntimeEvent.ps1` |
@@ -56,6 +64,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 - `demo reset` requires explicit `--confirm`.
 - Protected container execution remains opt-in with `--execute`; fixture validation should use `--no-run --no-submit`.
 - `Block` decisions are still enforced by the underlying protected-run script.
+- CI/CD image gate uses deterministic fixture input, returns documented exit codes, and writes sanitized reports only when requested.
 - Docker lifecycle replay is fixture-first; `lifecycle watch` is intentionally skipped in v1 to avoid live Docker dependencies in CI.
 - CI-safe commands use fixtures and do not require real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, real certificates, private keys, real signing keys, or real secrets.
 - The CLI must not print API keys, passwords, connection strings, environment values, raw Trivy JSON, raw runtime payload JSON, raw `AdditionalDataJson`, Docker logs, screenshots, certificates, private keys, signing keys, or generated local artifacts.
