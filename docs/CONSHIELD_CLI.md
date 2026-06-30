@@ -26,6 +26,10 @@ dotnet run --project .\src\ConShield.Cli -- run protected `
   --no-run `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
+  --from-docker-events-json .\tests\TestData\DockerEvents\container-lifecycle-events.json `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- sensor replay `
   --demo-signature `
   --no-submit
@@ -43,6 +47,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 | `demo reset --confirm` | `Reset-ConShieldLocalDemoData.ps1 -ConfirmReset` |
 | `scan image` | `Invoke-ConShieldImageScan.ps1` |
 | `run protected` | `Invoke-ConShieldProtectedRun.ps1` |
+| `lifecycle replay` | Built-in deterministic Docker lifecycle fixture replay through existing external ingestion |
 | `sensor replay` | `Replay-ConShieldFalcoRuntimeEvent.ps1` |
 | `evidence export` | `Export-ConShieldDefenseEvidence.ps1` |
 
@@ -51,6 +56,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 - `demo reset` requires explicit `--confirm`.
 - Protected container execution remains opt-in with `--execute`; fixture validation should use `--no-run --no-submit`.
 - `Block` decisions are still enforced by the underlying protected-run script.
+- Docker lifecycle replay is fixture-first; `lifecycle watch` is intentionally skipped in v1 to avoid live Docker dependencies in CI.
 - CI-safe commands use fixtures and do not require real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, real certificates, private keys, real signing keys, or real secrets.
 - The CLI must not print API keys, passwords, connection strings, environment values, raw Trivy JSON, raw runtime payload JSON, raw `AdditionalDataJson`, Docker logs, screenshots, certificates, private keys, signing keys, or generated local artifacts.
 - Generated evidence and published binaries should stay under ignored `artifacts/local/`.

@@ -31,6 +31,7 @@ internal static class Program
                 "scan" => await RunScanAsync(repoRoot, args[1..]),
                 "run" => await RunProtectedRunAsync(repoRoot, args[1..]),
                 "sensor" => await RunSensorAsync(repoRoot, args[1..]),
+                "lifecycle" => await RunLifecycleAsync(repoRoot, args[1..]),
                 "evidence" => await RunEvidenceAsync(repoRoot, args[1..]),
                 _ => FailUsage($"Unknown command: {Safe(args[0])}")
             };
@@ -214,6 +215,97 @@ internal static class Program
         return await RunScriptCommandAsync(repoRoot, "evidence export", "Export-ConShieldDefenseEvidence.ps1", mapped);
     }
 
+    private static async Task<int> RunLifecycleAsync(string repoRoot, string[] args)
+    {
+        if (args.Length == 0 || IsHelp(args[0]))
+        {
+            PrintLifecycleHelp();
+            return Success;
+        }
+
+        return args[0].ToLowerInvariant() switch
+        {
+            "replay" => await RunLifecycleReplayAsync(repoRoot, args[1..]),
+            "watch" => FailUsage("lifecycle watch is intentionally not implemented in v1; use lifecycle replay fixture mode."),
+            _ => FailUsage($"Unknown lifecycle command: {Safe(args[0])}")
+        };
+    }
+
+    private static async Task<int> RunLifecycleReplayAsync(string repoRoot, string[] args)
+    {
+        var parser = new OptionParser(args);
+        var fixturePath = parser.TakeValue("--from-docker-events-json");
+        var noSubmit = parser.TakeFlag("--no-submit");
+        var baseUrl = parser.TakeValue("--base-url") ?? "http://127.0.0.1:5080";
+        parser.ThrowIfRemaining();
+
+        if (string.IsNullOrWhiteSpace(fixturePath))
+            throw new CliUsageException("--from-docker-events-json is required.");
+
+        var resolvedFixture = NormalizeExistingFilePath(repoRoot, fixturePath, "--from-docker-events-json");
+
+        IReadOnlyList<NormalizedDockerLifecycleEvent> events;
+        try
+        {
+            events = DockerLifecycleCollector.Normalize(DockerLifecycleCollector.ParseFixture(resolvedFixture));
+        }
+        catch (DockerLifecycleException ex)
+        {
+            Console.WriteLine("Command: lifecycle replay");
+            Console.WriteLine($"Fixture: {Path.GetFileName(resolvedFixture)}");
+            Console.WriteLine($"Validation: FAIL ({Safe(ex.Message)})");
+            Console.WriteLine("Result: FAIL");
+            return RuntimeError;
+        }
+
+        Console.WriteLine("Command: lifecycle replay");
+        Console.WriteLine("ConShield Docker lifecycle replay");
+        Console.WriteLine($"Web: {(noSubmit ? "SKIP" : "CHECK")}");
+        Console.WriteLine($"Fixture: {Path.GetFileName(resolvedFixture)}");
+        Console.WriteLine($"SourceSystem: {DockerLifecycleCollector.SourceSystem}");
+        Console.WriteLine($"Parsed: {events.Count}");
+        Console.WriteLine($"Mapped: {events.Count}");
+        Console.WriteLine($"Lifecycle event types: {string.Join(",", events.Select(x => x.EventType).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))}");
+        Console.WriteLine($"Actions: {string.Join(",", events.Select(x => x.AdditionalData.DockerAction).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))}");
+        Console.WriteLine($"Latest container: {events.OrderByDescending(x => x.OccurredAtUtc).First().AdditionalData.ContainerName ?? "-"}");
+        Console.WriteLine($"ExternalEventIds: {string.Join(",", events.Select(x => x.ExternalEventId.ToString("D")).Take(3))}{(events.Count > 3 ? ",..." : string.Empty)}");
+
+        if (noSubmit)
+        {
+            Console.WriteLine("Ingestion: SKIP");
+            Console.WriteLine("Expected rules: LIFE-001,LIFE-002 unaffected");
+            Console.WriteLine("Result: PASS");
+            return Success;
+        }
+
+        if (!await DockerLifecycleCollector.TestWebAsync(baseUrl))
+        {
+            Console.WriteLine("Web: FAIL");
+            Console.WriteLine("Ingestion: FAIL");
+            Console.WriteLine("Start local services first:");
+            Console.WriteLine("pwsh -NoProfile -ExecutionPolicy Bypass -File .\\Start-ConShield.ps1 -StartApps -OpenRabbit");
+            Console.WriteLine("Result: FAIL");
+            return RuntimeError;
+        }
+
+        var apiKey = DockerLifecycleCollector.ReadLocalApiKey(repoRoot);
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            Console.WriteLine("Web: OK");
+            Console.WriteLine("Ingestion: FAIL");
+            Console.WriteLine("Configure the local external ingestion key or rerun with --no-submit for offline validation.");
+            Console.WriteLine("Result: FAIL");
+            return RuntimeError;
+        }
+
+        var submit = await DockerLifecycleCollector.SubmitAsync(events, baseUrl, apiKey);
+        Console.WriteLine("Web: OK");
+        Console.WriteLine($"Ingestion: accepted={submit.Accepted} duplicate={submit.Duplicate} failed={submit.Failed}");
+        Console.WriteLine("Expected rules: LIFE-001,LIFE-002 unaffected");
+        Console.WriteLine($"Result: {(submit.Failed == 0 ? "PASS" : "FAIL")}");
+        return submit.Failed == 0 ? Success : RuntimeError;
+    }
+
     private static async Task<int> RunScriptCommandAsync(string repoRoot, string command, string scriptName, IReadOnlyList<string> scriptArguments)
     {
         Console.WriteLine($"Command: {command}");
@@ -360,6 +452,7 @@ internal static class Program
         Console.WriteLine("  scan image");
         Console.WriteLine("  run protected");
         Console.WriteLine("  sensor replay");
+        Console.WriteLine("  lifecycle replay");
         Console.WriteLine("  evidence export");
         Console.WriteLine();
         Console.WriteLine("Examples:");
@@ -367,6 +460,7 @@ internal static class Program
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- scan image --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- run protected --image demo/insecure-api:latest --container-name conshield-demo-insecure --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json --no-run --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- sensor replay --demo-signature --no-submit");
+        Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- lifecycle replay --from-docker-events-json .\\tests\\TestData\\DockerEvents\\container-lifecycle-events.json --no-submit");
     }
 
     private static void PrintDemoHelp()
@@ -400,6 +494,13 @@ internal static class Program
     {
         Console.WriteLine("Evidence commands:");
         Console.WriteLine("  evidence export --output .\\artifacts\\local\\defense-evidence-cli.md");
+    }
+
+    private static void PrintLifecycleHelp()
+    {
+        Console.WriteLine("Lifecycle commands:");
+        Console.WriteLine("  lifecycle replay --from-docker-events-json <path> --no-submit");
+        Console.WriteLine("  lifecycle watch is intentionally skipped in v1 to avoid live Docker dependencies in CI.");
     }
 
     private static void WriteSafeLine(TextWriter writer, string? line)

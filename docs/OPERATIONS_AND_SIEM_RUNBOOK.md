@@ -24,6 +24,10 @@ dotnet run --project .\src\ConShield.Cli -- run protected `
   --no-run `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
+  --from-docker-events-json .\tests\TestData\DockerEvents\container-lifecycle-events.json `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- sensor replay --demo-signature --no-submit
 dotnet run --project .\src\ConShield.Cli -- evidence export --output .\artifacts\local\defense-evidence-cli.md
 ```
@@ -189,7 +193,7 @@ Before a defense or live demo, run the safe readiness check from the repository 
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadiness.ps1
 ```
 
-The check verifies Git awareness, Docker, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, the local defense scenario, Falco replay, Runtime Sensor Health, and defense evidence export. It does not require a real Fedora/Falco setup and writes generated evidence to `artifacts/local/demo-readiness-evidence.md` by default.
+The check verifies Git awareness, Docker, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, the local defense scenario, Docker lifecycle replay, Falco replay, Runtime Sensor Health, and defense evidence export. It does not require a real Fedora/Falco setup, live Docker event watching, or live Trivy DB/network, and writes generated evidence to `artifacts/local/demo-readiness-evidence.md` by default.
 
 Useful optional switches:
 
@@ -285,6 +289,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtecte
 ```
 
 Execution is explicit. No Docker container starts unless `-Execute` is present and policy allows it. `Block` never starts a container. `Warn` requires both `-AcceptWarning` and `-Execute`. The evidence exporter adds `Protected Run Evidence` from safe policy and launch lifecycle event descriptions only.
+
+## Docker lifecycle collector
+
+Use the Docker lifecycle replay path to validate container lifecycle mapping without live Docker or machine-state-dependent event watching:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
+  --from-docker-events-json .\tests\TestData\DockerEvents\container-lifecycle-events.json `
+  --no-submit
+```
+
+The collector maps Docker-compatible fixture actions to sanitized `conshield.docker-lifecycle-collector` / `container.lifecycle.*` security events with deterministic external event IDs. Defense evidence includes `Docker Lifecycle Collector Evidence` when matching events are present. Existing `LIFE-001` and `LIFE-002` sensor/protected-run lifecycle rules remain available; this v1 collector does not require live Docker in CI and does not print raw Docker event JSON, raw payloads, Docker logs, environment values, host-sensitive mount paths, or secrets. See [DOCKER_LIFECYCLE_COLLECTOR.md](DOCKER_LIFECYCLE_COLLECTOR.md).
 
 ## Runtime Sensor Health
 

@@ -85,7 +85,7 @@ Run the safe local defense scenario:
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1
 ```
 
-The default scenario does not require Fedora, Falco, Kubernetes, or a real enrolled runtime sensor. It uses marked synthetic demo data to demonstrate image scan (`IMG-001`), policy gate (`POL-001`), runtime (`RTE-001`), sensor trust enforcement (`SENSOR-001`/`SENSOR-002`), signed sensor events (`SIGN-001`/`SIGN-002`/`SIGN-003`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence, and the Security Summary report.
+The default scenario does not require Fedora, Falco, Kubernetes, or a real enrolled runtime sensor. It uses marked synthetic demo data to demonstrate image scan (`IMG-001`), policy gate (`POL-001`), Docker lifecycle collector replay, runtime (`RTE-001`), sensor trust enforcement (`SENSOR-001`/`SENSOR-002`), signed sensor events (`SIGN-001`/`SIGN-002`/`SIGN-003`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence, and the Security Summary report.
 
 ### Configurable SIEM rules
 
@@ -125,7 +125,7 @@ Before a defense or live demo, run the one-command readiness check:
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadiness.ps1
 ```
 
-It verifies Git awareness, Docker services, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, the defense scenario, Falco replay, Runtime Sensor Health, and evidence export. The generated evidence defaults to `artifacts/local/demo-readiness-evidence.md`, which must stay uncommitted.
+It verifies Git awareness, Docker services, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, the defense scenario, Docker lifecycle replay, Falco replay, Runtime Sensor Health, and evidence export. The generated evidence defaults to `artifacts/local/demo-readiness-evidence.md`, which must stay uncommitted.
 
 ### Reset local demo data
 
@@ -169,6 +169,10 @@ dotnet run --project .\src\ConShield.Cli -- run protected `
   --no-run `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
+  --from-docker-events-json .\tests\TestData\DockerEvents\container-lifecycle-events.json `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- sensor replay `
   --demo-signature `
   --no-submit
@@ -181,7 +185,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
   --output .\artifacts\local\defense-evidence-cli.md
 ```
 
-Reset requires explicit `--confirm`. Live Docker execution remains opt-in through the existing protected-run safety rules. Deterministic fixture commands do not require real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, certificates, private keys, signing keys, or real secrets. Details are documented in [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
+Reset requires explicit `--confirm`. Live Docker execution remains opt-in through the existing protected-run safety rules. Deterministic fixture commands do not require real Fedora/Falco, live Docker run or event watching, live Trivy DB/network, external internet, certificates, private keys, signing keys, or real secrets. Details are documented in [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
 
 ### Image scan CLI
 
@@ -227,6 +231,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtecte
 
 The runner enforces `Allow` / `Warn` / `Block` decisions from the container baseline policy. Without `-Execute`, no container is started. With `-NoRun`, a container is never started. `Block` never starts a container, and `Warn` requires both `-AcceptWarning` and `-Execute`. Evidence export includes `Protected Run Evidence` when matching policy or launch lifecycle events are available.
 
+### Docker lifecycle collector
+
+Replay deterministic Docker-compatible lifecycle events without live Docker:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
+  --from-docker-events-json .\tests\TestData\DockerEvents\container-lifecycle-events.json `
+  --no-submit
+```
+
+The collector maps sanitized fixture events to `SourceSystem=conshield.docker-lifecycle-collector` and `ExternalEventType=container.lifecycle.*` with deterministic external event IDs. Evidence export includes `Docker Lifecycle Collector Evidence` when matching events are available. Existing `LIFE-001` / `LIFE-002` behavior remains available for protected-run and sensor lifecycle paths. Details are documented in [`docs/DOCKER_LIFECYCLE_COLLECTOR.md`](docs/DOCKER_LIFECYCLE_COLLECTOR.md).
+
 ### Export defense evidence
 
 Export a safe Markdown evidence pack to an ignored local artifact path:
@@ -236,7 +252,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseE
   -OutputMarkdownPath .\artifacts\local\defense-evidence.md
 ```
 
-The exporter writes only safe aggregate and metadata fields. It summarizes health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, Protected Run Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation, and operator checklists. It intentionally excludes raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots, and generated reports from source control.
+The exporter writes only safe aggregate and metadata fields. It summarizes health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, Protected Run Evidence, Docker Lifecycle Collector Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation, and operator checklists. It intentionally excludes raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots, and generated reports from source control.
 
 Keep generated Markdown under `artifacts/local/` or another ignored local path.
 
@@ -362,6 +378,7 @@ For docs-only changes, proportional checks such as `git diff --check`, README li
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
+- [Docker lifecycle collector](docs/DOCKER_LIFECYCLE_COLLECTOR.md)
 - [Falco runtime sensor](docs/FALCO_RUNTIME_SENSOR.md)
 - [Signed sensor events](docs/SIGNED_SENSOR_EVENTS.md)
 - [Security event outbox](docs/SECURITY_EVENT_OUTBOX.md)
@@ -460,7 +477,7 @@ Incidents: http://127.0.0.1:5080/Incidents
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScenario.ps1
 ```
 
-Default scenario не требует Fedora, Falco, Kubernetes или настоящего enrolled runtime sensor. Он использует помеченные synthetic demo data, чтобы показать image scan (`IMG-001`), policy gate (`POL-001`), runtime (`RTE-001`), enforcement доверия сенсоров (`SENSOR-001`/`SENSOR-002`), signed sensor events (`SIGN-001`/`SIGN-002`/`SIGN-003`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence и Security Summary report.
+Default scenario не требует Fedora, Falco, Kubernetes или настоящего enrolled runtime sensor. Он использует помеченные synthetic demo data, чтобы показать image scan (`IMG-001`), policy gate (`POL-001`), Docker lifecycle collector replay, runtime (`RTE-001`), enforcement доверия сенсоров (`SENSOR-001`/`SENSOR-002`), signed sensor events (`SIGN-001`/`SIGN-002`/`SIGN-003`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence и Security Summary report.
 
 ### Конфигурируемые правила SIEM
 
@@ -500,7 +517,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldContainerP
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldDemoReadiness.ps1
 ```
 
-Команда проверяет Git awareness, локальные Docker services, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, defense scenario, Falco replay, Runtime Sensor Health и evidence export. Generated evidence по умолчанию сохраняется в `artifacts/local/demo-readiness-evidence.md`; этот файл нельзя коммитить.
+Команда проверяет Git awareness, локальные Docker services, PostgreSQL, RabbitMQ, MongoDB, demo users, Web, EventConsumer, defense scenario, Docker lifecycle replay, Falco replay, Runtime Sensor Health и evidence export. Generated evidence по умолчанию сохраняется в `artifacts/local/demo-readiness-evidence.md`; этот файл нельзя коммитить.
 
 ### Сброс локальных demo-данных
 
@@ -544,6 +561,10 @@ dotnet run --project .\src\ConShield.Cli -- run protected `
   --no-run `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
+  --from-docker-events-json .\tests\TestData\DockerEvents\container-lifecycle-events.json `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- sensor replay `
   --demo-signature `
   --no-submit
@@ -556,7 +577,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
   --output .\artifacts\local\defense-evidence-cli.md
 ```
 
-Reset требует явный `--confirm`. Live Docker execution остаётся opt-in через существующие safety rules protected-run workflow. Deterministic fixture-команды не требуют real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, certificates, private keys, signing keys или real secrets. Подробности описаны в [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
+Reset требует явный `--confirm`. Live Docker execution остаётся opt-in через существующие safety rules protected-run workflow. Deterministic fixture-команды не требуют real Fedora/Falco, live Docker run или event watching, live Trivy DB/network, external internet, certificates, private keys, signing keys или real secrets. Подробности описаны в [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
 
 ### Image scan CLI
 
@@ -602,6 +623,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldProtecte
 
 Runner применяет решения `Allow` / `Warn` / `Block` из container baseline policy. Без `-Execute` контейнер не запускается. С `-NoRun` контейнер не запускается никогда. `Block` никогда не запускает контейнер, а `Warn` требует одновременно `-AcceptWarning` и `-Execute`. Evidence export включает `Protected Run Evidence`, если доступны policy или launch lifecycle events.
 
+### Docker lifecycle collector
+
+Replay deterministic Docker-compatible lifecycle events без live Docker:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
+  --from-docker-events-json .\tests\TestData\DockerEvents\container-lifecycle-events.json `
+  --no-submit
+```
+
+Collector маппит sanitized fixture events в `SourceSystem=conshield.docker-lifecycle-collector` и `ExternalEventType=container.lifecycle.*` с deterministic external event IDs. Evidence export включает `Docker Lifecycle Collector Evidence`, если matching events доступны. Existing `LIFE-001` / `LIFE-002` behavior остаётся доступным для protected-run и sensor lifecycle paths. Подробности описаны в [`docs/DOCKER_LIFECYCLE_COLLECTOR.md`](docs/DOCKER_LIFECYCLE_COLLECTOR.md).
+
 ### Экспорт evidence для защиты
 
 Выгрузите безопасный Markdown evidence pack в ignored local artifact path:
@@ -611,7 +644,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Export-ConShieldDefenseE
   -OutputMarkdownPath .\artifacts\local\defense-evidence.md
 ```
 
-Exporter выводит только безопасные aggregate и metadata fields. Он включает health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, Protected Run Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation и operator checklists. Он намеренно не выводит raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots или generated reports в source control.
+Exporter выводит только безопасные aggregate и metadata fields. Он включает health, scenario results, SIEM alerts, incidents, Security Events, Image Scan Evidence, Protected Run Evidence, Docker Lifecycle Collector Evidence, outbox/inbox state, Runtime Sensor Evidence, Runtime Sensor Health, demo navigation и operator checklists. Он намеренно не выводит raw event payload JSON, raw `AdditionalDataJson`, secrets, connection strings, API keys, tokens, cookies, local logs, screenshots или generated reports в source control.
 
 Храните generated Markdown under `artifacts/local/` или в другом ignored local path.
 
@@ -737,6 +770,7 @@ gitleaks git --redact --no-banner
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
+- [Docker lifecycle collector](docs/DOCKER_LIFECYCLE_COLLECTOR.md)
 - [Falco runtime sensor](docs/FALCO_RUNTIME_SENSOR.md)
 - [Signed sensor events](docs/SIGNED_SENSOR_EVENTS.md)
 - [Security event outbox](docs/SECURITY_EVENT_OUTBOX.md)

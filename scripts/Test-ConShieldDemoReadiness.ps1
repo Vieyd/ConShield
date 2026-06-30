@@ -512,6 +512,19 @@ try {
         }
     }
 
+    $dockerLifecycle = Invoke-CapturedCommand `
+        -FilePath 'dotnet' `
+        -Arguments @('run', '--project', '.\src\ConShield.Cli', '--', 'lifecycle', 'replay', '--from-docker-events-json', '.\tests\TestData\DockerEvents\container-lifecycle-events.json', '--no-submit') `
+        -WorkingDirectory $repoRoot
+    $dockerLifecycleResult = ($dockerLifecycle.Output | Where-Object { $_ -match '^Result:\s+' } | Select-Object -Last 1)
+    $dockerLifecycleOutput = $dockerLifecycle.Output -join "`n"
+    if ($dockerLifecycle.ExitCode -eq 0 -and $dockerLifecycleResult -match 'PASS' -and $dockerLifecycleOutput -match 'container\.lifecycle\.') {
+        Add-ReadinessCheck -Name 'Docker lifecycle collector fixture' -Status 'PASS' -Detail 'Result: PASS'
+    }
+    else {
+        Add-ReadinessCheck -Name 'Docker lifecycle collector fixture' -Status 'FAIL' -Detail 'lifecycle replay fixture did not return PASS' -Hint 'Run: dotnet run --project .\src\ConShield.Cli -- lifecycle replay --from-docker-events-json .\tests\TestData\DockerEvents\container-lifecycle-events.json --no-submit'
+    }
+
     if ($SkipFalcoReplay) {
         Add-ReadinessCheck -Name 'Falco replay' -Status 'SKIP' -Detail 'requested by -SkipFalcoReplay'
     }

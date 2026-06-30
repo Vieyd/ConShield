@@ -484,6 +484,9 @@ $tables = @{
     ProtectedRunLaunches = @()
     ProtectedRunPolicies = @()
     ProtectedRunRules = @()
+    DockerLifecycleSummary = @()
+    DockerLifecycleLatest = @()
+    DockerLifecycleLifeRules = @()
     ContainerPolicyDecisions = @()
     ContainerPolicyPolAlerts = @()
     SensorTrustEnforcementAlerts = @()
@@ -523,6 +526,9 @@ if (-not [string]::IsNullOrWhiteSpace($databaseLink)) {
         $tables.ProtectedRunLaunches = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.container-runtime'' and coalesce("ExternalEventType", '''') = ''container.image.launch.result'' order by "OccurredAtUtc" desc limit 10;')
         $tables.ProtectedRunPolicies = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.container-guard'' and coalesce("ExternalEventType", '''') = ''container.image.policy.evaluated'' order by "OccurredAtUtc" desc limit 10;')
         $tables.ProtectedRunRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" in (''IMG-001'', ''POL-001'', ''LIFE-001'') group by "RuleCode" order by "RuleCode";')
+        $tables.DockerLifecycleSummary = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", count(*)::int as "Count", max("OccurredAtUtc") as "LatestOccurredAtUtc" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.docker-lifecycle-collector'' or coalesce("ExternalEventType", '''') like ''container.lifecycle.%'' group by coalesce("SourceSystem", ''''), coalesce("ExternalEventType", '''') order by max("OccurredAtUtc") desc limit 10;')
+        $tables.DockerLifecycleLatest = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.docker-lifecycle-collector'' or coalesce("ExternalEventType", '''') like ''container.lifecycle.%'' order by "OccurredAtUtc" desc limit 10;')
+        $tables.DockerLifecycleLifeRules = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" in (''LIFE-001'', ''LIFE-002'') group by "RuleCode" order by "RuleCode";')
         $tables.ContainerPolicyDecisions = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "Id", "OccurredAtUtc", "Severity"::text as "Severity", coalesce("SourceSystem", '''') as "SourceSystem", coalesce("ExternalEventType", '''') as "ExternalEventType", "Description" from "SecurityEvents" where coalesce("SourceSystem", '''') = ''conshield.container-guard'' and coalesce("ExternalEventType", '''') = ''container.image.policy.evaluated'' order by "OccurredAtUtc" desc limit 10;')
         $tables.ContainerPolicyPolAlerts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" = ''POL-001'' group by "RuleCode";')
         $tables.SensorTrustEnforcementAlerts = @(Invoke-SafeQuery -DatabaseLink $databaseLink -Sql 'select "RuleCode", count(*)::int as "Count", max("CreatedAtUtc") as "LatestCreatedAtUtc" from "SiemAlerts" where "RuleCode" in (''SENSOR-001'', ''SENSOR-002'') group by "RuleCode" order by "RuleCode";')
@@ -702,9 +708,34 @@ else {
     $lines.Add('') | Out-Null
     Add-MarkdownTable -Lines $lines -Headers @('RuleCode', 'Count', 'LatestCreatedAtUtc') -Rows $tables.ProtectedRunRules
     $lines.Add('') | Out-Null
-    $lines.Add('- Protected run path: image scan → policy decision → launch lifecycle result.') | Out-Null
+$lines.Add('- Protected run path: image scan → policy decision → launch lifecycle result.') | Out-Null
     $lines.Add('- Related evidence uses safe descriptions only; raw Trivy JSON, raw payloads, raw Docker logs, and local artifacts are excluded.') | Out-Null
 }
+$lines.Add('') | Out-Null
+
+$lines.Add('## Docker Lifecycle Collector Evidence') | Out-Null
+$lines.Add('') | Out-Null
+$lines.Add('Docker Lifecycle Collector v1 replays deterministic Docker-compatible fixture events into sanitized `container.lifecycle.*` security events. It does not require live Docker in CI and excludes raw Docker event JSON, raw payloads, Docker logs, environment values, and host-sensitive mount paths.') | Out-Null
+$lines.Add('') | Out-Null
+if (@($tables.DockerLifecycleSummary).Count -eq 0) {
+    $lines.Add('No Docker lifecycle collector events were found in the current evidence window.') | Out-Null
+}
+else {
+    $lines.Add('### Lifecycle event summary') | Out-Null
+    $lines.Add('') | Out-Null
+    Add-MarkdownTable -Lines $lines -Headers @('SourceSystem', 'ExternalEventType', 'Count', 'LatestOccurredAtUtc') -Rows $tables.DockerLifecycleSummary
+    $lines.Add('') | Out-Null
+    $lines.Add('### Latest lifecycle events') | Out-Null
+    $lines.Add('') | Out-Null
+    Add-MarkdownTable -Lines $lines -Headers @('Id', 'OccurredAtUtc', 'Severity', 'ExternalEventType', 'Description') -Rows $tables.DockerLifecycleLatest
+}
+$lines.Add('') | Out-Null
+$lines.Add('### Existing LIFE rules') | Out-Null
+$lines.Add('') | Out-Null
+Add-MarkdownTable -Lines $lines -Headers @('RuleCode', 'Count', 'LatestCreatedAtUtc') -Rows $tables.DockerLifecycleLifeRules
+$lines.Add('') | Out-Null
+$lines.Add('- Existing `LIFE-001` / `LIFE-002` correlation behavior remains available for protected-run and sensor lifecycle paths; Docker lifecycle collector events are emitted through the same external ingestion surface with deterministic IDs.') | Out-Null
+$lines.Add('- Local replay command: `dotnet run --project .\src\ConShield.Cli -- lifecycle replay --from-docker-events-json .\tests\TestData\DockerEvents\container-lifecycle-events.json --no-submit`.') | Out-Null
 $lines.Add('') | Out-Null
 
 $lines.Add('## Container Policy Evidence') | Out-Null
