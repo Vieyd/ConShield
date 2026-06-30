@@ -303,14 +303,15 @@ http://127.0.0.1:5080/Demo
 
 ## 18. README/docs consistency
 
-- Purpose: keep bilingual README and docs aligned with the current command surface.
+- Purpose: keep bilingual README, docs links, and product-positioning material aligned with the current command surface.
 - Commands:
 
 ```powershell
 dotnet test .\ConShield.sln --configuration Release --no-build --filter FullIntegrationContractTests
+dotnet test .\ConShield.sln --configuration Release --no-build --filter ProductPositioningDocsTests
 ```
 
-- Expected result: contract tests pass; README keeps English first and Russian second; README docs links point to existing files.
+- Expected result: contract tests pass; README keeps English first and Russian second; README docs links point to existing files; positioning docs exist and avoid overclaim wording.
 - CI-safe: yes.
 - Web/API required: no.
 - Docker/Falco/Trivy network required: no.
@@ -353,6 +354,10 @@ Use the feature-specific operational docs for these checks when needed:
 - [`CONTAINER_POLICY.md`](CONTAINER_POLICY.md)
 - [`CICD_CONTAINER_GATE.md`](CICD_CONTAINER_GATE.md)
 - [`DOCKER_LIFECYCLE_COLLECTOR.md`](DOCKER_LIFECYCLE_COLLECTOR.md)
+- [`PRODUCT_POSITIONING.md`](PRODUCT_POSITIONING.md)
+- [`COMPETITIVE_ANALYSIS.md`](COMPETITIVE_ANALYSIS.md)
+- [`DIPLOMA_DEFENSE_NARRATIVE.md`](DIPLOMA_DEFENSE_NARRATIVE.md)
+- [`ROADMAP_TO_PRODUCTION.md`](ROADMAP_TO_PRODUCTION.md)
 
 ## Known follow-up work
 

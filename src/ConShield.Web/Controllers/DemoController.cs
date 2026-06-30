@@ -64,7 +64,8 @@ public sealed class DemoController : Controller
         new(18, "Open Runtime Sensor Health", "Review runtime/Falco source health, trust, enforcement, and signature status derived from events and registry.", "/RuntimeSensors", "RuntimeSensors", "Index", "Runtime sensor health renders trust, enforcement, and signature status."),
         new(19, "Export defense evidence", "Create the safe Markdown evidence pack in ignored local artifacts.", "PowerShell command", null, null, "Evidence export prints Result: PASS."),
         new(20, "Run demo readiness check", "Verify the full local demo path before defense.", "PowerShell command", null, null, "Readiness check prints Result: PASS."),
-        new(21, "Create demo release pack", "Publish the CLI and collect safe docs/config/scripts into a local ignored release bundle.", "PowerShell command", null, null, "Release pack prints Result: PASS and writes under artifacts/local.")
+        new(21, "Create demo release pack", "Publish the CLI and collect safe docs/config/scripts into a local ignored release bundle.", "PowerShell command", null, null, "Release pack prints Result: PASS and writes under artifacts/local."),
+        new(22, "Review product positioning docs", "Use the positioning, competitive analysis, and diploma narrative docs to explain why ConShield is an integrated local control plane, not a scanner-only wrapper.", "Documentation", null, null, "Docs explain scope, limitations, and roadmap conservatively.")
     ];
 
     private static IReadOnlyList<DemoWalkthroughCommandViewModel> BuildCommands() =>
@@ -79,6 +80,7 @@ public sealed class DemoController : Controller
         new("Unified CLI evidence export", "dotnet run --project .\\src\\ConShield.Cli -- evidence export `\n  --output .\\artifacts\\local\\defense-evidence-cli.md", "Exports safe evidence to ignored local artifacts when local services are available."),
         new("Unified CLI readiness", "dotnet run --project .\\src\\ConShield.Cli -- demo readiness", "Runs the existing readiness workflow through the unified CLI."),
         new("Create demo release pack", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\New-ConShieldDemoReleasePack.ps1", "Publishes ConShield.Cli and creates a safe local release folder plus zip under ignored artifacts/local."),
+        new("Read product positioning docs", "docs\\PRODUCT_POSITIONING.md; docs\\COMPETITIVE_ANALYSIS.md; docs\\DIPLOMA_DEFENSE_NARRATIVE.md", "Use these docs for defense wording, comparison matrix, limitations, and roadmap."),
         new("Start local stack", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\Start-ConShield.ps1 -StartApps -OpenRabbit", "Docker services, Web, EventConsumer, and RabbitMQ UI are available."),
         new("Reset local demo data preview", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Reset-ConShieldLocalDemoData.ps1 -WhatIf", "Dry-run prints counts and Result: DRY-RUN."),
         new("Reset local demo data", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Reset-ConShieldLocalDemoData.ps1 -ConfirmReset", "Confirmed reset prints Result: PASS."),

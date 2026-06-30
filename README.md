@@ -420,6 +420,10 @@ For docs-only changes, proportional checks such as `git diff --check`, README li
 ### Documentation
 
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
+- [Product positioning](docs/PRODUCT_POSITIONING.md)
+- [Competitive analysis](docs/COMPETITIVE_ANALYSIS.md)
+- [Diploma defense narrative](docs/DIPLOMA_DEFENSE_NARRATIVE.md)
+- [Roadmap to production](docs/ROADMAP_TO_PRODUCTION.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
 - [Full validation checklist](docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md)
@@ -859,6 +863,10 @@ gitleaks git --redact --no-banner
 ### Документация
 
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
+- [Позиционирование продукта](docs/PRODUCT_POSITIONING.md)
+- [Конкурентный анализ](docs/COMPETITIVE_ANALYSIS.md)
+- [Нарратив для защиты диплома](docs/DIPLOMA_DEFENSE_NARRATIVE.md)
+- [Roadmap к production](docs/ROADMAP_TO_PRODUCTION.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
 - [Full validation checklist](docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md)
