@@ -70,6 +70,11 @@ The pack is allowlist-based. It includes:
   - `SECURITY_REQUIREMENTS.md`;
   - `REQUIREMENTS_TRACEABILITY_MATRIX.md`;
   - `RESIDUAL_RISKS.md`;
+  - `ARCHITECTURE.md`;
+  - `ARCHITECTURE_DIAGRAMS.md`;
+  - `DATA_FLOW_MODEL.md`;
+  - `DEPLOYMENT_VIEW.md`;
+  - `SEQUENCE_FLOWS.md`;
   - `RELEASE_AND_DEMO_PACKAGING.md`;
   - `CONSHIELD_FULL_VALIDATION_CHECKLIST.md`;
   - `CONSHIELD_CLI.md`;
@@ -138,6 +143,8 @@ The release pack includes concise defense and positioning docs:
 - [ROADMAP_TO_PRODUCTION.md](ROADMAP_TO_PRODUCTION.md) lists realistic hardening work without claiming the local prototype already covers enterprise production scope.
 
 The pack also includes [THREAT_MODEL.md](THREAT_MODEL.md), [ATTACKER_SCENARIOS.md](ATTACKER_SCENARIOS.md), [SECURITY_REQUIREMENTS.md](SECURITY_REQUIREMENTS.md), [REQUIREMENTS_TRACEABILITY_MATRIX.md](REQUIREMENTS_TRACEABILITY_MATRIX.md), and [RESIDUAL_RISKS.md](RESIDUAL_RISKS.md) so a reviewer can trace threats to requirements, modules, commands, SIEM rules, evidence, and tests.
+
+Architecture and data-flow explanation are included through [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_DIAGRAMS.md](ARCHITECTURE_DIAGRAMS.md), [DATA_FLOW_MODEL.md](DATA_FLOW_MODEL.md), [DEPLOYMENT_VIEW.md](DEPLOYMENT_VIEW.md), and [SEQUENCE_FLOWS.md](SEQUENCE_FLOWS.md). The diagrams are Mermaid in Markdown, not generated binary images.
 
 ## Start Web GUI for demo
 

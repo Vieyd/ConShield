@@ -11,6 +11,8 @@ image scan -> policy gate -> CI/CD gate -> protected run -> Docker lifecycle/run
 
 It does not claim enterprise production coverage. The model is threat-informed and uses ATT&CK-style reasoning: adversary behavior is grouped into initial access, execution, defense evasion, impact, and detection/response gaps, but the current artifact stays focused on implemented ConShield workflows.
 
+Architecture and data-flow views are documented in [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_DIAGRAMS.md](ARCHITECTURE_DIAGRAMS.md), [DATA_FLOW_MODEL.md](DATA_FLOW_MODEL.md), [DEPLOYMENT_VIEW.md](DEPLOYMENT_VIEW.md), and [SEQUENCE_FLOWS.md](SEQUENCE_FLOWS.md).
+
 ## Protected assets
 
 - Container images and normalized scan results.

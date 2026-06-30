@@ -26,6 +26,8 @@ For diploma or stakeholder explanation, use [PRODUCT_POSITIONING.md](PRODUCT_POS
 
 For security foundation and traceability, use [THREAT_MODEL.md](THREAT_MODEL.md), [ATTACKER_SCENARIOS.md](ATTACKER_SCENARIOS.md), [SECURITY_REQUIREMENTS.md](SECURITY_REQUIREMENTS.md), [REQUIREMENTS_TRACEABILITY_MATRIX.md](REQUIREMENTS_TRACEABILITY_MATRIX.md), and [RESIDUAL_RISKS.md](RESIDUAL_RISKS.md). The traceability matrix links threats, attacker scenarios, requirement IDs, modules, CLI/scripts, SIEM rules, evidence sections, and tests.
 
+For architecture explanation, use [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_DIAGRAMS.md](ARCHITECTURE_DIAGRAMS.md), [DATA_FLOW_MODEL.md](DATA_FLOW_MODEL.md), [DEPLOYMENT_VIEW.md](DEPLOYMENT_VIEW.md), and [SEQUENCE_FLOWS.md](SEQUENCE_FLOWS.md). These docs describe components, Mermaid diagrams, trust boundaries, DFD levels, local endpoints, and key sequences.
+
 ## Unified CLI shortcuts
 
 The existing PowerShell scripts remain the source of truth, but local operators can also use the unified CLI wrapper:

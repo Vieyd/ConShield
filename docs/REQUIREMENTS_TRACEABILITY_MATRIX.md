@@ -2,6 +2,8 @@
 
 This matrix maps threat scenarios to requirements, implemented repository elements, commands, SIEM/config IDs, evidence, and tests.
 
+Architecture views that explain the same paths visually are [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_DIAGRAMS.md](ARCHITECTURE_DIAGRAMS.md), [DATA_FLOW_MODEL.md](DATA_FLOW_MODEL.md), [DEPLOYMENT_VIEW.md](DEPLOYMENT_VIEW.md), and [SEQUENCE_FLOWS.md](SEQUENCE_FLOWS.md).
+
 | Requirement ID | Requirement summary | Threat/scenario IDs | Implemented by | Config/rule IDs | CLI/script command | Tests | Evidence/demo output | Status |
 |---|---|---|---|---|---|---|---|---|
 | REQ-IMG-001 | Image scan results must be normalized into security events | AS-001 | `ConShield.ImageScanner`, external event ingestion | `IMG-001`, `conshield.image-scanner` | `dotnet run --project .\src\ConShield.Cli -- scan image --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json --no-submit` | `ImageScanCliScriptTests`, `ImageScannerParserTests` | Image Scan Evidence, IMG SIEM alert path | Implemented |

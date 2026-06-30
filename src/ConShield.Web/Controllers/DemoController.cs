@@ -66,7 +66,8 @@ public sealed class DemoController : Controller
         new(20, "Run demo readiness check", "Verify the full local demo path before defense.", "PowerShell command", null, null, "Readiness check prints Result: PASS."),
         new(21, "Create demo release pack", "Publish the CLI and collect safe docs/config/scripts into a local ignored release bundle.", "PowerShell command", null, null, "Release pack prints Result: PASS and writes under artifacts/local."),
         new(22, "Review product positioning docs", "Use the positioning, competitive analysis, and diploma narrative docs to explain why ConShield is an integrated local control plane, not a scanner-only wrapper.", "Documentation", null, null, "Docs explain scope, limitations, and roadmap conservatively."),
-        new(23, "Review threat model and traceability", "Use the threat model, attacker scenarios, security requirements, and traceability matrix to explain what is in scope and how it is verified.", "Documentation", null, null, "Docs map threats to requirements, modules, SIEM rules, evidence, and tests.")
+        new(23, "Review threat model and traceability", "Use the threat model, attacker scenarios, security requirements, and traceability matrix to explain what is in scope and how it is verified.", "Documentation", null, null, "Docs map threats to requirements, modules, SIEM rules, evidence, and tests."),
+        new(24, "Review architecture and data-flow diagrams", "Use the architecture, Mermaid diagrams, data flow model, deployment view, and sequence flows to explain components and boundaries.", "Documentation", null, null, "Docs show system context, components, trust boundaries, DFD levels, deployment, and sequences.")
     ];
 
     private static IReadOnlyList<DemoWalkthroughCommandViewModel> BuildCommands() =>
@@ -83,6 +84,7 @@ public sealed class DemoController : Controller
         new("Create demo release pack", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\New-ConShieldDemoReleasePack.ps1", "Publishes ConShield.Cli and creates a safe local release folder plus zip under ignored artifacts/local."),
         new("Read product positioning docs", "docs\\PRODUCT_POSITIONING.md; docs\\COMPETITIVE_ANALYSIS.md; docs\\DIPLOMA_DEFENSE_NARRATIVE.md", "Use these docs for defense wording, comparison matrix, limitations, and roadmap."),
         new("Read threat model docs", "docs\\THREAT_MODEL.md; docs\\ATTACKER_SCENARIOS.md; docs\\SECURITY_REQUIREMENTS.md; docs\\REQUIREMENTS_TRACEABILITY_MATRIX.md", "Trace threats to scenarios, requirement IDs, modules, CLI/scripts, SIEM rules, evidence, and tests."),
+        new("Read architecture docs", "docs\\ARCHITECTURE.md; docs\\ARCHITECTURE_DIAGRAMS.md; docs\\DATA_FLOW_MODEL.md; docs\\DEPLOYMENT_VIEW.md; docs\\SEQUENCE_FLOWS.md", "Use Mermaid diagrams and DFDs to explain system context, components, trust boundaries, deployment, and sequences."),
         new("Start local stack", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\Start-ConShield.ps1 -StartApps -OpenRabbit", "Docker services, Web, EventConsumer, and RabbitMQ UI are available."),
         new("Reset local demo data preview", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Reset-ConShieldLocalDemoData.ps1 -WhatIf", "Dry-run prints counts and Result: DRY-RUN."),
         new("Reset local demo data", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Reset-ConShieldLocalDemoData.ps1 -ConfirmReset", "Confirmed reset prints Result: PASS."),

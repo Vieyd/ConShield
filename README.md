@@ -420,6 +420,11 @@ For docs-only changes, proportional checks such as `git diff --check`, README li
 ### Documentation
 
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
+- [System architecture](docs/ARCHITECTURE.md)
+- [Architecture diagrams](docs/ARCHITECTURE_DIAGRAMS.md)
+- [Data flow model](docs/DATA_FLOW_MODEL.md)
+- [Deployment view](docs/DEPLOYMENT_VIEW.md)
+- [Sequence flows](docs/SEQUENCE_FLOWS.md)
 - [Product positioning](docs/PRODUCT_POSITIONING.md)
 - [Competitive analysis](docs/COMPETITIVE_ANALYSIS.md)
 - [Diploma defense narrative](docs/DIPLOMA_DEFENSE_NARRATIVE.md)
@@ -868,6 +873,11 @@ gitleaks git --redact --no-banner
 ### Документация
 
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
+- [System architecture](docs/ARCHITECTURE.md)
+- [Architecture diagrams](docs/ARCHITECTURE_DIAGRAMS.md)
+- [Data flow model](docs/DATA_FLOW_MODEL.md)
+- [Deployment view](docs/DEPLOYMENT_VIEW.md)
+- [Sequence flows](docs/SEQUENCE_FLOWS.md)
 - [Позиционирование продукта](docs/PRODUCT_POSITIONING.md)
 - [Конкурентный анализ](docs/COMPETITIVE_ANALYSIS.md)
 - [Нарратив для защиты диплома](docs/DIPLOMA_DEFENSE_NARRATIVE.md)

@@ -310,9 +310,10 @@ http://127.0.0.1:5080/Demo
 dotnet test .\ConShield.sln --configuration Release --no-build --filter FullIntegrationContractTests
 dotnet test .\ConShield.sln --configuration Release --no-build --filter ProductPositioningDocsTests
 dotnet test .\ConShield.sln --configuration Release --no-build --filter ThreatModelRequirementsDocsTests
+dotnet test .\ConShield.sln --configuration Release --no-build --filter ArchitectureDocsTests
 ```
 
-- Expected result: contract tests pass; README keeps English first and Russian second; README docs links point to existing files; positioning and traceability docs exist and avoid overclaim wording.
+- Expected result: contract tests pass; README keeps English first and Russian second; README docs links point to existing files; positioning, traceability, architecture, diagram, deployment, and DFD docs exist and avoid overclaim wording.
 - CI-safe: yes.
 - Web/API required: no.
 - Docker/Falco/Trivy network required: no.
@@ -364,6 +365,11 @@ Use the feature-specific operational docs for these checks when needed:
 - [`SECURITY_REQUIREMENTS.md`](SECURITY_REQUIREMENTS.md)
 - [`REQUIREMENTS_TRACEABILITY_MATRIX.md`](REQUIREMENTS_TRACEABILITY_MATRIX.md)
 - [`RESIDUAL_RISKS.md`](RESIDUAL_RISKS.md)
+- [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`ARCHITECTURE_DIAGRAMS.md`](ARCHITECTURE_DIAGRAMS.md)
+- [`DATA_FLOW_MODEL.md`](DATA_FLOW_MODEL.md)
+- [`DEPLOYMENT_VIEW.md`](DEPLOYMENT_VIEW.md)
+- [`SEQUENCE_FLOWS.md`](SEQUENCE_FLOWS.md)
 
 ## Known follow-up work
 
