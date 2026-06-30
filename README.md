@@ -157,6 +157,16 @@ http://127.0.0.1:5080/Demo
 
 The page is read-only. It shows the demo order, safe PowerShell commands, current counts, and links to Security Summary, Security Events, SIEM, Incidents, and Runtime Sensor Health. It does not execute scripts from the browser and does not display secrets, raw payloads, logs, or generated local artifacts.
 
+### Demo release packaging
+
+Create a local demo release pack with the published CLI, safe docs, default configs, validation scripts, and a release README:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoReleasePack.ps1
+```
+
+The pack is generated under `artifacts/local/conshield-demo-release-pack` with an archive at `artifacts/local/conshield-demo-release-pack.zip`; both paths are ignored by Git. The packaging command excludes secrets, local overrides, generated evidence, logs, screenshots, raw payloads, and nested local artifacts. Details are documented in [`docs/RELEASE_AND_DEMO_PACKAGING.md`](docs/RELEASE_AND_DEMO_PACKAGING.md).
+
 ### Unified ConShield CLI
 
 `ConShield.Cli` provides one local entry point for the existing safe scripts. The scripts remain available and are not replaced.
@@ -387,6 +397,8 @@ Common local checks:
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
 
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoReleasePack.ps1
+
 dotnet restore
 dotnet build -c Release --no-restore
 dotnet test -c Release --no-build
@@ -411,6 +423,7 @@ For docs-only changes, proportional checks such as `git diff --check`, README li
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
 - [Full validation checklist](docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md)
+- [Release and demo packaging](docs/RELEASE_AND_DEMO_PACKAGING.md)
 - [CI/CD container gate](docs/CICD_CONTAINER_GATE.md)
 - [Docker lifecycle collector](docs/DOCKER_LIFECYCLE_COLLECTOR.md)
 - [Falco runtime sensor](docs/FALCO_RUNTIME_SENSOR.md)
@@ -582,6 +595,16 @@ http://127.0.0.1:5080/Demo
 ```
 
 Страница только для чтения: она показывает порядок демонстрации, безопасные PowerShell-команды, текущие счётчики и ссылки на Security Summary, Security Events, SIEM, Incidents и Runtime Sensor Health. Она не запускает scripts из браузера и не показывает secrets, raw payloads, logs или generated local artifacts.
+
+### Упаковка demo release
+
+Создайте локальный demo release pack с опубликованным CLI, безопасной документацией, default configs, validation scripts и release README:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoReleasePack.ps1
+```
+
+Pack создаётся в `artifacts/local/conshield-demo-release-pack`, архив — в `artifacts/local/conshield-demo-release-pack.zip`; оба пути игнорируются Git. Команда упаковки исключает secrets, local overrides, generated evidence, logs, screenshots, raw payloads и nested local artifacts. Подробности описаны в [`docs/RELEASE_AND_DEMO_PACKAGING.md`](docs/RELEASE_AND_DEMO_PACKAGING.md).
 
 ### Единый ConShield CLI
 
@@ -813,6 +836,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldSensorRegi
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
 
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoReleasePack.ps1
+
 dotnet restore
 dotnet build -c Release --no-restore
 dotnet test -c Release --no-build
@@ -837,6 +862,7 @@ gitleaks git --redact --no-banner
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
 - [Full validation checklist](docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md)
+- [Release and demo packaging](docs/RELEASE_AND_DEMO_PACKAGING.md)
 - [CI/CD container gate](docs/CICD_CONTAINER_GATE.md)
 - [Docker lifecycle collector](docs/DOCKER_LIFECYCLE_COLLECTOR.md)
 - [Falco runtime sensor](docs/FALCO_RUNTIME_SENSOR.md)

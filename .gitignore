@@ -49,6 +49,10 @@ trivy
 # Generated/cache files
 *.cache
 artifacts/local/
+artifacts/local/conshield-demo-release-pack/
+artifacts/local/conshield-demo-release-pack*.zip
+artifacts/local/conshieldctl/
+artifacts/local/publish/
 TestResults/
 coverage/
 *.tmp

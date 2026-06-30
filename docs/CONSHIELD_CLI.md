@@ -13,6 +13,8 @@ dotnet run --project .\src\ConShield.Cli -- validate
 
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
 
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoReleasePack.ps1
+
 dotnet run --project .\src\ConShield.Cli -- demo readiness
 
 dotnet run --project .\src\ConShield.Cli -- demo reset --confirm
@@ -70,6 +72,16 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValida
 ```
 
 The default mode validates repository contracts, config files, CLI commands, scripts, deterministic fixtures, `/Demo` command coverage, evidence sections, and security guardrails. It does not require live Web/API, live Docker execution, live Trivy DB/network, real Fedora/Falco, external internet, browser login, real certificates, private keys, signing keys, or real secrets. The complete checklist is in [CONSHIELD_FULL_VALIDATION_CHECKLIST.md](CONSHIELD_FULL_VALIDATION_CHECKLIST.md).
+
+## Demo release packaging
+
+Create a local gitignored release pack with the published CLI, safe docs, default configs, validation scripts, and a generated release README:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoReleasePack.ps1
+```
+
+The output folder is `artifacts/local/conshield-demo-release-pack`, and the default archive is `artifacts/local/conshield-demo-release-pack.zip`. Packaging is script-based in v1; the CLI command surface is unchanged. Details are in [RELEASE_AND_DEMO_PACKAGING.md](RELEASE_AND_DEMO_PACKAGING.md).
 
 ## Safety rules
 

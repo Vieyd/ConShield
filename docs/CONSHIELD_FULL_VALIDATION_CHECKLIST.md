@@ -35,9 +35,10 @@ git status --short
 dotnet --version
 pwsh -NoProfile -Command '$PSVersionTable.PSVersion'
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValidation.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoReleasePack.ps1
 ```
 
-- Expected result: clean or understood git state; .NET and PowerShell are available; full validation prints `Result: PASS`.
+- Expected result: clean or understood git state; .NET and PowerShell are available; full validation prints `Result: PASS`; packaging creates `artifacts/local/conshield-demo-release-pack` and `artifacts/local/conshield-demo-release-pack.zip`.
 - CI-safe: yes.
 - Web/API required: no.
 - Docker/Falco/Trivy network required: no.
@@ -325,7 +326,7 @@ gitleaks protect --staged --redact --no-banner
 git diff --check
 ```
 
-- Expected result: no leaks, no staged leaks, no whitespace errors; `.gitignore` protects `artifacts/local/`, logs, env files, local appsettings, and build outputs.
+- Expected result: no leaks, no staged leaks, no whitespace errors; `.gitignore` protects `artifacts/local/`, `artifacts/local/conshield-demo-release-pack/`, `artifacts/local/conshield-demo-release-pack*.zip`, published CLI outputs, logs, env files, local appsettings, and build outputs.
 - CI-safe: yes.
 - Web/API required: no.
 - Docker/Falco/Trivy network required: no.

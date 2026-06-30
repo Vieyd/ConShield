@@ -14,6 +14,14 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ConShieldFullValida
 
 It checks repository contracts, config validation, CLI wrappers, fixture workflows, `/Demo`, evidence sections, and security guardrails without requiring Web/API, live Docker execution, live Trivy DB/network, real Fedora/Falco, external internet, real certificates, private keys, signing keys, or real secrets. Use [CONSHIELD_FULL_VALIDATION_CHECKLIST.md](CONSHIELD_FULL_VALIDATION_CHECKLIST.md) as the detailed audit checklist.
 
+To create a local handoff bundle after validation, run:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoReleasePack.ps1
+```
+
+The release pack is written under ignored `artifacts/local/conshield-demo-release-pack` with a zip archive next to it. It includes the published CLI, safe docs, default configs, selected helper scripts, and a release README. It excludes local overrides, generated evidence, logs, screenshots, raw payloads, nested local artifacts, and secrets. See [RELEASE_AND_DEMO_PACKAGING.md](RELEASE_AND_DEMO_PACKAGING.md).
+
 ## Unified CLI shortcuts
 
 The existing PowerShell scripts remain the source of truth, but local operators can also use the unified CLI wrapper:
@@ -385,7 +393,8 @@ If the local Web app is running, omit `-SkipWebChecks` to check unauthenticated 
 Apply is explicit and local/dev/demo only:
 
 ```powershell
-$env:CONSHIELD_DEMO_CONNECTION_STRING = "Host=127.0.0.1;Port=5432;Database=conshield;Username=conshield;Password=<local-dev-password>"
+# Set CONSHIELD_DEMO_CONNECTION_STRING from an ignored local file or user-secret source.
+# Do not paste or print the actual value in terminals, screenshots, PRs, logs, or chat.
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Validate-DemoScenario.ps1 -Scenario full-demo -Apply
 ```
 
