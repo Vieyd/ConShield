@@ -29,6 +29,7 @@ internal static class Program
                 "validate" => await RunValidateAsync(repoRoot, args[1..]),
                 "demo" => await RunDemoAsync(repoRoot, args[1..]),
                 "scan" => await RunScanAsync(repoRoot, args[1..]),
+                "gate" => await RunGateAsync(repoRoot, args[1..]),
                 "run" => await RunProtectedRunAsync(repoRoot, args[1..]),
                 "sensor" => await RunSensorAsync(repoRoot, args[1..]),
                 "lifecycle" => await RunLifecycleAsync(repoRoot, args[1..]),
@@ -140,6 +141,20 @@ internal static class Program
             new OptionSpec("--timeout-seconds", "-TimeoutSeconds", RequiresValue: true));
 
         return await RunScriptCommandAsync(repoRoot, "scan image", "Invoke-ConShieldImageScan.ps1", mapped);
+    }
+
+    private static Task<int> RunGateAsync(string repoRoot, string[] args)
+    {
+        if (args.Length == 0 || IsHelp(args[0]))
+        {
+            PrintGateHelp();
+            return Task.FromResult(Success);
+        }
+
+        if (!args[0].Equals("image", StringComparison.OrdinalIgnoreCase))
+            return Task.FromResult(FailUsage($"Unknown gate command: {Safe(args[0])}"));
+
+        return Task.FromResult(CicdContainerGate.RunImageGate(repoRoot, args[1..], Console.Out, Console.Error));
     }
 
     private static async Task<int> RunProtectedRunAsync(string repoRoot, string[] args)
@@ -450,6 +465,7 @@ internal static class Program
         Console.WriteLine("  demo readiness");
         Console.WriteLine("  demo reset");
         Console.WriteLine("  scan image");
+        Console.WriteLine("  gate image");
         Console.WriteLine("  run protected");
         Console.WriteLine("  sensor replay");
         Console.WriteLine("  lifecycle replay");
@@ -458,6 +474,7 @@ internal static class Program
         Console.WriteLine("Examples:");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- validate");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- scan image --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json --no-submit");
+        Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- gate image --image demo/insecure-api:latest --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json --fail-on never --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- run protected --image demo/insecure-api:latest --container-name conshield-demo-insecure --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json --no-run --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- sensor replay --demo-signature --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- lifecycle replay --from-docker-events-json .\\tests\\TestData\\DockerEvents\\container-lifecycle-events.json --no-submit");
@@ -474,6 +491,13 @@ internal static class Program
     {
         Console.WriteLine("Scan commands:");
         Console.WriteLine("  scan image --from-trivy-json <path> --no-submit");
+    }
+
+    private static void PrintGateHelp()
+    {
+        Console.WriteLine("Gate commands:");
+        Console.WriteLine("  gate image --image <image> --from-trivy-json <path> --fail-on block|warn|never --report <path> --no-submit");
+        Console.WriteLine("  Exit codes: 0=passed, 1=failed by policy, 2=usage/input error, 3=infrastructure error.");
     }
 
     private static void PrintRunHelp()

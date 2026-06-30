@@ -162,6 +162,13 @@ dotnet run --project .\src\ConShield.Cli -- scan image `
   --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image demo/insecure-api:latest `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --fail-on never `
+  --report .\artifacts\local\cicd-gate-report.md `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- run protected `
   --image demo/insecure-api:latest `
   --container-name conshield-demo-insecure `
@@ -186,6 +193,21 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 ```
 
 Reset requires explicit `--confirm`. Live Docker execution remains opt-in through the existing protected-run safety rules. Deterministic fixture commands do not require real Fedora/Falco, live Docker run or event watching, live Trivy DB/network, external internet, certificates, private keys, signing keys, or real secrets. Details are documented in [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
+
+### CI/CD container gate
+
+Run the deterministic gate without live Trivy DB/network or Docker execution:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image demo/insecure-api:latest `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --fail-on never `
+  --report .\artifacts\local\cicd-gate-report.md `
+  --no-submit
+```
+
+The gate evaluates scan fixtures against `config/container-policy.default.json`, prints `Allow` / `Warn` / `Block`, and returns deterministic CI exit codes: `0` passed, `1` failed by policy, `2` usage/input/config error, `3` infrastructure error. `Block` fails with `--fail-on block`; `Warn` fails only with `--fail-on warn`; `--fail-on never` reports findings without failing. Details and a GitHub Actions snippet are documented in [`docs/CICD_CONTAINER_GATE.md`](docs/CICD_CONTAINER_GATE.md).
 
 ### Image scan CLI
 
@@ -378,6 +400,7 @@ For docs-only changes, proportional checks such as `git diff --check`, README li
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
+- [CI/CD container gate](docs/CICD_CONTAINER_GATE.md)
 - [Docker lifecycle collector](docs/DOCKER_LIFECYCLE_COLLECTOR.md)
 - [Falco runtime sensor](docs/FALCO_RUNTIME_SENSOR.md)
 - [Signed sensor events](docs/SIGNED_SENSOR_EVENTS.md)
@@ -554,6 +577,13 @@ dotnet run --project .\src\ConShield.Cli -- scan image `
   --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image demo/insecure-api:latest `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --fail-on never `
+  --report .\artifacts\local\cicd-gate-report.md `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- run protected `
   --image demo/insecure-api:latest `
   --container-name conshield-demo-insecure `
@@ -578,6 +608,21 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 ```
 
 Reset требует явный `--confirm`. Live Docker execution остаётся opt-in через существующие safety rules protected-run workflow. Deterministic fixture-команды не требуют real Fedora/Falco, live Docker run или event watching, live Trivy DB/network, external internet, certificates, private keys, signing keys или real secrets. Подробности описаны в [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
+
+### CI/CD container gate
+
+Запустите deterministic gate без live Trivy DB/network или Docker execution:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image demo/insecure-api:latest `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --fail-on never `
+  --report .\artifacts\local\cicd-gate-report.md `
+  --no-submit
+```
+
+Gate оценивает scan fixtures через `config/container-policy.default.json`, печатает `Allow` / `Warn` / `Block` и возвращает deterministic CI exit codes: `0` passed, `1` failed by policy, `2` usage/input/config error, `3` infrastructure error. `Block` падает с `--fail-on block`; `Warn` падает только с `--fail-on warn`; `--fail-on never` показывает findings без падения. Подробности и GitHub Actions snippet описаны в [`docs/CICD_CONTAINER_GATE.md`](docs/CICD_CONTAINER_GATE.md).
 
 ### Image scan CLI
 
@@ -770,6 +815,7 @@ gitleaks git --redact --no-banner
 - [Architecture and roadmap](docs/CONSHIELD_ARCHITECTURE_AND_ROADMAP.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
+- [CI/CD container gate](docs/CICD_CONTAINER_GATE.md)
 - [Docker lifecycle collector](docs/DOCKER_LIFECYCLE_COLLECTOR.md)
 - [Falco runtime sensor](docs/FALCO_RUNTIME_SENSOR.md)
 - [Signed sensor events](docs/SIGNED_SENSOR_EVENTS.md)

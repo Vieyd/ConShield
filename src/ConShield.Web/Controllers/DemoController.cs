@@ -53,16 +53,17 @@ public sealed class DemoController : Controller
         new(7, "Simulate signed sensor events", "Validate valid, missing, invalid, and stale signed runtime sensor metadata without real signing keys.", "PowerShell command", null, null, "Valid expects RTE-001; missing/invalid/stale expect SIGN rules."),
         new(8, "Run image scan fixture", "Submit a deterministic Trivy fixture through the image scan CLI path.", "PowerShell command", null, null, "Image scan prints Result: PASS and expects IMG-001."),
         new(9, "Validate protected run fixture", "Show scan → policy → launch decision without Docker execution.", "PowerShell command", null, null, "Protected run prints Result: PASS and no container is started."),
-        new(10, "Replay Docker lifecycle fixture", "Map deterministic Docker-compatible lifecycle events into sanitized ConShield LIFE events without live Docker.", "PowerShell command", null, null, "Lifecycle replay prints Result: PASS."),
-        new(11, "Run defense scenario", "Generate the baseline local defense story.", "PowerShell command", null, null, "Scenario prints Result: PASS."),
-        new(12, "Replay Falco runtime fixture", "Add a Falco-compatible runtime event without real Fedora/Falco.", "PowerShell command", null, null, "Replay prints Result: PASS."),
-        new(13, "Open Security Summary", "Review the executive security summary.", "/Reports/SecuritySummary", "Reports", "SecuritySummary", "Summary cards and status render."),
-        new(14, "Open Security Events", "Review source events behind alerts and incidents.", "/SecurityEvents", "SecurityEvents", "Index", "Events list renders safely."),
-        new(15, "Open SIEM", "Review correlated alerts, including IMG-001/RTE-001/SENSOR-001/SENSOR-002/SIGN-001/SIGN-002/SIGN-003 when available.", "/Siem", "Siem", "Index", "SIEM alerts render safely."),
-        new(16, "Open Incidents / Operator Workflow", "Follow alert-to-incident workflow and close with a conclusion.", "/Incidents", "Incidents", "Index", "Incidents and workflow links render."),
-        new(17, "Open Runtime Sensor Health", "Review runtime/Falco source health, trust, enforcement, and signature status derived from events and registry.", "/RuntimeSensors", "RuntimeSensors", "Index", "Runtime sensor health renders trust, enforcement, and signature status."),
-        new(18, "Export defense evidence", "Create the safe Markdown evidence pack in ignored local artifacts.", "PowerShell command", null, null, "Evidence export prints Result: PASS."),
-        new(19, "Run demo readiness check", "Verify the full local demo path before defense.", "PowerShell command", null, null, "Readiness check prints Result: PASS.")
+        new(10, "Run CI/CD container gate fixture", "Evaluate image scan fixture through container policy-as-code with deterministic CI exit-code behavior.", "PowerShell command", null, null, "Gate prints PASS_WITH_FINDINGS with --fail-on never."),
+        new(11, "Replay Docker lifecycle fixture", "Map deterministic Docker-compatible lifecycle events into sanitized ConShield LIFE events without live Docker.", "PowerShell command", null, null, "Lifecycle replay prints Result: PASS."),
+        new(12, "Run defense scenario", "Generate the baseline local defense story.", "PowerShell command", null, null, "Scenario prints Result: PASS."),
+        new(13, "Replay Falco runtime fixture", "Add a Falco-compatible runtime event without real Fedora/Falco.", "PowerShell command", null, null, "Replay prints Result: PASS."),
+        new(14, "Open Security Summary", "Review the executive security summary.", "/Reports/SecuritySummary", "Reports", "SecuritySummary", "Summary cards and status render."),
+        new(15, "Open Security Events", "Review source events behind alerts and incidents.", "/SecurityEvents", "SecurityEvents", "Index", "Events list renders safely."),
+        new(16, "Open SIEM", "Review correlated alerts, including IMG-001/RTE-001/SENSOR-001/SENSOR-002/SIGN-001/SIGN-002/SIGN-003 when available.", "/Siem", "Siem", "Index", "SIEM alerts render safely."),
+        new(17, "Open Incidents / Operator Workflow", "Follow alert-to-incident workflow and close with a conclusion.", "/Incidents", "Incidents", "Index", "Incidents and workflow links render."),
+        new(18, "Open Runtime Sensor Health", "Review runtime/Falco source health, trust, enforcement, and signature status derived from events and registry.", "/RuntimeSensors", "RuntimeSensors", "Index", "Runtime sensor health renders trust, enforcement, and signature status."),
+        new(19, "Export defense evidence", "Create the safe Markdown evidence pack in ignored local artifacts.", "PowerShell command", null, null, "Evidence export prints Result: PASS."),
+        new(20, "Run demo readiness check", "Verify the full local demo path before defense.", "PowerShell command", null, null, "Readiness check prints Result: PASS.")
     ];
 
     private static IReadOnlyList<DemoWalkthroughCommandViewModel> BuildCommands() =>
@@ -70,6 +71,7 @@ public sealed class DemoController : Controller
         new("Unified CLI help", "dotnet run --project .\\src\\ConShield.Cli -- --help", "Lists validate, demo, scan, run, sensor, and evidence commands."),
         new("Unified CLI validate", "dotnet run --project .\\src\\ConShield.Cli -- validate", "Runs SIEM rules, container policy, and sensor registry validation in deterministic mode."),
         new("Unified CLI image scan fixture", "dotnet run --project .\\src\\ConShield.Cli -- scan image `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --no-submit", "Deterministic image scan fixture validates IMG path without live Trivy DB or Web submit."),
+        new("Unified CLI CI/CD gate fixture", "dotnet run --project .\\src\\ConShield.Cli -- gate image `\n  --image demo/insecure-api:latest `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --fail-on never `\n  --report .\\artifacts\\local\\cicd-gate-report.md `\n  --no-submit", "Evaluates image scan fixture against policy-as-code and writes a sanitized ignored Markdown report."),
         new("Unified CLI protected run fixture", "dotnet run --project .\\src\\ConShield.Cli -- run protected `\n  --image demo/insecure-api:latest `\n  --container-name conshield-demo-insecure `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --no-run `\n  --no-submit", "Validates scan → policy → launch decision without Docker execution or Web submit."),
         new("Unified CLI Docker lifecycle replay", "dotnet run --project .\\src\\ConShield.Cli -- lifecycle replay `\n  --from-docker-events-json .\\tests\\TestData\\DockerEvents\\container-lifecycle-events.json `\n  --no-submit", "Maps deterministic Docker-compatible lifecycle fixture events without live Docker or Web submit."),
         new("Unified CLI signed sensor replay", "dotnet run --project .\\src\\ConShield.Cli -- sensor replay `\n  --demo-signature `\n  --no-submit", "Validates signed runtime sensor replay without Fedora/Falco or Web submit."),

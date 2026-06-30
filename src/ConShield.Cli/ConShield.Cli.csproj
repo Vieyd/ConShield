@@ -13,4 +13,8 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ConShield.ImageScanner\ConShield.ImageScanner.csproj" />
+  </ItemGroup>
+
 </Project>

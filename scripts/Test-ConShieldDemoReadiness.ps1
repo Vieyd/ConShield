@@ -512,6 +512,19 @@ try {
         }
     }
 
+    $cicdGate = Invoke-CapturedCommand `
+        -FilePath 'dotnet' `
+        -Arguments @('run', '--project', '.\src\ConShield.Cli', '--', 'gate', 'image', '--image', 'demo/insecure-api:latest', '--from-trivy-json', '.\tests\TestData\Trivy\sample-image-scan.json', '--fail-on', 'never', '--no-submit') `
+        -WorkingDirectory $repoRoot
+    $cicdGateResult = ($cicdGate.Output | Where-Object { $_ -match '^Result:\s+' } | Select-Object -Last 1)
+    $cicdGateOutput = $cicdGate.Output -join "`n"
+    if ($cicdGate.ExitCode -eq 0 -and $cicdGateResult -match 'PASS' -and $cicdGateOutput -match 'PASS_WITH_FINDINGS') {
+        Add-ReadinessCheck -Name 'CI/CD container gate fixture' -Status 'PASS' -Detail 'Result: PASS_WITH_FINDINGS'
+    }
+    else {
+        Add-ReadinessCheck -Name 'CI/CD container gate fixture' -Status 'FAIL' -Detail 'gate fixture did not return PASS_WITH_FINDINGS' -Hint 'Run: dotnet run --project .\src\ConShield.Cli -- gate image --image demo/insecure-api:latest --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json --fail-on never --no-submit'
+    }
+
     $dockerLifecycle = Invoke-CapturedCommand `
         -FilePath 'dotnet' `
         -Arguments @('run', '--project', '.\src\ConShield.Cli', '--', 'lifecycle', 'replay', '--from-docker-events-json', '.\tests\TestData\DockerEvents\container-lifecycle-events.json', '--no-submit') `
