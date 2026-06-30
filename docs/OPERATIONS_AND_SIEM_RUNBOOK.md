@@ -24,6 +24,8 @@ The release pack is written under ignored `artifacts/local/conshield-demo-releas
 
 For diploma or stakeholder explanation, use [PRODUCT_POSITIONING.md](PRODUCT_POSITIONING.md), [COMPETITIVE_ANALYSIS.md](COMPETITIVE_ANALYSIS.md), and [DIPLOMA_DEFENSE_NARRATIVE.md](DIPLOMA_DEFENSE_NARRATIVE.md). The recommended wording is that ConShield is a local-first DevSecOps/SIEM control plane for container security, not a scanner-only wrapper and not a replacement for commercial CNAPP platforms.
 
+For security foundation and traceability, use [THREAT_MODEL.md](THREAT_MODEL.md), [ATTACKER_SCENARIOS.md](ATTACKER_SCENARIOS.md), [SECURITY_REQUIREMENTS.md](SECURITY_REQUIREMENTS.md), [REQUIREMENTS_TRACEABILITY_MATRIX.md](REQUIREMENTS_TRACEABILITY_MATRIX.md), and [RESIDUAL_RISKS.md](RESIDUAL_RISKS.md). The traceability matrix links threats, attacker scenarios, requirement IDs, modules, CLI/scripts, SIEM rules, evidence sections, and tests.
+
 ## Unified CLI shortcuts
 
 The existing PowerShell scripts remain the source of truth, but local operators can also use the unified CLI wrapper:

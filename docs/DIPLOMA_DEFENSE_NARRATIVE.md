@@ -37,6 +37,12 @@ The goal is to build and validate a reproducible local workflow that connects co
 8. Export safe evidence.
 9. Validate the workflow without requiring external infrastructure by default.
 
+The formal traceability artifacts are [THREAT_MODEL.md](THREAT_MODEL.md), [ATTACKER_SCENARIOS.md](ATTACKER_SCENARIOS.md), [SECURITY_REQUIREMENTS.md](SECURITY_REQUIREMENTS.md), [REQUIREMENTS_TRACEABILITY_MATRIX.md](REQUIREMENTS_TRACEABILITY_MATRIX.md), and [RESIDUAL_RISKS.md](RESIDUAL_RISKS.md).
+
+Russian-ready wording:
+
+> Для защиты важно показать не только интерфейс и скрипты, но и трассируемость: угрозы → сценарии атакующего → требования безопасности → реализованные модули → правила SIEM → доказательная база → тесты.
+
 ## Novelty / difference from analogs
 
 The contribution is not a new vulnerability scanner or a replacement runtime sensor. The difference is the integrated chain:

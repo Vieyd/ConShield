@@ -65,6 +65,11 @@ The pack is allowlist-based. It includes:
   - `COMPETITIVE_ANALYSIS.md`;
   - `DIPLOMA_DEFENSE_NARRATIVE.md`;
   - `ROADMAP_TO_PRODUCTION.md`;
+  - `THREAT_MODEL.md`;
+  - `ATTACKER_SCENARIOS.md`;
+  - `SECURITY_REQUIREMENTS.md`;
+  - `REQUIREMENTS_TRACEABILITY_MATRIX.md`;
+  - `RESIDUAL_RISKS.md`;
   - `RELEASE_AND_DEMO_PACKAGING.md`;
   - `CONSHIELD_FULL_VALIDATION_CHECKLIST.md`;
   - `CONSHIELD_CLI.md`;
@@ -131,6 +136,8 @@ The release pack includes concise defense and positioning docs:
 - [COMPETITIVE_ANALYSIS.md](COMPETITIVE_ANALYSIS.md) compares ConShield cautiously with scanner-focused, runtime-focused, Kubernetes policy, SIEM/XDR, and commercial CNAPP categories.
 - [DIPLOMA_DEFENSE_NARRATIVE.md](DIPLOMA_DEFENSE_NARRATIVE.md) provides defense wording for the scan → policy gate → runtime/lifecycle → sensor trust/signatures → SIEM → incidents → evidence story.
 - [ROADMAP_TO_PRODUCTION.md](ROADMAP_TO_PRODUCTION.md) lists realistic hardening work without claiming the local prototype already covers enterprise production scope.
+
+The pack also includes [THREAT_MODEL.md](THREAT_MODEL.md), [ATTACKER_SCENARIOS.md](ATTACKER_SCENARIOS.md), [SECURITY_REQUIREMENTS.md](SECURITY_REQUIREMENTS.md), [REQUIREMENTS_TRACEABILITY_MATRIX.md](REQUIREMENTS_TRACEABILITY_MATRIX.md), and [RESIDUAL_RISKS.md](RESIDUAL_RISKS.md) so a reviewer can trace threats to requirements, modules, commands, SIEM rules, evidence, and tests.
 
 ## Start Web GUI for demo
 

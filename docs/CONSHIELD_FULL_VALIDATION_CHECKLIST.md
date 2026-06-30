@@ -309,9 +309,10 @@ http://127.0.0.1:5080/Demo
 ```powershell
 dotnet test .\ConShield.sln --configuration Release --no-build --filter FullIntegrationContractTests
 dotnet test .\ConShield.sln --configuration Release --no-build --filter ProductPositioningDocsTests
+dotnet test .\ConShield.sln --configuration Release --no-build --filter ThreatModelRequirementsDocsTests
 ```
 
-- Expected result: contract tests pass; README keeps English first and Russian second; README docs links point to existing files; positioning docs exist and avoid overclaim wording.
+- Expected result: contract tests pass; README keeps English first and Russian second; README docs links point to existing files; positioning and traceability docs exist and avoid overclaim wording.
 - CI-safe: yes.
 - Web/API required: no.
 - Docker/Falco/Trivy network required: no.
@@ -358,6 +359,11 @@ Use the feature-specific operational docs for these checks when needed:
 - [`COMPETITIVE_ANALYSIS.md`](COMPETITIVE_ANALYSIS.md)
 - [`DIPLOMA_DEFENSE_NARRATIVE.md`](DIPLOMA_DEFENSE_NARRATIVE.md)
 - [`ROADMAP_TO_PRODUCTION.md`](ROADMAP_TO_PRODUCTION.md)
+- [`THREAT_MODEL.md`](THREAT_MODEL.md)
+- [`ATTACKER_SCENARIOS.md`](ATTACKER_SCENARIOS.md)
+- [`SECURITY_REQUIREMENTS.md`](SECURITY_REQUIREMENTS.md)
+- [`REQUIREMENTS_TRACEABILITY_MATRIX.md`](REQUIREMENTS_TRACEABILITY_MATRIX.md)
+- [`RESIDUAL_RISKS.md`](RESIDUAL_RISKS.md)
 
 ## Known follow-up work
 
