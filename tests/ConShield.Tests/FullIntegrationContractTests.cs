@@ -74,13 +74,13 @@ public sealed class FullIntegrationContractTests
     public void FullValidationScriptHasValidPowerShellSyntax()
     {
         var path = Path.Combine(RepoRoot(), "scripts", "Test-ConShieldFullValidation.ps1");
+        var literalPath = path.Replace("'", "''", StringComparison.Ordinal);
         var result = RunPwsh(
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            "$errors=$null; $null=[System.Management.Automation.PSParser]::Tokenize((Get-Content -LiteralPath $args[0] -Raw), [ref]$errors); if($errors){$errors; exit 1}",
-            path);
+            "$errors=$null; $null=[System.Management.Automation.PSParser]::Tokenize((Get-Content -LiteralPath '" + literalPath + "' -Raw), [ref]$errors); if($errors){$errors; exit 1}");
 
         Assert.Equal(0, result.ExitCode);
     }
@@ -246,12 +246,8 @@ public sealed class FullIntegrationContractTests
         foreach (var argument in arguments)
             startInfo.ArgumentList.Add(argument);
 
-        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("pwsh was not started.");
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit(60_000);
-
-        return new CommandResult(process.ExitCode, output + error);
+        var result = TestProcessRunner.Run(startInfo, TimeSpan.FromSeconds(60));
+        return new CommandResult(result.ExitCode, result.Output);
     }
 
     private static void AssertSafeText(string text)

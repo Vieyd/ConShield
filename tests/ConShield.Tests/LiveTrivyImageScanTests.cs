@@ -198,12 +198,8 @@ public sealed class LiveTrivyImageScanTests
         foreach (var argument in arguments)
             psi.ArgumentList.Add(argument);
 
-        using var process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start CLI.");
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit(120_000);
-
-        return new CommandResult(process.ExitCode, output + error);
+        var result = TestProcessRunner.Run(psi, TimeSpan.FromSeconds(60));
+        return new CommandResult(result.ExitCode, result.Output);
     }
 
     private static string MissingTrivyPath() => Path.Combine(Path.GetTempPath(), $"conshield-missing-trivy-{Guid.NewGuid():N}.exe");
