@@ -67,6 +67,9 @@
                                 <a class="nav-link @IsActive("Siem", "Rules")" asp-controller="Siem" asp-action="Rules">Правила SIEM</a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link @IsActive("Dashboard")" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link @IsActive("Demo")" asp-controller="Demo" asp-action="Index">Демо</a>
                             </li>
                             @if (User.IsInRole("AdminIB"))

@@ -146,6 +146,16 @@ The pack also includes [THREAT_MODEL.md](THREAT_MODEL.md), [ATTACKER_SCENARIOS.m
 
 Architecture and data-flow explanation are included through [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_DIAGRAMS.md](ARCHITECTURE_DIAGRAMS.md), [DATA_FLOW_MODEL.md](DATA_FLOW_MODEL.md), [DEPLOYMENT_VIEW.md](DEPLOYMENT_VIEW.md), and [SEQUENCE_FLOWS.md](SEQUENCE_FLOWS.md). The diagrams are Mermaid in Markdown, not generated binary images.
 
+## Operator dashboard
+
+The Web UI includes a read-only operator dashboard at:
+
+```text
+http://127.0.0.1:5080/Dashboard
+```
+
+The dashboard is useful during a demo because it shows posture cards, latest sanitized alerts/incidents, sensor trust/signature summaries, workflow tiles, command snippets, and docs links in one place. It does not run local commands from the browser and does not display secrets, raw payloads, logs, environment values, connection strings, or generated local artifacts.
+
 ## Start Web GUI for demo
 
 Run from the repository root:

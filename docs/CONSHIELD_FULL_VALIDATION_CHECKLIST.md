@@ -303,7 +303,7 @@ http://127.0.0.1:5080/Demo
 
 ## 18. README/docs consistency
 
-- Purpose: keep bilingual README, docs links, and product-positioning material aligned with the current command surface.
+- Purpose: verify `/Dashboard` remains a read-only operator console and keep bilingual README/docs links aligned with the current command surface.
 - Commands:
 
 ```powershell
@@ -311,9 +311,10 @@ dotnet test .\ConShield.sln --configuration Release --no-build --filter FullInte
 dotnet test .\ConShield.sln --configuration Release --no-build --filter ProductPositioningDocsTests
 dotnet test .\ConShield.sln --configuration Release --no-build --filter ThreatModelRequirementsDocsTests
 dotnet test .\ConShield.sln --configuration Release --no-build --filter ArchitectureDocsTests
+dotnet test .\ConShield.sln --configuration Release --no-build --filter WebOperatorDashboardTests
 ```
 
-- Expected result: contract tests pass; README keeps English first and Russian second; README docs links point to existing files; positioning, traceability, architecture, diagram, deployment, and DFD docs exist and avoid overclaim wording.
+- Expected result: contract tests pass; `/Dashboard` route/view exists, exposes only safe links/snippets/status summaries, does not add server-side command execution, README keeps English first and Russian second, and README docs links point to existing files.
 - CI-safe: yes.
 - Web/API required: no.
 - Docker/Falco/Trivy network required: no.
