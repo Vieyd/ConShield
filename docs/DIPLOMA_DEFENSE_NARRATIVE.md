@@ -67,8 +67,8 @@ The defense demo can be explained as a controlled story:
 
 1. Start the local stack.
 2. Reset demo-generated data.
-3. Run the defense scenario.
-4. Replay image scan, protected run, lifecycle, and runtime fixtures.
+3. Run the guided demo data seed to create or reuse deterministic IMG/POL/LIFE/RTE/SENSOR/SIGN evidence.
+4. Run the defense scenario or replay image scan, protected run, lifecycle, and runtime fixtures manually if you want to explain each source path.
 5. Open Security Summary.
 6. Open the read-only Operator Dashboard at `/Dashboard` to show status-first posture cards, latest sanitized activity, guided demo flow, grouped workflow references, and docs links.
 7. Drill into SIEM alert, incident, and source event.

@@ -188,7 +188,7 @@ public sealed class WebOperatorDashboardTests
         foreach (var step in new[]
         {
             "Validate repository and configuration",
-            "Generate or replay demo data",
+            "Seed guided demo data",
             "Review dashboard posture",
             "Inspect SIEM alerts and incidents",
             "Review runtime sensors and signed events",

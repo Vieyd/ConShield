@@ -89,6 +89,18 @@ internal static class Program
                 "demo readiness",
                 "Test-ConShieldDemoReadiness.ps1",
                 MapOptions(args[1..], new OptionSpec("--output", "-OutputMarkdownPath", RequiresValue: true))),
+            "seed" => await RunScriptCommandAsync(
+                repoRoot,
+                "demo seed",
+                "Seed-ConShieldDemoData.ps1",
+                MapOptions(
+                    args[1..],
+                    new OptionSpec("--base-url", "-BaseUrl", RequiresValue: true),
+                    new OptionSpec("--reset-first", "-ResetFirst", RequiresValue: false),
+                    new OptionSpec("--skip-evidence-export", "-SkipEvidenceExport", RequiresValue: false),
+                    new OptionSpec("--output-evidence", "-OutputEvidencePath", RequiresValue: true),
+                    new OptionSpec("--continue-on-expected-findings", "-ContinueOnExpectedFindings", RequiresValue: false),
+                    new OptionSpec("--timeout-seconds", "-TimeoutSeconds", RequiresValue: true))),
             "reset" => await RunDemoResetAsync(repoRoot, args[1..]),
             _ => FailUsage($"Unknown demo command: {Safe(args[0])}")
         };
@@ -463,6 +475,7 @@ internal static class Program
         Console.WriteLine("Commands:");
         Console.WriteLine("  validate");
         Console.WriteLine("  demo readiness");
+        Console.WriteLine("  demo seed");
         Console.WriteLine("  demo reset");
         Console.WriteLine("  scan image");
         Console.WriteLine("  gate image");
@@ -484,6 +497,7 @@ internal static class Program
     {
         Console.WriteLine("Demo commands:");
         Console.WriteLine("  demo readiness");
+        Console.WriteLine("  demo seed");
         Console.WriteLine("  demo reset --confirm");
     }
 

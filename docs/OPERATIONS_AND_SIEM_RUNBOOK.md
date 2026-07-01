@@ -214,6 +214,22 @@ The runner checks Web, PostgreSQL, RabbitMQ/EventConsumer/Mongo projection avail
 
 After the runner finishes, open `/Operations/Health`, `/SecurityEvents`, `/Sensors`, `/RuntimeSensors`, `/SiemAlerts`, `/Incidents`, and `/Reports/SecuritySummary`. The runner and report output intentionally avoid raw JSON, `AdditionalDataJson`, connection strings, API keys, tokens, cookies, credentials, verifier values, and Fedora protected env contents.
 
+## Guided demo data seed
+
+For a richer dashboard-first walkthrough, start the local Web/API stack and then run the guided seed:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Seed-ConShieldDemoData.ps1
+```
+
+CLI equivalent:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- demo seed
+```
+
+The seed creates or reuses deterministic local evidence for `IMG-001`, `POL-001`, `LIFE-001`, `LIFE-002`, `RTE-001`, `SENSOR-001`, `SENSOR-002`, `SIGN-001`, `SIGN-002`, and `SIGN-003`. It does not reset by default; pass `-ResetFirst` only for an explicit confirmed clean run. The Web UI only displays this command as a copy/paste reference and does not execute it from the browser. The full walkthrough is in [`GUIDED_DEMO_SCENARIO.md`](GUIDED_DEMO_SCENARIO.md).
+
 ## Demo readiness check
 
 Before a defense or live demo, run the safe readiness check from the repository root:
@@ -272,6 +288,8 @@ http://127.0.0.1:5080/Demo
 ```
 
 Use it as the live navigation guide for the local defense demo. It shows the order of operations, safe PowerShell commands, current Security Events / SIEM / Incidents / Runtime Sensor counts, and links to `/Reports/SecuritySummary`, `/SecurityEvents`, `/Siem`, `/Incidents`, and `/RuntimeSensors`.
+
+For a meaningful seeded dashboard before opening `/Demo`, run `scripts\Seed-ConShieldDemoData.ps1` from PowerShell or `dotnet run --project .\src\ConShield.Cli -- demo seed`. The page remains read-only and never runs the seed from the browser.
 
 The page does not execute shell scripts from the browser. Run commands in PowerShell from the repository root. It does not display secrets, connection strings, API keys, env values, raw event payloads, logs, screenshots, or generated files under `artifacts/local/`.
 

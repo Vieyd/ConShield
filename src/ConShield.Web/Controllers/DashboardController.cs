@@ -161,7 +161,7 @@ public sealed class DashboardController : Controller
     private static IReadOnlyList<OperatorDashboardGuidedDemoStepViewModel> BuildGuidedDemoSteps() =>
     [
         new(1, "Validate repository and configuration", "Confirm deterministic checks before showing the system.", "Full validation reports PASS.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldFullValidation.ps1", "docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md"),
-        new(2, "Generate or replay demo data", "Run offline fixtures for scan, policy, lifecycle, and runtime paths.", "Security Events, SIEM alerts, incidents, and runtime summaries are populated.", "dotnet run --project .\\src\\ConShield.Cli -- sensor replay `\n  --demo-signature `\n  --no-submit", "docs/FALCO_RUNTIME_SENSOR.md", "SecurityEvents", "Index"),
+        new(2, "Seed guided demo data", "Create or reuse deterministic demo events for scan, policy, lifecycle, runtime, trust, and signatures.", "Dashboard posture, SIEM alerts, incidents, runtime summaries, and evidence sections are meaningful.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Seed-ConShieldDemoData.ps1", "docs/GUIDED_DEMO_SCENARIO.md", "SecurityEvents", "Index"),
         new(3, "Review dashboard posture", "Start the defense story from status cards and warning counters.", "Current demo posture and key counters are visible first.", "Open http://127.0.0.1:5080/Dashboard after login", "docs/OPERATIONS_AND_SIEM_RUNBOOK.md", "Dashboard", "Index"),
         new(4, "Inspect SIEM alerts and incidents", "Drill into correlated alert, incident, and linked source event.", "Operator can explain alert → incident → source event traceability.", "Open SIEM and Incidents from the dashboard links", "docs/OPERATIONS_AND_SIEM_RUNBOOK.md", "Siem", "Index"),
         new(5, "Review runtime sensors and signed events", "Show trust and signature states without requiring real Fedora/Falco.", "Trusted, unknown/revoked, and signed event counters are summarized.", "Open Runtime Sensor Health from the dashboard link", "docs/SIGNED_SENSOR_EVENTS.md", "RuntimeSensors", "Index"),
@@ -203,6 +203,7 @@ public sealed class DashboardController : Controller
         new("Product positioning", "docs/PRODUCT_POSITIONING.md"),
         new("Competitive analysis", "docs/COMPETITIVE_ANALYSIS.md"),
         new("Diploma defense narrative", "docs/DIPLOMA_DEFENSE_NARRATIVE.md"),
+        new("Guided demo scenario", "docs/GUIDED_DEMO_SCENARIO.md"),
         new("Full validation checklist", "docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md"),
         new("Release/demo packaging", "docs/RELEASE_AND_DEMO_PACKAGING.md"),
         new("CLI docs", "docs/CONSHIELD_CLI.md")
@@ -214,7 +215,7 @@ public sealed class DashboardController : Controller
         new("Architecture and data flow", PickDocs(documentationLinks, "Architecture", "Data flow model")),
         new("Security model and requirements", PickDocs(documentationLinks, "Threat model", "Security requirements", "Requirements traceability matrix")),
         new("Product positioning and defense", PickDocs(documentationLinks, "Product positioning", "Competitive analysis", "Diploma defense narrative")),
-        new("Operations and release", PickDocs(documentationLinks, "Full validation checklist", "Release/demo packaging", "CLI docs"))
+        new("Operations and release", PickDocs(documentationLinks, "Guided demo scenario", "Full validation checklist", "Release/demo packaging", "CLI docs"))
     ];
 
     private static IReadOnlyList<OperatorDashboardDocLinkViewModel> PickDocs(

@@ -87,6 +87,22 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScen
 
 The default scenario does not require Fedora, Falco, Kubernetes, or a real enrolled runtime sensor. It uses marked synthetic demo data to demonstrate image scan (`IMG-001`), policy gate (`POL-001`), Docker lifecycle collector replay, runtime (`RTE-001`), sensor trust enforcement (`SENSOR-001`/`SENSOR-002`), signed sensor events (`SIGN-001`/`SIGN-002`/`SIGN-003`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence, and the Security Summary report.
 
+### Guided demo data seed
+
+After the local Web/API stack is running, prepare or reuse meaningful deterministic demo data with one safe command:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Seed-ConShieldDemoData.ps1
+```
+
+CLI equivalent:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- demo seed
+```
+
+The seed covers `IMG-001`, `POL-001`, `LIFE-001`/`LIFE-002`, `RTE-001`, `SENSOR-001`/`SENSOR-002`, and `SIGN-001`/`SIGN-002`/`SIGN-003`. It does not reset local data by default; use `-ResetFirst` only when you explicitly want a confirmed clean demo reset before seeding. The guided walkthrough is documented in [`docs/GUIDED_DEMO_SCENARIO.md`](docs/GUIDED_DEMO_SCENARIO.md).
+
 ### Configurable SIEM rules
 
 ConShield loads the configurable demo SIEM rules from [`config/siem-rules.default.json`](config/siem-rules.default.json). The committed default config preserves the existing `IMG-001`, `POL-001`, `RTE-001`, `SENSOR-001`, `SENSOR-002`, `SIGN-001`, `SIGN-002`, `SIGN-003`, `LIFE-001`, and `LIFE-002` behavior. Optional local overrides can use `config/siem-rules.local.json`, which is ignored by Git and must not contain secrets.
@@ -446,6 +462,7 @@ For docs-only changes, proportional checks such as `git diff --check`, README li
 - [Residual risks](docs/RESIDUAL_RISKS.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
+- [Guided demo scenario](docs/GUIDED_DEMO_SCENARIO.md)
 - [Full validation checklist](docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md)
 - [Release and demo packaging](docs/RELEASE_AND_DEMO_PACKAGING.md)
 - [CI/CD container gate](docs/CICD_CONTAINER_GATE.md)
@@ -549,6 +566,22 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-ConShieldDefenseScen
 ```
 
 Default scenario не требует Fedora, Falco, Kubernetes или настоящего enrolled runtime sensor. Он использует помеченные synthetic demo data, чтобы показать image scan (`IMG-001`), policy gate (`POL-001`), Docker lifecycle collector replay, runtime (`RTE-001`), enforcement доверия сенсоров (`SENSOR-001`/`SENSOR-002`), signed sensor events (`SIGN-001`/`SIGN-002`/`SIGN-003`), lifecycle (`LIFE-001`/`LIFE-002`), SIEM alerts, incidents, outbox/inbox evidence и Security Summary report.
+
+### Seed guided demo data
+
+После запуска локального Web/API stack подготовьте или переиспользуйте meaningful deterministic demo data одной безопасной командой:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Seed-ConShieldDemoData.ps1
+```
+
+Эквивалент через CLI:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- demo seed
+```
+
+Seed покрывает `IMG-001`, `POL-001`, `LIFE-001`/`LIFE-002`, `RTE-001`, `SENSOR-001`/`SENSOR-002` и `SIGN-001`/`SIGN-002`/`SIGN-003`. По умолчанию он не делает reset локальных данных; используйте `-ResetFirst` только если явно нужен подтверждённый чистый demo reset перед seed. Guided walkthrough описан в [`docs/GUIDED_DEMO_SCENARIO.md`](docs/GUIDED_DEMO_SCENARIO.md).
 
 ### Конфигурируемые правила SIEM
 
@@ -909,6 +942,7 @@ gitleaks git --redact --no-banner
 - [Residual risks](docs/RESIDUAL_RISKS.md)
 - [Operations and SIEM runbook](docs/OPERATIONS_AND_SIEM_RUNBOOK.md)
 - [Unified ConShield CLI](docs/CONSHIELD_CLI.md)
+- [Guided demo scenario](docs/GUIDED_DEMO_SCENARIO.md)
 - [Full validation checklist](docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md)
 - [Release and demo packaging](docs/RELEASE_AND_DEMO_PACKAGING.md)
 - [CI/CD container gate](docs/CICD_CONTAINER_GATE.md)

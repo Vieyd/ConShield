@@ -17,6 +17,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoRelease
 
 dotnet run --project .\src\ConShield.Cli -- demo readiness
 
+dotnet run --project .\src\ConShield.Cli -- demo seed
+
 dotnet run --project .\src\ConShield.Cli -- demo reset --confirm
 
 dotnet run --project .\src\ConShield.Cli -- scan image `
@@ -55,6 +57,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 | --- | --- |
 | `validate` | `Test-ConShieldSiemRules.ps1`, `Test-ConShieldContainerPolicy.ps1`, `Test-ConShieldSensorRegistry.ps1` |
 | `demo readiness` | `Test-ConShieldDemoReadiness.ps1` |
+| `demo seed` | `Seed-ConShieldDemoData.ps1` |
 | `demo reset --confirm` | `Reset-ConShieldLocalDemoData.ps1 -ConfirmReset` |
 | `scan image` | `Invoke-ConShieldImageScan.ps1` |
 | `gate image` | Built-in CI/CD image gate for fixture scan result + container policy-as-code |
@@ -82,6 +85,16 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-ConShieldDemoRelease
 ```
 
 The output folder is `artifacts/local/conshield-demo-release-pack`, and the default archive is `artifacts/local/conshield-demo-release-pack.zip`. Packaging is script-based in v1; the CLI command surface is unchanged. Details are in [RELEASE_AND_DEMO_PACKAGING.md](RELEASE_AND_DEMO_PACKAGING.md).
+
+## Guided demo seed
+
+Prepare a meaningful local dashboard and evidence path with one safe command after the local Web/API stack is running:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- demo seed
+```
+
+The command wraps `scripts/Seed-ConShieldDemoData.ps1`, which creates or reuses deterministic IMG, POL, LIFE, RTE, SENSOR, and SIGN demo data. It does not reset data by default; pass `--reset-first` only when you want an explicit confirmed reset before seeding. The walkthrough is documented in [GUIDED_DEMO_SCENARIO.md](GUIDED_DEMO_SCENARIO.md).
 
 ## Safety rules
 
