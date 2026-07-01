@@ -206,11 +206,22 @@ dotnet run --project .\src\ConShield.Cli -- scan image `
   --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- gate image `
   --image demo/insecure-api:latest `
   --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
   --fail-on never `
   --report .\artifacts\local\cicd-gate-report.md `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --fail-on block `
   --no-submit
 
 dotnet run --project .\src\ConShield.Cli -- run protected `
@@ -237,6 +248,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 ```
 
 Reset requires explicit `--confirm`. Live Docker execution remains opt-in through the existing protected-run safety rules. Deterministic fixture commands do not require real Fedora/Falco, live Docker run or event watching, live Trivy DB/network, external internet, certificates, private keys, signing keys, or real secrets. Details are documented in [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
+Optional live Trivy commands are manual local checks only. They require local Trivy installation and image access, cannot be mixed with `--from-trivy-json`, and are not required for CI, full validation, readiness, or guided seed.
 
 ### CI/CD container gate
 
@@ -252,6 +264,16 @@ dotnet run --project .\src\ConShield.Cli -- gate image `
 ```
 
 The gate evaluates scan fixtures against `config/container-policy.default.json`, prints `Allow` / `Warn` / `Block`, and returns deterministic CI exit codes: `0` passed, `1` failed by policy, `2` usage/input/config error, `3` infrastructure error. `Block` fails with `--fail-on block`; `Warn` fails only with `--fail-on warn`; `--fail-on never` reports findings without failing. Details and a GitHub Actions snippet are documented in [`docs/CICD_CONTAINER_GATE.md`](docs/CICD_CONTAINER_GATE.md).
+
+Optional live Trivy gate smoke, outside default validation:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --fail-on block `
+  --no-submit
+```
 
 ### Image scan CLI
 
@@ -271,6 +293,17 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageSca
 ```
 
 The command maps Trivy-compatible results to `SourceSystem=conshield.image-scanner`, `ExternalEventType=container.image.scan.completed`, and the expected `IMG-001` path. Evidence export includes an `Image Scan Evidence` section when image scan events are available. The wrapper prints only safe summary fields and does not print raw Trivy JSON, raw event payloads, secrets, API keys, connection strings, or environment values.
+
+Optional live Trivy scan smoke, outside default validation:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --no-submit
+```
+
+If Trivy is unavailable, use fixture mode. The Web UI only shows this as a copy/paste reference and does not execute Trivy from the browser.
 
 ### Protected container run
 
@@ -696,11 +729,22 @@ dotnet run --project .\src\ConShield.Cli -- scan image `
   --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- gate image `
   --image demo/insecure-api:latest `
   --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
   --fail-on never `
   --report .\artifacts\local\cicd-gate-report.md `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --fail-on block `
   --no-submit
 
 dotnet run --project .\src\ConShield.Cli -- run protected `
@@ -727,6 +771,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 ```
 
 Reset требует явный `--confirm`. Live Docker execution остаётся opt-in через существующие safety rules protected-run workflow. Deterministic fixture-команды не требуют real Fedora/Falco, live Docker run или event watching, live Trivy DB/network, external internet, certificates, private keys, signing keys или real secrets. Подробности описаны в [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
+Optional live Trivy команды — только manual local checks. Они требуют локальный Trivy и доступ к image, не смешиваются с `--from-trivy-json` и не требуются для CI, full validation, readiness или guided seed.
 
 ### CI/CD container gate
 
@@ -742,6 +787,16 @@ dotnet run --project .\src\ConShield.Cli -- gate image `
 ```
 
 Gate оценивает scan fixtures через `config/container-policy.default.json`, печатает `Allow` / `Warn` / `Block` и возвращает deterministic CI exit codes: `0` passed, `1` failed by policy, `2` usage/input/config error, `3` infrastructure error. `Block` падает с `--fail-on block`; `Warn` падает только с `--fail-on warn`; `--fail-on never` показывает findings без падения. Подробности и GitHub Actions snippet описаны в [`docs/CICD_CONTAINER_GATE.md`](docs/CICD_CONTAINER_GATE.md).
+
+Optional live Trivy gate smoke, вне default validation:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --fail-on block `
+  --no-submit
+```
 
 ### Image scan CLI
 
@@ -761,6 +816,17 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageSca
 ```
 
 Команда маппит Trivy-compatible результат в `SourceSystem=conshield.image-scanner`, `ExternalEventType=container.image.scan.completed` и ожидаемый путь `IMG-001`. Evidence export включает секцию `Image Scan Evidence`, если image scan events доступны. Wrapper печатает только safe summary fields и не выводит raw Trivy JSON, raw event payloads, secrets, API keys, connection strings или environment values.
+
+Optional live Trivy scan smoke, вне default validation:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --no-submit
+```
+
+Если Trivy недоступен, используйте fixture mode. Web UI показывает это только как copy/paste reference и не запускает Trivy из браузера.
 
 ### Protected container run
 

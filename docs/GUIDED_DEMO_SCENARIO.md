@@ -104,6 +104,23 @@ dotnet run --project .\src\ConShield.Cli -- lifecycle watch `
 
 This check is not required for CI, readiness, full validation, or the guided seed. The Web UI only lists it as a copy/paste reference and does not execute Docker commands from the browser.
 
+Optional live Trivy check, only when Trivy is installed locally and image access is available:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --fail-on block `
+  --no-submit
+```
+
+This check is not required for CI, readiness, full validation, or the guided seed. The Web UI does not execute Trivy from the browser; it only shows read-only copy/paste commands.
+
 Useful routes:
 
 ```text

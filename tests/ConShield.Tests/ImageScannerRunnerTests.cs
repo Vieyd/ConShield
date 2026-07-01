@@ -59,7 +59,7 @@ public class ImageScannerRunnerTests
         var result = await runner.ScanAsync(Options(trivyPath: temp, image: "repo/app:1; rm -rf /"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Contains(fake.Calls, x => x.Arguments.SequenceEqual(["image", "--format", "json", "--quiet", "--scanners", "vuln", "repo/app:1; rm -rf /"]));
+        Assert.Contains(fake.Calls, x => x.Arguments.SequenceEqual(["image", "--format", "json", "--quiet", "--scanners", "vuln,secret,misconfig", "repo/app:1; rm -rf /"]));
     }
 
     [Fact]

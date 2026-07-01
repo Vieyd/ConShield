@@ -479,6 +479,7 @@ function Write-SafeMarkdown {
 function Write-Summary {
     param(
         [Parameter(Mandatory = $true)]$Summary,
+        [Parameter(Mandatory = $true)][string]$Mode,
         [Parameter(Mandatory = $true)][string]$WebStatus,
         [Parameter(Mandatory = $true)][string]$TrivyStatus,
         [Parameter(Mandatory = $true)][string]$ScanStatus,
@@ -489,6 +490,7 @@ function Write-Summary {
     Write-Output 'ConShield image scan'
     Write-Output ('Image: {0}' -f $Summary.ImageReference)
     Write-Output 'Scanner: Trivy'
+    Write-Output ('Mode: {0}' -f $Mode)
     Write-Output ('Web: {0}' -f $WebStatus)
     Write-Output ('Trivy: {0}' -f $TrivyStatus)
     Write-Output ('Scan: {0}' -f $ScanStatus)
@@ -525,6 +527,7 @@ try {
     }
 
     $trivyStatus = 'OK'
+    $scanMode = 'live'
     $requestedImage = $Image
     if (-not [string]::IsNullOrWhiteSpace($FromTrivyJson)) {
         $resolvedFixture = Resolve-RepoPath -RepoRoot $repoRoot -Path $FromTrivyJson
@@ -534,6 +537,7 @@ try {
             $requestedImage = Split-Path -Leaf $resolvedFixture
         }
         $trivyStatus = 'SKIP (fixture)'
+        $scanMode = 'fixture'
     }
     else {
         $trivy = Invoke-TrivyImageScan -TrivyExecutable $TrivyPath -ImageReference $Image -Timeout $TimeoutSeconds
@@ -550,7 +554,7 @@ try {
 
     if (-not $NoSubmit) {
         if ($webStatus -ne 'OK') {
-            Write-Summary -Summary $summary -WebStatus $webStatus -TrivyStatus $trivyStatus -ScanStatus 'OK' -IngestionStatus $ingestionStatus -Result 'FAIL'
+            Write-Summary -Summary $summary -Mode $scanMode -WebStatus $webStatus -TrivyStatus $trivyStatus -ScanStatus 'OK' -IngestionStatus $ingestionStatus -Result 'FAIL'
             Write-Output 'Start local services first:'
             Write-Output 'pwsh -NoProfile -ExecutionPolicy Bypass -File .\Start-ConShield.ps1 -StartApps -OpenRabbit'
             exit 1
@@ -567,14 +571,14 @@ try {
         }
 
         if ([string]::IsNullOrWhiteSpace($apiKey)) {
-            Write-Summary -Summary $summary -WebStatus $webStatus -TrivyStatus $trivyStatus -ScanStatus 'OK' -IngestionStatus $ingestionStatus -Result 'FAIL'
+            Write-Summary -Summary $summary -Mode $scanMode -WebStatus $webStatus -TrivyStatus $trivyStatus -ScanStatus 'OK' -IngestionStatus $ingestionStatus -Result 'FAIL'
             Write-Output 'Configure the local external ingestion key or rerun with -NoSubmit for offline validation.'
             exit 1
         }
 
         $submit = Submit-ImageScanEvent -BaseUrl $WebBaseUrl -ApiKey $apiKey -Payload $payload
         if (-not $submit.Ok) {
-            Write-Summary -Summary $summary -WebStatus $webStatus -TrivyStatus $trivyStatus -ScanStatus 'OK' -IngestionStatus $ingestionStatus -Result 'FAIL'
+            Write-Summary -Summary $summary -Mode $scanMode -WebStatus $webStatus -TrivyStatus $trivyStatus -ScanStatus 'OK' -IngestionStatus $ingestionStatus -Result 'FAIL'
             Write-Output 'External ingestion failed. Check Web status and local ingestion configuration; secret values were not printed.'
             exit 1
         }
@@ -586,12 +590,23 @@ try {
         Write-SafeMarkdown -RepoRoot $repoRoot -Path $OutputMarkdownPath -Summary $summary -IngestionStatus $ingestionStatus
     }
 
-    Write-Summary -Summary $summary -WebStatus $webStatus -TrivyStatus $trivyStatus -ScanStatus 'OK' -IngestionStatus $ingestionStatus -Result $result
+    Write-Summary -Summary $summary -Mode $scanMode -WebStatus $webStatus -TrivyStatus $trivyStatus -ScanStatus 'OK' -IngestionStatus $ingestionStatus -Result $result
     exit 0
 }
 catch {
+    $mode = if ([string]::IsNullOrWhiteSpace($FromTrivyJson)) { 'live' } else { 'fixture' }
+    $safeMessage = $_.Exception.Message
     Write-Output 'ConShield image scan'
-    Write-Output ('Scan: FAIL ({0})' -f $_.Exception.Message)
+    Write-Output ('Mode: {0}' -f $mode)
+    if ($safeMessage -like '*Trivy executable was not found*') {
+        Write-Output 'Trivy: unavailable'
+        Write-Output 'Hint: install Trivy or use --from-trivy-json fixture mode.'
+    }
+    elseif ($safeMessage -like '*Trivy scan failed*' -or $safeMessage -like '*timed out*') {
+        Write-Output 'Trivy: failed'
+        Write-Output 'Hint: verify image name, image source access, local cache/network, or use fixture mode.'
+    }
+    Write-Output ('Scan: FAIL ({0})' -f $safeMessage)
     Write-Output 'For deterministic local validation use:'
     Write-Output 'pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 -FromTrivyJson .\tests\TestData\Trivy\sample-image-scan.json -NoSubmit'
     Write-Output 'Result: FAIL'

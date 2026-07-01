@@ -50,8 +50,24 @@ internal static class CicdContainerGate
         {
             error.WriteLine($"Usage error: {SafeText(ex.Message, 512)}");
             error.WriteLine("Usage: dotnet run --project .\\src\\ConShield.Cli -- gate image --image <image> --from-trivy-json <path> --fail-on block|warn|never --no-submit");
+            error.WriteLine("Live:  dotnet run --project .\\src\\ConShield.Cli -- gate image --image <image> --live-trivy --fail-on block --no-submit");
             output.WriteLine("Result: FAIL");
             return ExitUsageOrInput;
+        }
+        catch (GateLiveTrivyException ex)
+        {
+            output.WriteLine("ConShield CI/CD image gate");
+            output.WriteLine($"Image: {SafeText(ex.Image, 256)}");
+            output.WriteLine("Scanner: Trivy");
+            output.WriteLine("Mode: live");
+            output.WriteLine($"Trivy: {ex.Status}");
+            if (!string.IsNullOrWhiteSpace(ex.SafeError))
+                output.WriteLine($"Scan: FAIL ({SafeText(ex.SafeError, 512)})");
+            output.WriteLine($"Hint: {ex.Hint}");
+            output.WriteLine("Gate: INFRASTRUCTURE_ERROR");
+            output.WriteLine($"Exit code: {ExitInfrastructure}");
+            output.WriteLine("Result: FAIL");
+            return ExitInfrastructure;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or TrivyReportParseException)
         {
@@ -63,9 +79,9 @@ internal static class CicdContainerGate
 
     public static GateResult Evaluate(string repoRoot, GateOptions options)
     {
-        var reportJson = ReadFixtureJson(options.TrivyJsonPath);
-        var summary = TrivyReportParser.Parse(reportJson, "fixture", options.Image);
-        var extended = ReadExtendedCounts(reportJson);
+        var scanInput = ReadScanInput(options);
+        var summary = TrivyReportParser.Parse(scanInput.ReportJson, scanInput.ScannerVersion, options.Image);
+        var extended = ReadExtendedCounts(scanInput.ReportJson);
         var policy = ContainerPolicyConfig.Load(repoRoot, options.PolicyPath);
         var evaluation = EvaluatePolicy(policy, summary, extended);
         var exitCode = GetExitCode(evaluation.Decision, options.FailOn);
@@ -86,7 +102,35 @@ internal static class CicdContainerGate
             exitCode,
             DisplayPath(repoRoot, options.ReportPath),
             DisplayPath(repoRoot, options.JsonReportPath),
-            options.Submit);
+            options.Submit,
+            scanInput.Mode,
+            scanInput.TrivyStatus);
+    }
+
+    private static GateScanInput ReadScanInput(GateOptions options)
+    {
+        if (!options.LiveTrivy)
+        {
+            return new GateScanInput(
+                ReadFixtureJson(options.TrivyJsonPath!),
+                "fixture",
+                "fixture",
+                "SKIP (fixture)");
+        }
+
+        var result = LiveTrivyScanner.ScanAsync(options.Image, options.TrivyPath, options.TimeoutSeconds)
+            .GetAwaiter()
+            .GetResult();
+
+        if (result.IsSuccess)
+            return new GateScanInput(result.ReportJson!, result.ScannerVersion ?? "unknown", "live", "OK");
+
+        var status = result.FailureKind == LiveTrivyFailureKind.Unavailable ? "unavailable" : "failed";
+        var hint = result.FailureKind == LiveTrivyFailureKind.Unavailable
+            ? LiveTrivyScanner.UnavailableHint
+            : LiveTrivyScanner.FailedHint;
+
+        throw new GateLiveTrivyException(options.Image, status, hint, result.SafeError);
     }
 
     private static string ReadFixtureJson(string path)
@@ -219,6 +263,9 @@ internal static class CicdContainerGate
     {
         output.WriteLine("ConShield CI/CD image gate");
         output.WriteLine($"Image: {SafeText(result.Image, 256)}");
+        output.WriteLine("Scanner: Trivy");
+        output.WriteLine($"Mode: {result.ScanMode}");
+        output.WriteLine($"Trivy: {result.TrivyStatus}");
         output.WriteLine($"Policy: {result.Evaluation.Decision}");
         output.WriteLine($"Matched policy rules: {(result.Evaluation.MatchedPolicyRuleIds.Count > 0 ? string.Join(",", result.Evaluation.MatchedPolicyRuleIds) : "-")}");
         output.WriteLine($"Fail on: {result.FailOn}");
@@ -358,12 +405,15 @@ internal static class CicdContainerGate
 
     internal sealed record GateOptions(
         string Image,
-        string TrivyJsonPath,
+        string? TrivyJsonPath,
         string PolicyPath,
         string FailOn,
         string? ReportPath,
         string? JsonReportPath,
-        bool Submit)
+        bool Submit,
+        bool LiveTrivy,
+        string? TrivyPath,
+        int TimeoutSeconds)
     {
         public static GateOptions Parse(string repoRoot, string[] args)
         {
@@ -376,13 +426,13 @@ internal static class CicdContainerGate
                 if (!option.StartsWith("--", StringComparison.Ordinal))
                     throw new GateUsageException($"Unexpected value without option: {SafeText(option, 128)}");
 
-                if (option is "--no-submit" or "--submit")
+                if (option is "--no-submit" or "--submit" or "--live-trivy")
                 {
                     flags.Add(option);
                     continue;
                 }
 
-                if (option is not ("--image" or "--from-trivy-json" or "--policy-config" or "--fail-on" or "--report" or "--json-report"))
+                if (option is not ("--image" or "--from-trivy-json" or "--policy-config" or "--fail-on" or "--report" or "--json-report" or "--trivy-path" or "--timeout-seconds"))
                     throw new GateUsageException($"Unknown option: {SafeText(option, 128)}");
 
                 if (i + 1 >= args.Length || string.IsNullOrWhiteSpace(args[i + 1]) || args[i + 1].StartsWith("--", StringComparison.Ordinal))
@@ -394,8 +444,12 @@ internal static class CicdContainerGate
             if (!values.TryGetValue("--image", out var image) || string.IsNullOrWhiteSpace(image))
                 throw new GateUsageException("--image is required.");
 
-            if (!values.TryGetValue("--from-trivy-json", out var trivyJsonPath) || string.IsNullOrWhiteSpace(trivyJsonPath))
-                throw new GateUsageException("--from-trivy-json is required for CI-safe gate mode.");
+            var liveTrivy = flags.Contains("--live-trivy");
+            values.TryGetValue("--from-trivy-json", out var trivyJsonPath);
+            if (liveTrivy && !string.IsNullOrWhiteSpace(trivyJsonPath))
+                throw new GateUsageException("Use either --from-trivy-json or --live-trivy, not both.");
+            if (!liveTrivy && string.IsNullOrWhiteSpace(trivyJsonPath))
+                throw new GateUsageException("--from-trivy-json is required for CI-safe gate mode, or use --live-trivy --image <image> for optional live mode.");
 
             var failOn = values.GetValueOrDefault("--fail-on", "block").Trim().ToLowerInvariant();
             if (failOn is not ("block" or "warn" or "never"))
@@ -405,14 +459,25 @@ internal static class CicdContainerGate
             if (submit && flags.Contains("--no-submit"))
                 throw new GateUsageException("Use either --submit or --no-submit, not both.");
 
+            var timeoutSeconds = LiveTrivyScanner.DefaultTimeoutSeconds;
+            if (values.TryGetValue("--timeout-seconds", out var timeoutValue))
+            {
+                if (!int.TryParse(timeoutValue, out timeoutSeconds))
+                    throw new GateUsageException("--timeout-seconds must be an integer.");
+                LiveTrivyScanner.ValidateTimeout(timeoutSeconds);
+            }
+
             return new GateOptions(
                 SafeText(image, 512),
-                ResolveExistingFile(repoRoot, trivyJsonPath, "--from-trivy-json"),
+                liveTrivy ? null : ResolveExistingFile(repoRoot, trivyJsonPath!, "--from-trivy-json"),
                 ResolveExistingFile(repoRoot, values.GetValueOrDefault("--policy-config", Path.Combine("config", "container-policy.default.json")), "--policy-config"),
                 failOn,
                 values.GetValueOrDefault("--report"),
                 values.GetValueOrDefault("--json-report"),
-                submit);
+                submit,
+                liveTrivy,
+                values.GetValueOrDefault("--trivy-path"),
+                timeoutSeconds);
         }
     }
 
@@ -428,7 +493,15 @@ internal static class CicdContainerGate
         int ExitCode,
         string ReportDisplayPath,
         string JsonReportDisplayPath,
-        bool Submit);
+        bool Submit,
+        string ScanMode,
+        string TrivyStatus);
+
+    private sealed record GateScanInput(
+        string ReportJson,
+        string ScannerVersion,
+        string Mode,
+        string TrivyStatus);
 
     internal sealed record GatePolicyEvaluation(
         string Decision,
@@ -583,5 +656,22 @@ internal static class CicdContainerGate
         public GateUsageException(string message) : base(message)
         {
         }
+    }
+
+    private sealed class GateLiveTrivyException : Exception
+    {
+        public GateLiveTrivyException(string image, string status, string hint, string? safeError)
+            : base(status)
+        {
+            Image = image;
+            Status = status;
+            Hint = hint;
+            SafeError = safeError;
+        }
+
+        public string Image { get; }
+        public string Status { get; }
+        public string Hint { get; }
+        public string? SafeError { get; }
     }
 }

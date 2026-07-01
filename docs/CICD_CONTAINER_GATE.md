@@ -31,6 +31,9 @@ Options:
 | --- | --- |
 | `--image <image>` | Image reference shown in safe gate output. |
 | `--from-trivy-json <path>` | Deterministic Trivy-compatible fixture input. |
+| `--live-trivy` | Optional manual live Trivy mode. Cannot be combined with `--from-trivy-json`. |
+| `--trivy-path <path>` | Optional Trivy executable path for live mode. |
+| `--timeout-seconds <n>` | Bounded live Trivy timeout. |
 | `--policy-config <path>` | Optional policy config path. Defaults to `config/container-policy.default.json`. |
 | `--fail-on block\|warn\|never` | Controls CI failure threshold. Defaults to `block`. |
 | `--report <path>` | Optional sanitized Markdown report path. |
@@ -38,6 +41,27 @@ Options:
 | `--no-submit` | Explicit fixture-only mode. This is the default CI-safe posture. |
 
 `--submit` is intentionally not supported in v1. Use existing image scan or protected-run workflows for ingestion. The gate remains focused on deterministic CI behavior.
+
+## Optional live Trivy gate
+
+Fixture mode remains the CI/full-validation default. For a local manual smoke when Trivy and image access are available:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --fail-on block `
+  --no-submit
+```
+
+If Trivy is unavailable, the gate fails safely with exit code `3`:
+
+```text
+Trivy: unavailable
+Hint: install Trivy or use --from-trivy-json fixture mode.
+```
+
+The live gate parses Trivy JSON through the existing parser and evaluates the same container policy-as-code. It does not print raw Trivy JSON, Docker logs, raw payload JSON, `AdditionalDataJson`, secrets, API keys, connection strings, environment values, certificates, private keys, signing keys, screenshots, or generated local artifacts.
 
 ## Exit code contract
 

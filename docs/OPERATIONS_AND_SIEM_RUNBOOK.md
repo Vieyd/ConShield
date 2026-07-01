@@ -322,6 +322,17 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageSca
 
 The script maps a Trivy-compatible report to `conshield.image-scanner` / `container.image.scan.completed`, expects `IMG-001`, and prints only compact summary fields. The evidence exporter adds `Image Scan Evidence` when matching image scan events are present. Do not commit generated Markdown under `artifacts/local/`, raw Trivy reports, raw event payloads, local logs, secrets, API keys, connection strings, or environment values.
 
+Optional manual live Trivy scan, when Trivy is installed and the image is accessible:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --no-submit
+```
+
+Live Trivy is not required for full validation or CI. If Trivy is unavailable, use the fixture command above. The Web UI does not execute Trivy; Dashboard and Demo only show copy/paste references.
+
 ## Protected container run path
 
 Use the protected run wrapper for the scan → policy → launch lifecycle workflow. Deterministic validation does not require live Trivy, internet, Fedora, or Docker execution:
@@ -361,6 +372,18 @@ dotnet run --project .\src\ConShield.Cli -- gate image `
 ```
 
 Exit codes are documented and CI-friendly: `0` means passed, `1` means failed by policy, `2` means usage/config/input error, and `3` means infrastructure error. `Block` fails when `--fail-on block`; `Warn` fails only when `--fail-on warn`; `--fail-on never` reports findings without failing. The command does not require live Trivy DB/network, live Docker run, Fedora/Falco, external internet, Kubernetes, certificates, private keys, signing keys, or secrets. See [CICD_CONTAINER_GATE.md](CICD_CONTAINER_GATE.md).
+
+Optional manual live Trivy gate:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --fail-on block `
+  --no-submit
+```
+
+This uses the same policy-as-code evaluation and exit code contract, but it remains outside default validation because it depends on local Trivy and image access.
 
 ## Docker lifecycle collector
 

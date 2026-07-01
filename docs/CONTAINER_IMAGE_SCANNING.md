@@ -77,6 +77,32 @@ Prefer `CONSHIELD_API_KEY` over `--api-key` so the key is not stored in shell hi
 
 ## CLI Examples
 
+Unified CLI deterministic fixture mode, recommended for CI and full validation:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
+  --no-submit
+```
+
+Optional live Trivy mode, for manual local checks only:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --no-submit
+```
+
+Live Trivy requires a local Trivy installation and image access. It is not required for full validation, CI, or demo readiness. If Trivy is unavailable, use fixture mode:
+
+```text
+Trivy: unavailable
+Hint: install Trivy or use --from-trivy-json fixture mode.
+```
+
+The Web UI does not execute Trivy. Dashboard and Demo pages only show read-only copy/paste command references.
+
 Recommended PowerShell wrapper with deterministic fixture and no ingestion:
 
 ```powershell
@@ -98,6 +124,8 @@ Live scan through the wrapper:
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Invoke-ConShieldImageScan.ps1 `
   -Image alpine:3.18
 ```
+
+Live scanner mode uses a bounded timeout. Through the unified CLI, `--timeout-seconds` is validated and must stay within the supported local range.
 
 Scan and submit:
 
@@ -164,6 +192,7 @@ The scanner sends `sourceSystem = "conshield.image-scanner"` and `externalEventT
 ```
 
 The full CVE list and full Trivy report are intentionally not submitted to ConShield.
+Raw Trivy JSON, raw event payload JSON, `AdditionalDataJson`, Docker logs, secrets, API keys, connection strings, environment values, screenshots, certificates, private keys, signing keys, and generated local artifacts are intentionally excluded from CLI output and evidence.
 
 ## IMG-001
 

@@ -40,7 +40,7 @@ public sealed class TrivyRunner : ITrivyRunner
         var scannerVersion = ParseVersion(versionResult.StandardOutput);
         var scanResult = await _processRunner.RunAsync(
             trivyPath,
-            ["image", "--format", "json", "--quiet", "--scanners", "vuln", options.ImageReference],
+            ["image", "--format", "json", "--quiet", "--scanners", "vuln,secret,misconfig", options.ImageReference],
             options.TimeoutSeconds,
             ScannerConstants.MaxReportBytes,
             ScannerConstants.MaxStderrBytes,

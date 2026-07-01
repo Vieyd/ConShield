@@ -25,11 +25,22 @@ dotnet run --project .\src\ConShield.Cli -- scan image `
   --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- gate image `
   --image demo/insecure-api:latest `
   --from-trivy-json .\tests\TestData\Trivy\sample-image-scan.json `
   --fail-on never `
   --report .\artifacts\local\cicd-gate-report.md `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --fail-on block `
   --no-submit
 
 dotnet run --project .\src\ConShield.Cli -- run protected `
@@ -63,8 +74,8 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 | `demo readiness` | `Test-ConShieldDemoReadiness.ps1` |
 | `demo seed` | `Seed-ConShieldDemoData.ps1` |
 | `demo reset --confirm` | `Reset-ConShieldLocalDemoData.ps1 -ConfirmReset` |
-| `scan image` | `Invoke-ConShieldImageScan.ps1` |
-| `gate image` | Built-in CI/CD image gate for fixture scan result + container policy-as-code |
+| `scan image` | `Invoke-ConShieldImageScan.ps1`; fixture-first, with optional live Trivy mode |
+| `gate image` | Built-in CI/CD image gate for fixture scan result + container policy-as-code; optional live Trivy mode |
 | `run protected` | `Invoke-ConShieldProtectedRun.ps1` |
 | `lifecycle replay` | Built-in deterministic Docker lifecycle fixture replay through existing external ingestion |
 | `lifecycle watch` | Optional bounded live Docker event watch; no-submit by default and not required for CI |
@@ -107,6 +118,7 @@ The command wraps `scripts/Seed-ConShieldDemoData.ps1`, which creates or reuses 
 - Protected container execution remains opt-in with `--execute`; fixture validation should use `--no-run --no-submit`.
 - `Block` decisions are still enforced by the underlying protected-run script.
 - CI/CD image gate uses deterministic fixture input, returns documented exit codes, and writes sanitized reports only when requested.
+- Live Trivy scan/gate is optional/manual, requires local Trivy and image access, cannot be mixed with `--from-trivy-json`, and is not required by full validation.
 - Docker lifecycle replay is fixture-first for CI; `lifecycle watch` is available as an optional manual command and is not required by full validation.
 - Docker lifecycle watch is optional/manual, bounded by duration and max-events, and defaults to no-submit.
 - CI-safe commands use fixtures and do not require real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, real certificates, private keys, real signing keys, or real secrets.
