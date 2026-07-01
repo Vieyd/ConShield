@@ -10,7 +10,7 @@ Docker Lifecycle Collector v1 adds a deterministic local replay path for Docker-
 - `ExternalEventType = container.lifecycle.abnormal_exit`
 - `ExternalEventType = container.lifecycle.exec_started`
 
-The v1 path is intentionally fixture-first and CI-safe. It does not require live Docker, Fedora/Falco, live Trivy DB/network, external internet, Kubernetes, mTLS, real certificates, private keys, signing keys, or secrets.
+The default path is fixture-first and CI-safe. It does not require live Docker, Fedora/Falco, live Trivy DB/network, external internet, Kubernetes, mTLS, real certificates, private keys, signing keys, or secrets.
 
 ## Local replay
 
@@ -43,6 +43,51 @@ dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
 
 The command reads local configuration only from environment variables or ignored local config. It never prints the key or connection details.
 
+## Optional live Docker watch
+
+Live Docker Lifecycle Watch v1 is an optional manual check for local machines where Docker Desktop or a compatible Docker daemon is already running. It is not required by CI, full validation, readiness, or the default guided demo seed.
+
+Watch without submitting to Web:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- lifecycle watch `
+  --duration-seconds 30 `
+  --no-submit
+```
+
+Optional submit mode:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- lifecycle watch `
+  --duration-seconds 30 `
+  --submit
+```
+
+The watch command uses a bounded `docker events --format "{{json .}}" --filter type=container` process and stops after the configured duration or `--max-events` limit.
+
+Options:
+
+- `--duration-seconds <n>`: bounded watch duration, allowed range `1..300`, default `30`.
+- `--max-events <n>`: maximum observed events, allowed range `1..1000`, default `100`.
+- `--no-submit`: default safe mode; observes and normalizes only.
+- `--submit`: submits sanitized events through existing external ingestion and requires local Web/API plus local ignored credentials.
+
+Expected no-submit output:
+
+```text
+ConShield Docker lifecycle watch
+Docker: OK
+Mode: live watch
+Duration: 30 seconds
+Submit: false
+Events observed: <n>
+Events normalized: <n>
+Events submitted: 0
+Result: PASS
+```
+
+If Docker is unavailable in no-submit mode, the command exits safely with `Result: SKIP` and a hint to start Docker Desktop or use lifecycle replay fixture mode. If Docker is unavailable in submit mode, it returns an infrastructure error. The command does not print Docker raw JSON, Docker logs, host mount paths, environment values, API keys, passwords, connection strings, tokens, or raw event payloads.
+
 ## Event mapping
 
 | Docker-compatible action | ConShield event type | Severity |
@@ -60,11 +105,11 @@ External event IDs are deterministic for the same source system, mapped event ty
 
 - Defense evidence export includes a `Docker Lifecycle Collector Evidence` section with safe aggregate counts and recent safe descriptions.
 - Demo readiness runs the deterministic fixture in `--no-submit` mode.
-- The `/Demo` page lists the lifecycle replay command as a read-only checklist item.
+- The `/Demo` page and `/Dashboard` list deterministic lifecycle replay and optional live watch as read-only copy/paste commands. The Web UI does not execute Docker commands.
 - Existing `LIFE-001` / `LIFE-002` behavior remains available for protected-run and sensor lifecycle paths. This PR does not replace those rules or add a live Docker dependency.
 
 ## Safety boundaries
 
 Do not commit generated reports or local artifacts. The collector and docs must not expose API keys, passwords, connection strings, environment values, Docker logs, raw Docker event JSON, raw event payload JSON, raw additional data, host-sensitive mount paths, screenshots, certificates, private keys, or signing keys.
 
-`lifecycle watch` is intentionally not implemented in v1 because live Docker event watching would make CI and demo validation depend on machine state. Use deterministic replay fixtures for regression coverage.
+Use deterministic replay fixtures for regression coverage. Keep live watch as an optional manual check only.

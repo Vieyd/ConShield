@@ -94,6 +94,16 @@ Recommended defense flow:
 6. Export evidence.
 7. Run readiness or full validation if you need a final confidence check.
 
+Optional manual live Docker check, only when Docker Desktop is running:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- lifecycle watch `
+  --duration-seconds 30 `
+  --no-submit
+```
+
+This check is not required for CI, readiness, full validation, or the guided seed. The Web UI only lists it as a copy/paste reference and does not execute Docker commands from the browser.
+
 Useful routes:
 
 ```text

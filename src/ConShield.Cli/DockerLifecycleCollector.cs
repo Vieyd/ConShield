@@ -44,6 +44,25 @@ internal static class DockerLifecycleCollector
         }
     }
 
+    public static DockerLifecycleEvent ParseJsonLine(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+            throw new DockerLifecycleException("Docker event line is empty.");
+
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+                throw new DockerLifecycleException("Docker event line must be a JSON object.");
+
+            return ParseEvent(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            throw new DockerLifecycleException("Docker event line is not valid JSON.");
+        }
+    }
+
     public static IReadOnlyList<NormalizedDockerLifecycleEvent> Normalize(IReadOnlyList<DockerLifecycleEvent> events)
     {
         var normalized = events

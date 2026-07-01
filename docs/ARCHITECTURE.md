@@ -2,7 +2,7 @@
 
 ## Architecture summary
 
-ConShield is a local-first DevSecOps/SIEM control plane for container security. It connects deterministic image scanning, policy-as-code, CI/CD gating, protected local run decisions, Docker lifecycle replay, Falco-compatible runtime events, sensor trust, signed sensor event verification, SIEM correlation, incidents, evidence export, and full validation.
+ConShield is a local-first DevSecOps/SIEM control plane for container security. It connects deterministic image scanning, policy-as-code, CI/CD gating, protected local run decisions, Docker lifecycle replay, optional live Docker lifecycle watch, Falco-compatible runtime events, sensor trust, signed sensor event verification, SIEM correlation, incidents, evidence export, and full validation.
 
 The current architecture is intentionally demo-ready and reproducible. It is designed to explain and validate the workflow locally without requiring real Fedora/Falco, live Docker execution, live Trivy network access, Kubernetes, full mTLS, real certificates, private keys, signing keys, or real secrets.
 
@@ -11,7 +11,7 @@ The current architecture is intentionally demo-ready and reproducible. It is des
 | Component | Responsibility |
 |---|---|
 | `ConShield.Web` | Local MVC UI, authentication, operator pages, external ingestion API, reports, Runtime Sensor Health, `/Demo` walkthrough. |
-| `ConShield.Cli` | Unified local CLI wrapper for validation, guided demo seed, demo reset/readiness, image scan, protected run, lifecycle replay, sensor replay, gate, and evidence export. |
+| `ConShield.Cli` | Unified local CLI wrapper for validation, guided demo seed, demo reset/readiness, image scan, protected run, lifecycle replay/watch, sensor replay, gate, and evidence export. |
 | External event ingestion API | Accepts normalized external security events and routes them into operational storage and SIEM correlation. |
 | `ConShield.EventConsumer` | Consumes RabbitMQ-delivered events and writes projection/checkpoint data when the message pipeline is enabled. |
 | PostgreSQL | Primary operational store for security events, alerts, incidents, sensors, outbox/inbox, and application state. |
@@ -20,7 +20,7 @@ The current architecture is intentionally demo-ready and reproducible. It is des
 | Image scanner path | Maps Trivy-compatible scan results into IMG security events without requiring live Trivy DB in fixture mode. |
 | Protected runner path | Evaluates scan findings against container policy-as-code and controls whether a container run is allowed, warned, or blocked. |
 | CI/CD gate | Evaluates scan results and policy decisions with deterministic exit behavior for pipeline use. |
-| Docker lifecycle collector | Replays Docker-compatible lifecycle events into sanitized LIFE security events. |
+| Docker lifecycle collector | Replays Docker-compatible lifecycle fixture events and can optionally watch bounded live Docker container events into sanitized LIFE security events. |
 | Falco/runtime replay path | Maps Falco-compatible runtime events into RTE security events. |
 | Sensor trust registry | Defines trusted, unknown, revoked, and disabled runtime sensor status. |
 | Sensor trust enforcement | Surfaces unknown/revoked/disabled runtime sources through deterministic SENSOR signals. |

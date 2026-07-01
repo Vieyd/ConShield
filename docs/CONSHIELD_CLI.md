@@ -43,6 +43,10 @@ dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
   --from-docker-events-json .\tests\TestData\DockerEvents\container-lifecycle-events.json `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- lifecycle watch `
+  --duration-seconds 30 `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- sensor replay `
   --demo-signature `
   --no-submit
@@ -63,6 +67,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 | `gate image` | Built-in CI/CD image gate for fixture scan result + container policy-as-code |
 | `run protected` | `Invoke-ConShieldProtectedRun.ps1` |
 | `lifecycle replay` | Built-in deterministic Docker lifecycle fixture replay through existing external ingestion |
+| `lifecycle watch` | Optional bounded live Docker event watch; no-submit by default and not required for CI |
 | `sensor replay` | `Replay-ConShieldFalcoRuntimeEvent.ps1` |
 | `evidence export` | `Export-ConShieldDefenseEvidence.ps1` |
 
@@ -102,7 +107,8 @@ The command wraps `scripts/Seed-ConShieldDemoData.ps1`, which creates or reuses 
 - Protected container execution remains opt-in with `--execute`; fixture validation should use `--no-run --no-submit`.
 - `Block` decisions are still enforced by the underlying protected-run script.
 - CI/CD image gate uses deterministic fixture input, returns documented exit codes, and writes sanitized reports only when requested.
-- Docker lifecycle replay is fixture-first; `lifecycle watch` is intentionally skipped in v1 to avoid live Docker dependencies in CI.
+- Docker lifecycle replay is fixture-first for CI; `lifecycle watch` is available as an optional manual command and is not required by full validation.
+- Docker lifecycle watch is optional/manual, bounded by duration and max-events, and defaults to no-submit.
 - CI-safe commands use fixtures and do not require real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, real certificates, private keys, real signing keys, or real secrets.
 - The CLI must not print API keys, passwords, connection strings, environment values, raw Trivy JSON, raw runtime payload JSON, raw `AdditionalDataJson`, Docker logs, screenshots, certificates, private keys, signing keys, or generated local artifacts.
 - Generated evidence and published binaries should stay under ignored `artifacts/local/`.

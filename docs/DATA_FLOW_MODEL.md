@@ -39,7 +39,7 @@ This data flow model describes the local ConShield security event processing and
 
 - Scan fixture or scan result → P2 → normalized IMG event.
 - Container policy config → P3 → POL/LIFE launch decision event.
-- Docker lifecycle fixture → P4 → sanitized LIFE event.
+- Docker lifecycle fixture or optional bounded live Docker watch → P4 → sanitized LIFE event.
 - Runtime/Falco fixture → P6/P4 → RTE/SENSOR/SIGN event.
 - P4 → D1 and optionally D3 → EventConsumer → D2.
 - D1 + D4 → P5 → alerts/incidents.
@@ -68,7 +68,8 @@ flowchart TB
     CI["Developer / CI system"] --> P1["P1 Validate configuration"]
     CI --> P2["P2 Scan/evaluate image"]
     Operator --> P3["P3 Enforce CI/CD or protected-run decision"]
-    Docker["Docker host"] --> P4["P4 Ingest normalized event"]
+    Docker["Docker host"] --> Watch["Optional bounded live Docker lifecycle watch"]
+    Watch --> P4["P4 Ingest normalized event"]
     Sensor["Runtime sensor"] --> P6["P6 Validate sensor trust/signature"]
     Trivy["Trivy scan source"] --> P2
 
