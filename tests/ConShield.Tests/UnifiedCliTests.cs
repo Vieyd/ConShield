@@ -29,6 +29,7 @@ public sealed class UnifiedCliTests
             "gate image",
             "run protected",
             "sensor replay",
+            "sensor collect",
             "lifecycle replay",
             "lifecycle watch",
             "evidence export"
@@ -162,6 +163,7 @@ public sealed class UnifiedCliTests
             "dotnet run --project .\\src\\ConShield.Cli -- lifecycle replay",
             "dotnet run --project .\\src\\ConShield.Cli -- lifecycle watch",
             "dotnet run --project .\\src\\ConShield.Cli -- sensor replay",
+            "dotnet run --project .\\src\\ConShield.Cli -- sensor collect",
             "dotnet run --project .\\src\\ConShield.Cli -- evidence export",
             "demo reset --confirm"
         })
@@ -196,12 +198,8 @@ public sealed class UnifiedCliTests
         foreach (var argument in arguments)
             psi.ArgumentList.Add(argument);
 
-        using var process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start CLI.");
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit(120_000);
-
-        return new CommandResult(process.ExitCode, output + error);
+        var result = TestProcessRunner.Run(psi, TimeSpan.FromSeconds(60));
+        return new CommandResult(result.ExitCode, result.Output);
     }
 
     private static string ReadRepoFile(params string[] parts) =>

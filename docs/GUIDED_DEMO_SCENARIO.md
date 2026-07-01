@@ -94,6 +94,17 @@ Recommended defense flow:
 6. Export evidence.
 7. Run readiness or full validation if you need a final confidence check.
 
+Optional deterministic runtime sensor stream check:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- sensor collect `
+  --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl `
+  --demo-signature `
+  --no-submit
+```
+
+This local collector fixture reads line by line, skips malformed lines safely, applies trust/signature handling, and does not require real Fedora/Falco. Dashboard and Demo pages list it only as a copy/paste reference; the Web UI does not execute collector commands.
+
 Optional manual live Docker check, only when Docker Desktop is running:
 
 ```powershell

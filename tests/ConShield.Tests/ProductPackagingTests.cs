@@ -203,17 +203,8 @@ public sealed class ProductPackagingTests
         foreach (var argument in arguments)
             startInfo.ArgumentList.Add(argument);
 
-        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("pwsh was not started.");
-        if (!process.WaitForExit(60_000))
-        {
-            process.Kill(entireProcessTree: true);
-            return new CommandResult(-1, "Process timed out.");
-        }
-
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-
-        return new CommandResult(process.ExitCode, output + error);
+        var result = TestProcessRunner.Run(startInfo, TimeSpan.FromSeconds(60));
+        return new CommandResult(result.ExitCode, result.Output);
     }
 
     private static CommandResult RunGit(params string[] arguments)
@@ -230,12 +221,8 @@ public sealed class ProductPackagingTests
         foreach (var argument in arguments)
             startInfo.ArgumentList.Add(argument);
 
-        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("git was not started.");
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit(60_000);
-
-        return new CommandResult(process.ExitCode, output + error);
+        var result = TestProcessRunner.Run(startInfo, TimeSpan.FromSeconds(60));
+        return new CommandResult(result.ExitCode, result.Output);
     }
 
     private static void AssertSafeText(string text)
