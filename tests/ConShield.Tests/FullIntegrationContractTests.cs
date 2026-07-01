@@ -99,6 +99,7 @@ public sealed class FullIntegrationContractTests
         {
             "validate",
             "demo readiness",
+            "demo seed",
             "demo reset",
             "scan image",
             "run protected",
@@ -114,6 +115,8 @@ public sealed class FullIntegrationContractTests
         foreach (var demoMarker in new[]
         {
             "Test-ConShieldDemoReadiness.ps1",
+            "Seed-ConShieldDemoData.ps1",
+            "demo seed",
             "Reset-ConShieldLocalDemoData.ps1",
             "scan image",
             "run protected",

@@ -297,6 +297,7 @@ http://127.0.0.1:5080/Demo
 ```
 
 - Expected result: page shows readiness, reset, image scan, protected run, CI/CD gate, Docker lifecycle collector, Falco/signed sensor replay, evidence export, and links to Security Summary, Security Events, SIEM, Incidents, and Runtime Sensor Health. It does not run shell scripts from the browser.
+- Guided seed: `scripts\Seed-ConShieldDemoData.ps1` and `dotnet run --project .\src\ConShield.Cli -- demo seed` are shown as copy/paste references only. Static tests verify the seed script, docs, `/Demo`, `/Dashboard`, and CLI references; live seed execution remains an optional local-service smoke because it requires a running Web/API.
 - CI-safe: route contract is covered by tests; live route is optional.
 - Web/API required: yes for live page.
 - Docker/Falco/Trivy network required: no.

@@ -169,7 +169,9 @@ function Test-Repository {
     $required = @(
         'ConShield.sln',
         'src\ConShield.Cli\ConShield.Cli.csproj',
+        'docs\GUIDED_DEMO_SCENARIO.md',
         'scripts\Export-ConShieldDefenseEvidence.ps1',
+        'scripts\Seed-ConShieldDemoData.ps1',
         'scripts\Test-ConShieldDemoReadiness.ps1',
         'README.md',
         '.github\workflows\dotnet.yml'
@@ -231,7 +233,7 @@ function Test-Cli {
         -FileName 'dotnet' `
         -Arguments @('run', '--project', $project, '--', '--help') `
         -RepoRoot $RepoRoot `
-        -RequiredMarkers @('validate', 'demo readiness', 'demo reset', 'scan image', 'run protected', 'sensor replay', 'lifecycle replay', 'gate image', 'evidence export') `
+        -RequiredMarkers @('validate', 'demo readiness', 'demo seed', 'demo reset', 'scan image', 'run protected', 'sensor replay', 'lifecycle replay', 'gate image', 'evidence export') `
         -Hint 'dotnet run --project .\src\ConShield.Cli -- --help'
     if (-not $help.Passed) {
         return New-StepResult -Name 'CLI' -Passed $false -Detail $help.Detail -Hint $help.Hint
@@ -265,6 +267,7 @@ function Test-Scripts {
         'scripts\Invoke-ConShieldImageScan.ps1',
         'scripts\Invoke-ConShieldProtectedRun.ps1',
         'scripts\Export-ConShieldDefenseEvidence.ps1',
+        'scripts\Seed-ConShieldDemoData.ps1',
         'scripts\Test-ConShieldDemoReadiness.ps1',
         'scripts\Reset-ConShieldLocalDemoData.ps1'
     )
@@ -348,6 +351,8 @@ function Test-DemoContract {
 
     foreach ($marker in @(
         'Test-ConShieldDemoReadiness.ps1',
+        'Seed-ConShieldDemoData.ps1',
+        'demo seed',
         'Reset-ConShieldLocalDemoData.ps1',
         'scan image',
         'run protected',
@@ -418,8 +423,10 @@ function Test-SecurityGuardrails {
     $safeFiles = @(
         'README.md',
         'docs\CONSHIELD_CLI.md',
+        'docs\GUIDED_DEMO_SCENARIO.md',
         'docs\CICD_CONTAINER_GATE.md',
         'docs\OPERATIONS_AND_SIEM_RUNBOOK.md',
+        'scripts\Seed-ConShieldDemoData.ps1',
         'scripts\Test-ConShieldDemoReadiness.ps1',
         'scripts\Export-ConShieldDefenseEvidence.ps1'
     )

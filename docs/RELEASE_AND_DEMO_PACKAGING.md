@@ -84,6 +84,7 @@ The pack is allowlist-based. It includes:
   - `SENSOR_TRUST_REGISTRY.md`;
   - `SIEM_RULES.md`;
   - `CONTAINER_POLICY.md`;
+  - `GUIDED_DEMO_SCENARIO.md`;
   - `OPERATIONS_AND_SIEM_RUNBOOK.md`;
 - committed default configs:
   - `config/siem-rules.default.json`;
@@ -93,6 +94,7 @@ The pack is allowlist-based. It includes:
   - `Start-ConShield.ps1`;
   - `Test-ConShieldFullValidation.ps1`;
   - `Test-ConShieldDemoReadiness.ps1`;
+  - `Seed-ConShieldDemoData.ps1`;
   - `Export-ConShieldDefenseEvidence.ps1`;
   - `Run-ConShieldDefenseScenario.ps1`;
   - `Replay-ConShieldFalcoRuntimeEvent.ps1`;

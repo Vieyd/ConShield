@@ -11,7 +11,7 @@ The current architecture is intentionally demo-ready and reproducible. It is des
 | Component | Responsibility |
 |---|---|
 | `ConShield.Web` | Local MVC UI, authentication, operator pages, external ingestion API, reports, Runtime Sensor Health, `/Demo` walkthrough. |
-| `ConShield.Cli` | Unified local CLI wrapper for validation, demo reset/readiness, image scan, protected run, lifecycle replay, sensor replay, gate, and evidence export. |
+| `ConShield.Cli` | Unified local CLI wrapper for validation, guided demo seed, demo reset/readiness, image scan, protected run, lifecycle replay, sensor replay, gate, and evidence export. |
 | External event ingestion API | Accepts normalized external security events and routes them into operational storage and SIEM correlation. |
 | `ConShield.EventConsumer` | Consumes RabbitMQ-delivered events and writes projection/checkpoint data when the message pipeline is enabled. |
 | PostgreSQL | Primary operational store for security events, alerts, incidents, sensors, outbox/inbox, and application state. |
@@ -28,6 +28,7 @@ The current architecture is intentionally demo-ready and reproducible. It is des
 | SIEM correlation service | Loads configurable SIEM rules and correlates security events into alerts. |
 | Incident/operator workflow | Links alerts to incidents and supports acknowledge, review, progress, close, and source-event navigation. |
 | Evidence export | Produces safe Markdown evidence summaries under ignored local artifacts. |
+| Guided demo seed | Orchestrates existing deterministic replay/scenario/evidence paths so the dashboard and operator story have meaningful local data. |
 | Full validation and demo release packaging | Validates repository contracts and packages safe docs/config/scripts/CLI into a local ignored release bundle. |
 
 ## Runtime topology
