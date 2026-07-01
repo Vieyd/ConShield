@@ -233,7 +233,7 @@ function Test-Cli {
         -FileName 'dotnet' `
         -Arguments @('run', '--project', $project, '--', '--help') `
         -RepoRoot $RepoRoot `
-        -RequiredMarkers @('validate', 'demo readiness', 'demo seed', 'demo reset', 'scan image', 'run protected', 'sensor replay', 'lifecycle replay', 'gate image', 'evidence export') `
+        -RequiredMarkers @('validate', 'demo readiness', 'demo seed', 'demo reset', 'scan image', 'run protected', 'sensor replay', 'lifecycle replay', 'lifecycle watch', 'gate image', 'evidence export') `
         -Hint 'dotnet run --project .\src\ConShield.Cli -- --help'
     if (-not $help.Passed) {
         return New-StepResult -Name 'CLI' -Passed $false -Detail $help.Detail -Hint $help.Hint

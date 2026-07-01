@@ -309,6 +309,16 @@ dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
 
 The collector maps sanitized fixture events to `SourceSystem=conshield.docker-lifecycle-collector` and `ExternalEventType=container.lifecycle.*` with deterministic external event IDs. Evidence export includes `Docker Lifecycle Collector Evidence` when matching events are available. Existing `LIFE-001` / `LIFE-002` behavior remains available for protected-run and sensor lifecycle paths. Details are documented in [`docs/DOCKER_LIFECYCLE_COLLECTOR.md`](docs/DOCKER_LIFECYCLE_COLLECTOR.md).
 
+Optional manual live watch when Docker Desktop is running:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- lifecycle watch `
+  --duration-seconds 30 `
+  --no-submit
+```
+
+Live watch is bounded by duration and max-events, defaults to no-submit, and is not required by CI, full validation, readiness, or the guided seed. Submit mode is available with `--submit` when local Web/API is running. The Web UI only shows this as a copy/paste reference and does not execute Docker commands from the browser.
+
 ### Export defense evidence
 
 Export a safe Markdown evidence pack to an ignored local artifact path:
@@ -788,6 +798,16 @@ dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
 ```
 
 Collector маппит sanitized fixture events в `SourceSystem=conshield.docker-lifecycle-collector` и `ExternalEventType=container.lifecycle.*` с deterministic external event IDs. Evidence export включает `Docker Lifecycle Collector Evidence`, если matching events доступны. Existing `LIFE-001` / `LIFE-002` behavior остаётся доступным для protected-run и sensor lifecycle paths. Подробности описаны в [`docs/DOCKER_LIFECYCLE_COLLECTOR.md`](docs/DOCKER_LIFECYCLE_COLLECTOR.md).
+
+Optional manual live watch, если Docker Desktop запущен:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- lifecycle watch `
+  --duration-seconds 30 `
+  --no-submit
+```
+
+Live watch ограничен duration и max-events, по умолчанию работает в no-submit mode и не требуется для CI, full validation, readiness или guided seed. Submit mode доступен через `--submit`, когда локальный Web/API запущен. Web UI только показывает эту команду как copy/paste reference и не запускает Docker-команды из браузера.
 
 ### Экспорт evidence для защиты
 

@@ -105,6 +105,7 @@ public sealed class FullIntegrationContractTests
             "run protected",
             "sensor replay",
             "lifecycle replay",
+            "lifecycle watch",
             "gate image",
             "evidence export"
         })
@@ -122,6 +123,7 @@ public sealed class FullIntegrationContractTests
             "run protected",
             "gate image",
             "lifecycle replay",
+            "lifecycle watch",
             "sensor replay",
             "Export-ConShieldDefenseEvidence.ps1",
             "/Reports/SecuritySummary",

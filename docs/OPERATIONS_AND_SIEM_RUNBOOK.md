@@ -374,6 +374,16 @@ dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
 
 The collector maps Docker-compatible fixture actions to sanitized `conshield.docker-lifecycle-collector` / `container.lifecycle.*` security events with deterministic external event IDs. Defense evidence includes `Docker Lifecycle Collector Evidence` when matching events are present. Existing `LIFE-001` and `LIFE-002` sensor/protected-run lifecycle rules remain available; this v1 collector does not require live Docker in CI and does not print raw Docker event JSON, raw payloads, Docker logs, environment values, host-sensitive mount paths, or secrets. See [DOCKER_LIFECYCLE_COLLECTOR.md](DOCKER_LIFECYCLE_COLLECTOR.md).
 
+Optional manual live watch, only when Docker Desktop is running:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- lifecycle watch `
+  --duration-seconds 30 `
+  --no-submit
+```
+
+Submit mode is also available with `--submit` when local Web/API is running. Live watch is bounded by duration and max-events, fails safely with a Docker Desktop hint when Docker is unavailable, and is not required by CI, full validation, readiness, or the guided seed.
+
 ## Runtime Sensor Health
 
 Runtime Sensor Health is a read-only UI/evidence view derived from ingested runtime/Falco-compatible security events. It shows SourceSystem, last seen time, event count, latest event metadata, trust status, signature status, related `RTE-001` / `SENSOR-*` / `SIGN-*` alerts, related incidents, and `Active` / `Stale` / `NoData` status. It does not require a real Fedora VM for local validation.

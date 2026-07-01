@@ -85,7 +85,7 @@ dotnet run --project .\src\ConShield.Cli -- --help
 dotnet run --project .\src\ConShield.Cli -- validate
 ```
 
-- Expected result: help lists `validate`, `demo readiness`, `demo reset`, `scan image`, `run protected`, `sensor replay`, `lifecycle replay`, `gate image`, and `evidence export`; validate prints `Result: PASS`.
+- Expected result: help lists `validate`, `demo readiness`, `demo reset`, `scan image`, `run protected`, `sensor replay`, `lifecycle replay`, optional `lifecycle watch`, `gate image`, and `evidence export`; validate prints `Result: PASS`.
 - CI-safe: yes.
 - Web/API required: no.
 - Docker/Falco/Trivy network required: no.
@@ -145,7 +145,7 @@ dotnet run --project .\src\ConShield.Cli -- gate image `
 
 ## 8. Docker lifecycle collector
 
-- Purpose: map deterministic Docker-compatible fixture events to LIFE events without live Docker.
+- Purpose: map deterministic Docker-compatible fixture events to LIFE events without live Docker; document optional manual live Docker watch without making it part of CI.
 - Commands:
 
 ```powershell
@@ -155,6 +155,7 @@ dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
 ```
 
 - Expected result: `SourceSystem: conshield.docker-lifecycle-collector`, mapped lifecycle event types, `Ingestion: SKIP`, `Result: PASS`.
+- Optional manual check: `dotnet run --project .\src\ConShield.Cli -- lifecycle watch --duration-seconds 30 --no-submit` can be run when Docker Desktop is available; it is intentionally outside default full validation.
 - CI-safe: yes.
 - Web/API required: no with `--no-submit`.
 - Docker/Falco/Trivy network required: no.
@@ -342,6 +343,7 @@ The following checks are intentionally outside the default full validation becau
 
 - real Fedora/Falco deployment;
 - live Docker run with `--execute`;
+- optional live Docker lifecycle watch;
 - live Trivy DB/network scan;
 - Kubernetes/admission controller;
 - full mTLS;

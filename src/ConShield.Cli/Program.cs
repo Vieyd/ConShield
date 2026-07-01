@@ -8,6 +8,7 @@ internal static class Program
     private const int Success = 0;
     private const int UsageError = 2;
     private const int RuntimeError = 1;
+    private const int InfrastructureUnavailable = 3;
 
     private static readonly StringComparer OptionComparer = StringComparer.OrdinalIgnoreCase;
 
@@ -253,9 +254,89 @@ internal static class Program
         return args[0].ToLowerInvariant() switch
         {
             "replay" => await RunLifecycleReplayAsync(repoRoot, args[1..]),
-            "watch" => FailUsage("lifecycle watch is intentionally not implemented in v1; use lifecycle replay fixture mode."),
+            "watch" => await RunLifecycleWatchAsync(repoRoot, args[1..]),
             _ => FailUsage($"Unknown lifecycle command: {Safe(args[0])}")
         };
+    }
+
+    private static async Task<int> RunLifecycleWatchAsync(string repoRoot, string[] args)
+    {
+        var parser = new OptionParser(args);
+        var durationSeconds = ParseIntOption(parser.TakeValue("--duration-seconds"), 30, "--duration-seconds");
+        var maxEvents = ParseIntOption(parser.TakeValue("--max-events"), 100, "--max-events");
+        var submit = parser.TakeFlag("--submit");
+        var noSubmit = parser.TakeFlag("--no-submit");
+        var baseUrl = parser.TakeValue("--base-url") ?? "http://127.0.0.1:5080";
+        parser.ThrowIfRemaining();
+
+        if (submit && noSubmit)
+            throw new CliUsageException("Use either --submit or --no-submit, not both.");
+
+        DockerLifecycleWatch.Validate(durationSeconds, maxEvents);
+
+        var shouldSubmit = submit;
+        Console.WriteLine("Command: lifecycle watch");
+        Console.WriteLine("ConShield Docker lifecycle watch");
+        Console.WriteLine("Mode: live watch");
+        Console.WriteLine($"Duration: {durationSeconds} seconds");
+        Console.WriteLine($"Max events: {maxEvents}");
+        Console.WriteLine($"Submit: {shouldSubmit.ToString().ToLowerInvariant()}");
+
+        var watch = await DockerLifecycleWatch.WatchAsync(durationSeconds, maxEvents);
+        if (!watch.DockerAvailable)
+        {
+            Console.WriteLine("Docker: unavailable");
+            Console.WriteLine($"Hint: {watch.Hint}");
+            Console.WriteLine($"Result: {(shouldSubmit ? "FAIL" : "SKIP")}");
+            return shouldSubmit ? InfrastructureUnavailable : Success;
+        }
+
+        Console.WriteLine("Docker: OK");
+        Console.WriteLine($"SourceSystem: {DockerLifecycleCollector.SourceSystem}");
+        Console.WriteLine($"Events observed: {watch.EventsObserved}");
+        Console.WriteLine($"Events normalized: {watch.Events.Count}");
+        Console.WriteLine($"Lifecycle event types: {string.Join(",", watch.Events.Select(x => x.EventType).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))}");
+
+        if (!shouldSubmit)
+        {
+            Console.WriteLine("Events submitted: 0");
+            Console.WriteLine("Ingestion: SKIP");
+            Console.WriteLine("Expected rules: LIFE-001,LIFE-002 unaffected");
+            Console.WriteLine("Result: PASS");
+            return Success;
+        }
+
+        if (!await DockerLifecycleCollector.TestWebAsync(baseUrl))
+        {
+            Console.WriteLine("Web: FAIL");
+            Console.WriteLine("Events submitted: 0");
+            Console.WriteLine("Ingestion: FAIL");
+            Console.WriteLine("Hint: start local services with: pwsh -NoProfile -ExecutionPolicy Bypass -File .\\Start-ConShield.ps1 -StartApps -OpenRabbit");
+            Console.WriteLine("Result: FAIL");
+            return InfrastructureUnavailable;
+        }
+
+        var apiKey = DockerLifecycleCollector.ReadLocalApiKey(repoRoot);
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            Console.WriteLine("Web: OK");
+            Console.WriteLine("Events submitted: 0");
+            Console.WriteLine("Ingestion: FAIL");
+            Console.WriteLine("Hint: configure the local external ingestion key or rerun with --no-submit for watch-only validation.");
+            Console.WriteLine("Result: FAIL");
+            return RuntimeError;
+        }
+
+        var submitResult = watch.Events.Count == 0
+            ? new SubmitSummary(0, 0, 0)
+            : await DockerLifecycleCollector.SubmitAsync(watch.Events, baseUrl, apiKey);
+
+        Console.WriteLine("Web: OK");
+        Console.WriteLine($"Events submitted: {submitResult.Accepted + submitResult.Duplicate}");
+        Console.WriteLine($"Ingestion: accepted={submitResult.Accepted} duplicate={submitResult.Duplicate} failed={submitResult.Failed}");
+        Console.WriteLine("Expected rules: LIFE-001,LIFE-002 unaffected");
+        Console.WriteLine($"Result: {(submitResult.Failed == 0 ? "PASS" : "FAIL")}");
+        return submitResult.Failed == 0 ? Success : RuntimeError;
     }
 
     private static async Task<int> RunLifecycleReplayAsync(string repoRoot, string[] args)
@@ -482,6 +563,7 @@ internal static class Program
         Console.WriteLine("  run protected");
         Console.WriteLine("  sensor replay");
         Console.WriteLine("  lifecycle replay");
+        Console.WriteLine("  lifecycle watch");
         Console.WriteLine("  evidence export");
         Console.WriteLine();
         Console.WriteLine("Examples:");
@@ -491,6 +573,7 @@ internal static class Program
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- run protected --image demo/insecure-api:latest --container-name conshield-demo-insecure --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json --no-run --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- sensor replay --demo-signature --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- lifecycle replay --from-docker-events-json .\\tests\\TestData\\DockerEvents\\container-lifecycle-events.json --no-submit");
+        Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- lifecycle watch --duration-seconds 30 --no-submit");
     }
 
     private static void PrintDemoHelp()
@@ -538,7 +621,20 @@ internal static class Program
     {
         Console.WriteLine("Lifecycle commands:");
         Console.WriteLine("  lifecycle replay --from-docker-events-json <path> --no-submit");
-        Console.WriteLine("  lifecycle watch is intentionally skipped in v1 to avoid live Docker dependencies in CI.");
+        Console.WriteLine("  lifecycle watch --duration-seconds 30 --max-events 100 --no-submit");
+        Console.WriteLine("  lifecycle watch --duration-seconds 30 --submit");
+        Console.WriteLine("  Live watch is optional/manual and is not required for CI or full validation.");
+    }
+
+    private static int ParseIntOption(string? value, int defaultValue, string optionName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return defaultValue;
+
+        if (!int.TryParse(value, out var parsed))
+            throw new CliUsageException($"{optionName} must be an integer.");
+
+        return parsed;
     }
 
     private static void WriteSafeLine(TextWriter writer, string? line)
@@ -634,10 +730,4 @@ internal static class Program
         }
     }
 
-    private sealed class CliUsageException : Exception
-    {
-        public CliUsageException(string message) : base(message)
-        {
-        }
-    }
 }
