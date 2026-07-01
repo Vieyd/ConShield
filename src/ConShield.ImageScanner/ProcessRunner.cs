@@ -24,9 +24,6 @@ public sealed class ProcessRunner : IProcessRunner
         int maxStderrBytes,
         CancellationToken cancellationToken)
     {
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
         var startInfo = new ProcessStartInfo
         {
             FileName = fileName,
@@ -51,20 +48,21 @@ public sealed class ProcessRunner : IProcessRunner
             return ProcessRunResult.Failed(ex.Message);
         }
 
-        var stdoutTask = ReadLimitedAsync(process.StandardOutput, maxStdoutBytes, linkedCts.Token);
-        var stderrTask = ReadLimitedAsync(process.StandardError, maxStderrBytes, linkedCts.Token);
+        var stdoutTask = ReadLimitedAsync(process.StandardOutput, maxStdoutBytes, cancellationToken);
+        var stderrTask = ReadLimitedAsync(process.StandardError, maxStderrBytes, cancellationToken);
 
-        try
-        {
-            await process.WaitForExitAsync(linkedCts.Token);
-        }
-        catch (OperationCanceledException)
+        var waitTask = process.WaitForExitAsync(CancellationToken.None);
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(timeoutSeconds), cancellationToken);
+        var completed = await Task.WhenAny(waitTask, delayTask);
+        if (completed != waitTask)
         {
             TryKill(process);
-            return cancellationToken.IsCancellationRequested && !timeoutCts.IsCancellationRequested
+            return cancellationToken.IsCancellationRequested
                 ? ProcessRunResult.CanceledResult()
                 : ProcessRunResult.TimedOutResult();
         }
+
+        await waitTask;
 
         var stdout = await stdoutTask;
         var stderr = await stderrTask;

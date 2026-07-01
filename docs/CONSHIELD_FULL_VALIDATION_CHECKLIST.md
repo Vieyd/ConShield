@@ -85,10 +85,29 @@ dotnet run --project .\src\ConShield.Cli -- --help
 dotnet run --project .\src\ConShield.Cli -- validate
 ```
 
-- Expected result: help lists `validate`, `demo readiness`, `demo reset`, `scan image`, `run protected`, `sensor replay`, `lifecycle replay`, optional `lifecycle watch`, `gate image`, and `evidence export`; validate prints `Result: PASS`.
+- Expected result: help lists `validate`, `demo readiness`, `demo reset`, `scan image`, optional live Trivy scan, `run protected`, `sensor replay`, `lifecycle replay`, optional `lifecycle watch`, `gate image`, optional live Trivy gate, and `evidence export`; validate prints `Result: PASS`.
 - CI-safe: yes.
 - Web/API required: no.
 - Docker/Falco/Trivy network required: no.
+
+Optional manual live Trivy commands, intentionally outside default full validation:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- scan image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --no-submit
+
+dotnet run --project .\src\ConShield.Cli -- gate image `
+  --image alpine:3.19 `
+  --live-trivy `
+  --fail-on block `
+  --no-submit
+```
+
+- Expected result: if Trivy and image access are available, live scan/gate print sanitized counts and policy output; otherwise they fail safely with a fixture-mode hint.
+- Required by CI/full validation: no.
+- Web execution: no; Dashboard/Demo show read-only copy/paste references only.
 
 ## 5. Image scanning
 
@@ -344,7 +363,7 @@ The following checks are intentionally outside the default full validation becau
 - real Fedora/Falco deployment;
 - live Docker run with `--execute`;
 - optional live Docker lifecycle watch;
-- live Trivy DB/network scan;
+- optional live Trivy scan/gate with local image access;
 - Kubernetes/admission controller;
 - full mTLS;
 - real certificates, private keys, and signing keys;

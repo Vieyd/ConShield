@@ -20,7 +20,7 @@ This data flow model describes the local ConShield security event processing and
 - Operator.
 - Docker host.
 - Runtime sensor.
-- Trivy scan source.
+- Trivy scan source: deterministic fixture or optional manual live Trivy scan/gate.
 
 ## Processes
 
@@ -56,7 +56,7 @@ flowchart LR
     Operator["Operator"] --> CS
     Docker["Docker host"] --> CS
     Sensor["Runtime sensor"] --> CS
-    Trivy["Trivy scan source"] --> CS
+    Trivy["Trivy scan source fixture or optional live Trivy"] --> CS
     CS --> Evidence["Safe evidence / release artifacts"]
     CS --> Views["Web and CLI views"]
 ```
@@ -71,7 +71,7 @@ flowchart TB
     Docker["Docker host"] --> Watch["Optional bounded live Docker lifecycle watch"]
     Watch --> P4["P4 Ingest normalized event"]
     Sensor["Runtime sensor"] --> P6["P6 Validate sensor trust/signature"]
-    Trivy["Trivy scan source"] --> P2
+    Trivy["Trivy scan fixture or optional live Trivy"] --> P2
 
     D4[("D4 Config files")] --> P1
     D4 --> P3

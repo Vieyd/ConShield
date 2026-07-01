@@ -145,13 +145,7 @@ internal static class Program
         if (!args[0].Equals("image", StringComparison.OrdinalIgnoreCase))
             return FailUsage($"Unknown scan command: {Safe(args[0])}");
 
-        var mapped = MapOptions(
-            args[1..],
-            new OptionSpec("--from-trivy-json", "-FromTrivyJson", RequiresValue: true, ExistingFile: true),
-            new OptionSpec("--image", "-Image", RequiresValue: true),
-            new OptionSpec("--no-submit", "-NoSubmit", RequiresValue: false),
-            new OptionSpec("--output", "-OutputMarkdownPath", RequiresValue: true),
-            new OptionSpec("--timeout-seconds", "-TimeoutSeconds", RequiresValue: true));
+        var mapped = MapScanImageOptions(repoRoot, args[1..]);
 
         return await RunScriptCommandAsync(repoRoot, "scan image", "Invoke-ConShieldImageScan.ps1", mapped);
     }
@@ -485,6 +479,66 @@ internal static class Program
         return mapped;
     }
 
+    private static IReadOnlyList<string> MapScanImageOptions(string repoRoot, string[] args)
+    {
+        var parser = new OptionParser(args);
+        var fromTrivyJson = parser.TakeValue("--from-trivy-json");
+        var image = parser.TakeValue("--image");
+        var liveTrivy = parser.TakeFlag("--live-trivy");
+        var trivyPath = parser.TakeValue("--trivy-path");
+        var timeoutSeconds = ParseIntOption(parser.TakeValue("--timeout-seconds"), LiveTrivyScanner.DefaultTimeoutSeconds, "--timeout-seconds");
+        var noSubmit = parser.TakeFlag("--no-submit");
+        var submit = parser.TakeFlag("--submit");
+        var output = parser.TakeValue("--output");
+        parser.ThrowIfRemaining();
+
+        if (submit && noSubmit)
+            throw new CliUsageException("Use either --submit or --no-submit, not both.");
+        if (liveTrivy && !string.IsNullOrWhiteSpace(fromTrivyJson))
+            throw new CliUsageException("Use either --from-trivy-json or --live-trivy, not both.");
+        if (liveTrivy && string.IsNullOrWhiteSpace(image))
+            throw new CliUsageException("--live-trivy requires --image.");
+        if (string.IsNullOrWhiteSpace(fromTrivyJson) && string.IsNullOrWhiteSpace(image))
+            throw new CliUsageException("Use --from-trivy-json <path> for fixture mode or --live-trivy --image <image> for optional live mode.");
+
+        LiveTrivyScanner.ValidateTimeout(timeoutSeconds);
+
+        var mapped = new List<string>();
+        if (!string.IsNullOrWhiteSpace(fromTrivyJson))
+        {
+            mapped.Add("-FromTrivyJson");
+            mapped.Add(NormalizeExistingFilePath(repoRoot, fromTrivyJson, "--from-trivy-json"));
+        }
+        else
+        {
+            mapped.Add("-Image");
+            mapped.Add(image!);
+        }
+
+        if (!string.IsNullOrWhiteSpace(trivyPath))
+        {
+            mapped.Add("-TrivyPath");
+            mapped.Add(trivyPath);
+        }
+
+        if (timeoutSeconds != LiveTrivyScanner.DefaultTimeoutSeconds)
+        {
+            mapped.Add("-TimeoutSeconds");
+            mapped.Add(timeoutSeconds.ToString());
+        }
+
+        if (!string.IsNullOrWhiteSpace(output))
+        {
+            mapped.Add("-OutputMarkdownPath");
+            mapped.Add(output);
+        }
+
+        if (noSubmit || (liveTrivy && !submit))
+            mapped.Add("-NoSubmit");
+
+        return mapped;
+    }
+
     private static void RejectUnexpectedArguments(string[] args)
     {
         if (args.Length == 0)
@@ -569,7 +623,9 @@ internal static class Program
         Console.WriteLine("Examples:");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- validate");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- scan image --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json --no-submit");
+        Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- scan image --image alpine:3.19 --live-trivy --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- gate image --image demo/insecure-api:latest --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json --fail-on never --no-submit");
+        Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- gate image --image alpine:3.19 --live-trivy --fail-on block --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- run protected --image demo/insecure-api:latest --container-name conshield-demo-insecure --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json --no-run --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- sensor replay --demo-signature --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- lifecycle replay --from-docker-events-json .\\tests\\TestData\\DockerEvents\\container-lifecycle-events.json --no-submit");
@@ -588,12 +644,17 @@ internal static class Program
     {
         Console.WriteLine("Scan commands:");
         Console.WriteLine("  scan image --from-trivy-json <path> --no-submit");
+        Console.WriteLine("  scan image --image alpine:3.19 --live-trivy --no-submit");
+        Console.WriteLine("  scan image --image alpine:3.19 --live-trivy --submit");
+        Console.WriteLine("  Live Trivy is optional/manual and is not required for CI or full validation.");
     }
 
     private static void PrintGateHelp()
     {
         Console.WriteLine("Gate commands:");
         Console.WriteLine("  gate image --image <image> --from-trivy-json <path> --fail-on block|warn|never --report <path> --no-submit");
+        Console.WriteLine("  gate image --image alpine:3.19 --live-trivy --fail-on block --no-submit");
+        Console.WriteLine("  Live Trivy is optional/manual and is not required for CI or full validation.");
         Console.WriteLine("  Exit codes: 0=passed, 1=failed by policy, 2=usage/input error, 3=infrastructure error.");
     }
 
