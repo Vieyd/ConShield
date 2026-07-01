@@ -57,10 +57,11 @@ dotnet run --project .\src\ConShield.Cli -- lifecycle replay `
   --no-submit
 
 dotnet run --project .\src\ConShield.Cli -- sensor replay --demo-signature --no-submit
+dotnet run --project .\src\ConShield.Cli -- sensor collect --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl --demo-signature --no-submit
 dotnet run --project .\src\ConShield.Cli -- evidence export --output .\artifacts\local\defense-evidence-cli.md
 ```
 
-`demo reset` requires explicit `--confirm`. Live Docker execution remains opt-in through the protected-run workflow. The deterministic fixture commands do not require real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, real certificates, private keys, signing keys, or secrets. See [CONSHIELD_CLI.md](CONSHIELD_CLI.md).
+`demo reset` requires explicit `--confirm`. Live Docker execution remains opt-in through the protected-run workflow. The deterministic fixture commands, including runtime sensor stream collection, do not require real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, real certificates, private keys, signing keys, or secrets. See [CONSHIELD_CLI.md](CONSHIELD_CLI.md).
 
 ## Main screens
 

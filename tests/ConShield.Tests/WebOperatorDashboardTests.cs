@@ -66,6 +66,7 @@ public sealed class WebOperatorDashboardTests
             "Protected Run",
             "Docker Lifecycle Collector",
             "Runtime/Falco Replay",
+            "Runtime Sensor Stream Collector",
             "Sensor Trust",
             "Signed Sensor Events",
             "SIEM Rules",
@@ -85,6 +86,7 @@ public sealed class WebOperatorDashboardTests
             "ConShield.Cli -- run protected",
             "ConShield.Cli -- lifecycle replay",
             "ConShield.Cli -- sensor replay",
+            "ConShield.Cli -- sensor collect",
             "Test-ConShieldFullValidation.ps1",
             "New-ConShieldDemoReleasePack.ps1"
         })

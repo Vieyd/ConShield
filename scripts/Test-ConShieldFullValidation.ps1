@@ -314,6 +314,11 @@ function Test-Fixtures {
             Markers = @('Signature: Valid', 'Result: PASS')
         },
         @{
+            Name = 'sensor collect'
+            Args = @('run', '--project', $project, '--', 'sensor', 'collect', '--from-json-lines', (Join-Path $RepoRoot 'tests\TestData\Falco\falco-runtime-stream.jsonl'), '--demo-signature', '--no-submit')
+            Markers = @('ConShield runtime sensor stream collector', 'Events skipped: 1', 'Result: PASS')
+        },
+        @{
             Name = 'lifecycle replay'
             Args = @('run', '--project', $project, '--', 'lifecycle', 'replay', '--from-docker-events-json', (Join-Path $RepoRoot 'tests\TestData\DockerEvents\container-lifecycle-events.json'), '--no-submit')
             Markers = @('SourceSystem: conshield.docker-lifecycle-collector', 'Result: PASS')
@@ -359,6 +364,7 @@ function Test-DemoContract {
         'gate image',
         'lifecycle replay',
         'sensor replay',
+        'sensor collect',
         'Export-ConShieldDefenseEvidence.ps1',
         '/Reports/SecuritySummary',
         '/SecurityEvents',

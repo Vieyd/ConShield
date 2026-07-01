@@ -198,6 +198,9 @@ internal static class Program
             return Success;
         }
 
+        if (args[0].Equals("collect", StringComparison.OrdinalIgnoreCase))
+            return await RuntimeSensorStreamCollector.RunAsync(repoRoot, args[1..], Console.In, Console.Out, Console.Error);
+
         if (!args[0].Equals("replay", StringComparison.OrdinalIgnoreCase))
             return FailUsage($"Unknown sensor command: {Safe(args[0])}");
 
@@ -616,6 +619,7 @@ internal static class Program
         Console.WriteLine("  gate image");
         Console.WriteLine("  run protected");
         Console.WriteLine("  sensor replay");
+        Console.WriteLine("  sensor collect");
         Console.WriteLine("  lifecycle replay");
         Console.WriteLine("  lifecycle watch");
         Console.WriteLine("  evidence export");
@@ -628,6 +632,7 @@ internal static class Program
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- gate image --image alpine:3.19 --live-trivy --fail-on block --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- run protected --image demo/insecure-api:latest --container-name conshield-demo-insecure --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json --no-run --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- sensor replay --demo-signature --no-submit");
+        Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- sensor collect --from-json-lines .\\tests\\TestData\\Falco\\falco-runtime-stream.jsonl --demo-signature --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- lifecycle replay --from-docker-events-json .\\tests\\TestData\\DockerEvents\\container-lifecycle-events.json --no-submit");
         Console.WriteLine("  dotnet run --project .\\src\\ConShield.Cli -- lifecycle watch --duration-seconds 30 --no-submit");
     }
@@ -670,6 +675,7 @@ internal static class Program
         Console.WriteLine("Sensor commands:");
         Console.WriteLine("  sensor replay --demo-signature --no-submit");
         Console.WriteLine("  sensor replay --simulate-missing-signature --no-submit");
+        RuntimeSensorStreamCollector.PrintHelp(Console.Out);
     }
 
     private static void PrintEvidenceHelp()

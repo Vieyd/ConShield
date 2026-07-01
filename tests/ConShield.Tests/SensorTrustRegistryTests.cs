@@ -237,11 +237,8 @@ public sealed class SensorTrustRegistryTests
         foreach (var argument in arguments)
             startInfo.ArgumentList.Add(argument);
 
-        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("pwsh was not started.");
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit(60_000);
-        return new CommandResult(process.ExitCode, output + error);
+        var result = TestProcessRunner.Run(startInfo, TimeSpan.FromSeconds(60));
+        return new CommandResult(result.ExitCode, result.Output);
     }
 
     private static void AssertSafeOutput(string output)
