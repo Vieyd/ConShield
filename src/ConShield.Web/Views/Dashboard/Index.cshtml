@@ -1,0 +1,250 @@
+@using ConShield.Web.Infrastructure
+@model ConShield.Web.ViewModels.OperatorDashboardViewModel
+@{
+    ViewData["Title"] = "ConShield Operator Dashboard";
+}
+
+<div class="app-page-header">
+    <div>
+        <h2 class="mb-1">ConShield Operator Dashboard</h2>
+        <div class="text-muted small">Read-only demo control center for security posture, workflow commands, documentation links, and sanitized operational summaries.</div>
+    </div>
+    <div class="app-actions">
+        <a asp-controller="Demo" asp-action="Index" class="btn btn-outline-secondary">Demo Walkthrough</a>
+        <a asp-controller="Reports" asp-action="SecuritySummary" class="btn btn-outline-primary">Security Summary</a>
+        <a asp-controller="RuntimeSensors" asp-action="Index" class="btn btn-outline-primary">Runtime Sensors</a>
+    </div>
+</div>
+
+<div class="alert alert-info py-2">
+    This dashboard is read-only. It shows status, links, and copy-paste command snippets only; the browser does not execute PowerShell,
+    shell scripts, Docker, Trivy, Falco, reset, evidence export, or release-pack commands. Sensitive payload bodies,
+    Docker output, secret material, credential values, local configuration values, screenshots, and generated local files are not displayed.
+</div>
+
+<div class="app-card mb-4">
+    <div class="card-body d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-center">
+        <div>
+            <div class="text-muted small">Current demo posture</div>
+            <h3 class="h5 mb-1">@Model.PostureStatus</h3>
+            <div class="text-muted">@Model.PostureSummary</div>
+        </div>
+        <span class="app-status @DisplayText.StatusClass(Model.PostureStatus)">
+            <span class="app-status-dot" aria-hidden="true"></span>
+            <span>@DisplayText.Status(Model.PostureStatus)</span>
+        </span>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    @foreach (var card in Model.StatusCards)
+    {
+        <div class="col-md-6 col-xl-3">
+            <div class="app-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <div class="text-muted small">@card.Label</div>
+                            <div class="fs-5"><span class="app-badge badge-neutral">@card.Value</span></div>
+                        </div>
+                        <span class="app-status @DisplayText.StatusClass(card.Status)">
+                            <span class="app-status-dot" aria-hidden="true"></span>
+                            <span>@DisplayText.Status(card.Status)</span>
+                        </span>
+                    </div>
+                    <div class="small text-muted mt-2">@card.Description</div>
+                    @if (!string.IsNullOrWhiteSpace(card.Controller) && !string.IsNullOrWhiteSpace(card.Action))
+                    {
+                        <div class="mt-2">
+                            @if (!string.IsNullOrWhiteSpace(card.RouteValue))
+                            {
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-controller="@card.Controller"
+                                   asp-action="@card.Action"
+                                   asp-route-SearchText="@card.RouteValue">Open related page</a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-controller="@card.Controller"
+                                   asp-action="@card.Action">Open related page</a>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="h5 mb-0">Latest sanitized SIEM alerts</h3>
+                    <a asp-controller="Siem" asp-action="Index" class="btn btn-sm btn-outline-primary">Open SIEM</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle app-table mb-0">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Rule</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                            <th>Incident</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var alert in Model.LatestAlerts)
+                        {
+                            <tr>
+                                <td><a asp-controller="Siem" asp-action="Details" asp-route-id="@alert.Id" class="app-id-pill app-id-nowrap">@alert.Id</a></td>
+                                <td><code class="id-code">@alert.RuleCode</code><div class="text-muted small">@DisplayText.RuleName(alert.RuleCode, alert.RuleName)</div></td>
+                                <td><span class="app-status @DisplayText.SeverityClass(alert.Severity)"><span class="app-status-dot" aria-hidden="true"></span><span>@DisplayText.Severity(alert.Severity)</span></span></td>
+                                <td><span class="app-status @DisplayText.StatusClass(alert.Status)"><span class="app-status-dot" aria-hidden="true"></span><span>@DisplayText.Status(alert.Status)</span></span></td>
+                                <td>
+                                    @if (alert.IncidentId.HasValue)
+                                    {
+                                        <a asp-controller="Incidents" asp-action="Details" asp-route-id="@alert.IncidentId.Value" class="app-id-pill app-id-nowrap">@alert.IncidentId.Value</a>
+                                    }
+                                    else
+                                    {
+                                        <span>—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                @if (Model.LatestAlerts.Count == 0)
+                {
+                    <div class="text-muted small mt-3">No local demo data yet.</div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="app-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="h5 mb-0">Latest sanitized incidents</h3>
+                    <a asp-controller="Incidents" asp-action="Index" class="btn btn-sm btn-outline-primary">Open Incidents</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle app-table mb-0">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                            <th>Source event</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var incident in Model.LatestIncidents)
+                        {
+                            <tr>
+                                <td><a asp-controller="Incidents" asp-action="Details" asp-route-id="@incident.Id" class="app-id-pill app-id-nowrap">@incident.Id</a></td>
+                                <td>@DisplayText.IncidentTitle(incident.Name)<div class="text-muted small">@incident.CreatedAtUtc.ToMoscowDisplay()</div></td>
+                                <td><span class="app-status @DisplayText.SeverityClass(incident.Severity)"><span class="app-status-dot" aria-hidden="true"></span><span>@DisplayText.Severity(incident.Severity)</span></span></td>
+                                <td><span class="app-status @DisplayText.StatusClass(incident.Status)"><span class="app-status-dot" aria-hidden="true"></span><span>@DisplayText.Status(incident.Status)</span></span></td>
+                                <td>
+                                    @if (incident.SourceEventId.HasValue)
+                                    {
+                                        <a asp-controller="SecurityEvents"
+                                           asp-action="Index"
+                                           asp-route-SearchText="@incident.SourceEventId.Value"
+                                           class="app-id-pill app-id-nowrap">@incident.SourceEventId.Value</a>
+                                    }
+                                    else
+                                    {
+                                        <span>—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                @if (Model.LatestIncidents.Count == 0)
+                {
+                    <div class="text-muted small mt-3">No local demo data yet.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="h5 mb-0">Sensor trust and signature summary</h3>
+            <a asp-controller="RuntimeSensors" asp-action="Index" class="btn btn-sm btn-outline-primary">Open Runtime Sensor Health</a>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-3"><div class="text-muted small">Runtime sources</div><span class="app-badge badge-neutral">@Model.SensorSummary.RuntimeSources</span></div>
+            <div class="col-md-3"><div class="text-muted small">Trusted / Unknown</div><span class="app-badge badge-neutral">@Model.SensorSummary.TrustedSensors / @Model.SensorSummary.UnknownSensors</span></div>
+            <div class="col-md-3"><div class="text-muted small">Revoked / Disabled</div><span class="app-badge badge-neutral">@Model.SensorSummary.RevokedOrDisabledSensors</span></div>
+            <div class="col-md-3"><div class="text-muted small">Latest runtime event</div><span class="app-badge badge-neutral">@(Model.SensorSummary.LatestRuntimeEventUtc?.ToMoscowDisplay() ?? "No local demo data yet")</span></div>
+            <div class="col-md-3"><div class="text-muted small">Valid / NotRequired signatures</div><span class="app-badge badge-neutral">@Model.SensorSummary.ValidSignatures</span></div>
+            <div class="col-md-3"><div class="text-muted small">Missing signatures</div><span class="app-badge badge-neutral">@Model.SensorSummary.MissingSignatures</span></div>
+            <div class="col-md-3"><div class="text-muted small">Invalid / UnknownKey signatures</div><span class="app-badge badge-neutral">@Model.SensorSummary.InvalidOrUnknownKeySignatures</span></div>
+            <div class="col-md-3"><div class="text-muted small">Stale / Replay signatures</div><span class="app-badge badge-neutral">@Model.SensorSummary.StaleOrReplaySignatures</span></div>
+        </div>
+    </div>
+</div>
+
+<div class="app-card mb-4">
+    <div class="card-body">
+        <h3 class="h5">Workflow tiles and safe command snippets</h3>
+        <p class="text-muted small">
+            Copy commands into a local terminal. The Web dashboard never runs them server-side and does not provide browser-triggered reset or shell execution.
+        </p>
+        <div class="row g-3">
+            @foreach (var tile in Model.WorkflowTiles)
+            {
+                <div class="col-lg-6">
+                    <div class="app-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                    <h4 class="h6 mb-1">@tile.Name</h4>
+                                    <div class="text-muted small">@tile.Purpose</div>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(tile.Controller) && !string.IsNullOrWhiteSpace(tile.Action))
+                                {
+                                    <a class="btn btn-sm btn-outline-primary" asp-controller="@tile.Controller" asp-action="@tile.Action">Open</a>
+                                }
+                            </div>
+                            <pre class="app-code-block mt-3 mb-2"><code>@tile.Command</code></pre>
+                            <div class="small">Docs: <code>@tile.DocPath</code></div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="app-card mb-4">
+    <div class="card-body">
+        <h3 class="h5">Documentation links</h3>
+        <div class="row g-2">
+            @foreach (var link in Model.DocumentationLinks)
+            {
+                <div class="col-md-6 col-xl-4">
+                    <div class="app-card h-100">
+                        <div class="card-body py-2">
+                            <div class="fw-semibold">@link.Label</div>
+                            <code class="app-technical-code">@link.Path</code>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -66,6 +66,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export --output .\artifacts
 
 - Состояние системы: `/Operations/Health`
 - Сводка безопасности: `/Reports/SecuritySummary`
+- Operator Dashboard: `/Dashboard`
 - Security Events: `/SecurityEvents`
 - Сенсоры: `/Sensors`
 - Alerts / Incidents: use the existing Оповещения SIEM and incident registry pages in the app
@@ -273,6 +274,16 @@ http://127.0.0.1:5080/Demo
 Use it as the live navigation guide for the local defense demo. It shows the order of operations, safe PowerShell commands, current Security Events / SIEM / Incidents / Runtime Sensor counts, and links to `/Reports/SecuritySummary`, `/SecurityEvents`, `/Siem`, `/Incidents`, and `/RuntimeSensors`.
 
 The page does not execute shell scripts from the browser. Run commands in PowerShell from the repository root. It does not display secrets, connection strings, API keys, env values, raw event payloads, logs, screenshots, or generated files under `artifacts/local/`.
+
+## Operator dashboard
+
+After starting the Web app, open the read-only operator dashboard:
+
+```text
+http://127.0.0.1:5080/Dashboard
+```
+
+The dashboard shows current posture, status cards, latest sanitized SIEM alerts and incidents, sensor trust/signature summary, workflow tiles, safe command snippets, and docs links. It is not a browser command execution panel: it does not run PowerShell, shell commands, reset, Docker, Trivy, Falco, evidence export, or release packaging from the server, and it does not display raw payloads, secrets, logs, environment values, connection strings, or generated local artifacts.
 
 ## Image scan CLI path
 

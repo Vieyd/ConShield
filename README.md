@@ -157,6 +157,16 @@ http://127.0.0.1:5080/Demo
 
 The page is read-only. It shows the demo order, safe PowerShell commands, current counts, and links to Security Summary, Security Events, SIEM, Incidents, and Runtime Sensor Health. It does not execute scripts from the browser and does not display secrets, raw payloads, logs, or generated local artifacts.
 
+### Operator dashboard
+
+Open the read-only operator dashboard after starting the Web app:
+
+```text
+http://127.0.0.1:5080/Dashboard
+```
+
+The dashboard shows status cards, latest sanitized SIEM alerts/incidents, sensor trust and signature summaries, workflow tiles, safe command snippets, and documentation links. It does not execute PowerShell or shell commands from the browser, does not trigger destructive reset, and does not display raw payloads, secrets, logs, environment values, connection strings, or generated local artifacts.
+
 ### Demo release packaging
 
 Create a local demo release pack with the published CLI, safe docs, default configs, validation scripts, and a release README:
@@ -609,6 +619,16 @@ http://127.0.0.1:5080/Demo
 ```
 
 Страница только для чтения: она показывает порядок демонстрации, безопасные PowerShell-команды, текущие счётчики и ссылки на Security Summary, Security Events, SIEM, Incidents и Runtime Sensor Health. Она не запускает scripts из браузера и не показывает secrets, raw payloads, logs или generated local artifacts.
+
+### Operator dashboard
+
+После запуска Web откройте read-only operator dashboard:
+
+```text
+http://127.0.0.1:5080/Dashboard
+```
+
+Dashboard показывает status cards, последние sanitized SIEM alerts/incidents, summary доверия сенсоров и подписей, workflow tiles, безопасные command snippets и documentation links. Он не запускает PowerShell или shell commands из браузера, не выполняет destructive reset и не показывает raw payloads, secrets, logs, environment values, connection strings или generated local artifacts.
 
 ### Упаковка demo release
 
