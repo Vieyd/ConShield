@@ -17,7 +17,7 @@
 </div>
 
 <div class="alert alert-info py-2">
-    This dashboard is read-only. It shows status, links, and copy-paste command snippets only; the browser does not execute PowerShell,
+    This dashboard is read-only. Status and guided demo context are prioritized first. Commands are shown as local copy/paste references only; the browser does not execute PowerShell,
     shell scripts, Docker, Trivy, Falco, reset, evidence export, or release-pack commands. Sensitive payload bodies,
     Docker output, secret material, credential values, local configuration values, screenshots, and generated local files are not displayed.
 </div>
@@ -200,28 +200,84 @@
 
 <div class="app-card mb-4">
     <div class="card-body">
-        <h3 class="h5">Workflow tiles and safe command snippets</h3>
-        <p class="text-muted small">
-            Copy commands into a local terminal. The Web dashboard never runs them server-side and does not provide browser-triggered reset or shell execution.
-        </p>
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-2 mb-3">
+            <div>
+                <h3 class="h5 mb-1">Guided demo flow</h3>
+                <p class="text-muted mb-0">
+                    Use this sequence during defense: status first, traceability second, commands only when you need local reproduction.
+                </p>
+            </div>
+            <a asp-controller="Demo" asp-action="Index" class="btn btn-sm btn-outline-primary align-self-start">Open Demo page</a>
+        </div>
         <div class="row g-3">
-            @foreach (var tile in Model.WorkflowTiles)
+            @foreach (var step in Model.GuidedDemoSteps)
             {
-                <div class="col-lg-6">
+                <div class="col-lg-6 col-xl-4">
                     <div class="app-card h-100">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="d-flex gap-3">
+                                <span class="app-id-pill app-id-nowrap align-self-start">@step.Number</span>
                                 <div>
-                                    <h4 class="h6 mb-1">@tile.Name</h4>
-                                    <div class="text-muted small">@tile.Purpose</div>
+                                    <h4 class="h6 mb-1">@step.Title</h4>
+                                    <div class="text-muted small">@step.Purpose</div>
+                                    <div class="small mt-2"><span class="fw-semibold">Expected:</span> @step.ExpectedResult</div>
                                 </div>
-                                @if (!string.IsNullOrWhiteSpace(tile.Controller) && !string.IsNullOrWhiteSpace(tile.Action))
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                @if (!string.IsNullOrWhiteSpace(step.Controller) && !string.IsNullOrWhiteSpace(step.Action))
                                 {
-                                    <a class="btn btn-sm btn-outline-primary" asp-controller="@tile.Controller" asp-action="@tile.Action">Open</a>
+                                    <a class="btn btn-sm btn-outline-primary" asp-controller="@step.Controller" asp-action="@step.Action">Open related page</a>
+                                }
+                                <span class="small align-self-center">Docs: <code>@step.DocPath</code></span>
+                            </div>
+                            <details class="mt-3">
+                                <summary class="small fw-semibold">Optional local command reference</summary>
+                                <pre class="app-code-block mt-2 mb-0"><code>@step.Command</code></pre>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="app-card mb-4">
+    <div class="card-body">
+        <h3 class="h5">Workflow references</h3>
+        <p class="text-muted small">
+            Commands are shown as local copy/paste references. The dashboard is read-only and never runs PowerShell, Docker, Trivy, Falco, reset, evidence export, or packaging actions from the browser.
+        </p>
+        <div class="row g-3">
+            @foreach (var group in Model.WorkflowGroups)
+            {
+                <div class="col-xl-4">
+                    <div class="app-card h-100">
+                        <div class="card-body">
+                            <h4 class="h6 mb-1">@group.Name</h4>
+                            <div class="text-muted small mb-3">@group.Description</div>
+                            <div class="d-grid gap-3">
+                                @foreach (var tile in group.Tiles)
+                                {
+                                    <div class="border rounded p-3">
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
+                                            <div>
+                                                <div class="fw-semibold">@tile.Name</div>
+                                                <div class="text-muted small">@tile.Purpose</div>
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(tile.Controller) && !string.IsNullOrWhiteSpace(tile.Action))
+                                            {
+                                                <a class="btn btn-sm btn-outline-primary" asp-controller="@tile.Controller" asp-action="@tile.Action">Open</a>
+                                            }
+                                        </div>
+                                        <details class="mt-2">
+                                            <summary class="small fw-semibold">Command reference</summary>
+                                            <pre class="app-code-block mt-2 mb-2"><code>@tile.Command</code></pre>
+                                        </details>
+                                        <div class="small">Docs: <code>@tile.DocPath</code></div>
+                                    </div>
                                 }
                             </div>
-                            <pre class="app-code-block mt-3 mb-2"><code>@tile.Command</code></pre>
-                            <div class="small">Docs: <code>@tile.DocPath</code></div>
                         </div>
                     </div>
                 </div>
@@ -233,14 +289,22 @@
 <div class="app-card mb-4">
     <div class="card-body">
         <h3 class="h5">Documentation links</h3>
-        <div class="row g-2">
-            @foreach (var link in Model.DocumentationLinks)
+        <div class="row g-3">
+            @foreach (var group in Model.DocumentationGroups)
             {
-                <div class="col-md-6 col-xl-4">
+                <div class="col-md-6 col-xl-3">
                     <div class="app-card h-100">
-                        <div class="card-body py-2">
-                            <div class="fw-semibold">@link.Label</div>
-                            <code class="app-technical-code">@link.Path</code>
+                        <div class="card-body">
+                            <h4 class="h6">@group.Name</h4>
+                            <div class="d-grid gap-2">
+                                @foreach (var link in group.Links)
+                                {
+                                    <div>
+                                        <div class="fw-semibold small">@link.Label</div>
+                                        <code class="app-technical-code">@link.Path</code>
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>

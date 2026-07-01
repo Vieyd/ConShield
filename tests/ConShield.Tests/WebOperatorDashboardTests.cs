@@ -49,6 +49,16 @@ public sealed class WebOperatorDashboardTests
     {
         var combined = DashboardSource();
 
+        foreach (var category in new[]
+        {
+            "Pre-deployment controls",
+            "Runtime and lifecycle",
+            "Operations and evidence"
+        })
+        {
+            Assert.Contains(category, combined, StringComparison.Ordinal);
+        }
+
         foreach (var workflow in new[]
         {
             "Image Scan",
@@ -150,12 +160,50 @@ public sealed class WebOperatorDashboardTests
 
         Assert.Contains("This dashboard is read-only", view, StringComparison.Ordinal);
         Assert.Contains("the browser does not execute", view, StringComparison.Ordinal);
+        Assert.Contains("Commands are shown as local copy/paste references", view, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DashboardPrioritizesStatusGuidedDemoAndCollapsedCommandReferences()
+    {
+        var view = ReadRepoFile("src", "ConShield.Web", "Views", "Dashboard", "Index.cshtml");
+
+        var postureIndex = view.IndexOf("Current demo posture", StringComparison.Ordinal);
+        var alertsIndex = view.IndexOf("Latest sanitized SIEM alerts", StringComparison.Ordinal);
+        var guidedIndex = view.IndexOf("Guided demo flow", StringComparison.Ordinal);
+        var workflowIndex = view.IndexOf("Workflow references", StringComparison.Ordinal);
+        var docsIndex = view.IndexOf("Documentation links", StringComparison.Ordinal);
+
+        Assert.True(postureIndex >= 0, "Posture summary must be present.");
+        Assert.True(alertsIndex > postureIndex, "Latest alerts should follow posture/status cards.");
+        Assert.True(guidedIndex > alertsIndex, "Guided demo should follow status and recent activity.");
+        Assert.True(workflowIndex > guidedIndex, "Workflow command references should be secondary to guided demo flow.");
+        Assert.True(docsIndex > workflowIndex, "Documentation links should support the dashboard after workflow references.");
+
+        Assert.Contains("Optional local command reference", view, StringComparison.Ordinal);
+        Assert.Contains("Command reference", view, StringComparison.Ordinal);
+        Assert.Contains("<details", view, StringComparison.Ordinal);
+        Assert.Contains("<summary", view, StringComparison.Ordinal);
+
+        foreach (var step in new[]
+        {
+            "Validate repository and configuration",
+            "Generate or replay demo data",
+            "Review dashboard posture",
+            "Inspect SIEM alerts and incidents",
+            "Review runtime sensors and signed events",
+            "Export evidence",
+            "Create release pack"
+        })
+        {
+            Assert.Contains(step, view + DashboardSource(), StringComparison.Ordinal);
+        }
     }
 
     [Fact]
     public void DashboardDoesNotDisplayForbiddenRawPayloadOrSecretMarkers()
     {
-        var view = ReadRepoFile("src", "ConShield.Web", "Views", "Dashboard", "Index.cshtml");
+        var combined = DashboardSource();
 
         foreach (var forbidden in new[]
         {
@@ -169,11 +217,13 @@ public sealed class WebOperatorDashboardTests
             "connection string",
             "private key",
             "certificate block",
+            "artifacts/local",
+            "artifacts\\local",
             PrivateKeyMarker,
             CertificateMarker
         })
         {
-            Assert.DoesNotContain(forbidden, view, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(forbidden, combined, StringComparison.OrdinalIgnoreCase);
         }
     }
 
