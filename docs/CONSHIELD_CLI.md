@@ -62,6 +62,11 @@ dotnet run --project .\src\ConShield.Cli -- sensor replay `
   --demo-signature `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- sensor collect `
+  --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl `
+  --demo-signature `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- evidence export `
   --output .\artifacts\local\defense-evidence-cli.md
 ```
@@ -80,6 +85,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
 | `lifecycle replay` | Built-in deterministic Docker lifecycle fixture replay through existing external ingestion |
 | `lifecycle watch` | Optional bounded live Docker event watch; no-submit by default and not required for CI |
 | `sensor replay` | `Replay-ConShieldFalcoRuntimeEvent.ps1` |
+| `sensor collect` | Built-in deterministic Falco-compatible JSON-lines stream collector; fixture/stdin first, no real Fedora/Falco required |
 | `evidence export` | `Export-ConShieldDefenseEvidence.ps1` |
 
 ## Full validation wrapper
@@ -121,6 +127,7 @@ The command wraps `scripts/Seed-ConShieldDemoData.ps1`, which creates or reuses 
 - Live Trivy scan/gate is optional/manual, requires local Trivy and image access, cannot be mixed with `--from-trivy-json`, and is not required by full validation.
 - Docker lifecycle replay is fixture-first for CI; `lifecycle watch` is available as an optional manual command and is not required by full validation.
 - Docker lifecycle watch is optional/manual, bounded by duration and max-events, and defaults to no-submit.
+- Runtime sensor stream collection is fixture/stdin-first; `sensor collect --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl --demo-signature --no-submit` is deterministic, skips malformed lines without dumping raw input, applies sensor trust/signature metadata, and does not require real Fedora/Falco.
 - CI-safe commands use fixtures and do not require real Fedora/Falco, live Docker run, live Trivy DB/network, external internet, real certificates, private keys, real signing keys, or real secrets.
 - The CLI must not print API keys, passwords, connection strings, environment values, raw Trivy JSON, raw runtime payload JSON, raw `AdditionalDataJson`, Docker logs, screenshots, certificates, private keys, signing keys, or generated local artifacts.
 - Generated evidence and published binaries should stay under ignored `artifacts/local/`.

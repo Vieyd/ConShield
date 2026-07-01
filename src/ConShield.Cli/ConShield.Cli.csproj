@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ConShield.ImageScanner\ConShield.ImageScanner.csproj" />
+    <ProjectReference Include="..\ConShield.RuntimeDetection\ConShield.RuntimeDetection.csproj" />
   </ItemGroup>
 
 </Project>

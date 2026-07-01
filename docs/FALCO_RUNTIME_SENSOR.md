@@ -39,6 +39,40 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRun
 
 The script prints only a safe summary: Web status, fixture name, sensor id, sensor trust status, signature status, signature key id, mapped runtime event type, source system, a short hash identifier, ingestion status, expected SIEM rules, and result. It does not print API keys, sensor credentials, connection strings, environment values, raw Falco payload JSON, raw additional data, signing material, logs, screenshots, or generated evidence artifacts.
 
+## Runtime sensor stream collector
+
+Runtime Sensor Stream Collector v1 adds a deterministic local stream command for Falco-compatible JSON-lines input:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- sensor collect `
+  --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl `
+  --demo-signature `
+  --no-submit
+```
+
+The collector reads line by line, normalizes supported runtime events through the existing Falco mapping, applies sensor trust and signed-event metadata, skips malformed lines safely, and prints only counters, statuses, event types, and deterministic external event IDs. It does not dump the raw line, raw Falco JSON, raw runtime payload JSON, raw additional data, secrets, signing material, logs, screenshots, or generated artifacts.
+
+Submit mode is available only as an explicit local action after Web/API and local ingestion credentials are configured:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- sensor collect `
+  --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl `
+  --demo-signature `
+  --submit
+```
+
+Optional stdin mode is available for bounded local experiments without making real Falco/Fedora a CI dependency:
+
+```powershell
+Get-Content .\tests\TestData\Falco\falco-runtime-stream.jsonl |
+  dotnet run --project .\src\ConShield.Cli -- sensor collect `
+    --stdin `
+    --demo-signature `
+    --no-submit
+```
+
+Simulation flags cover trust and signature paths: `--simulate-unknown-sensor`, `--simulate-revoked-sensor`, `--simulate-disabled-sensor`, `--simulate-missing-signature`, `--simulate-invalid-signature`, `--simulate-stale-signature`, and `--simulate-replay-signature`. The fixture and options cover the `RTE-001`, `SENSOR-001`, `SENSOR-002`, `SIGN-001`, `SIGN-002`, and `SIGN-003` evidence paths without requiring real Fedora/Falco, live Docker, live Trivy, external internet, certificates, private keys, signing keys, or secrets.
+
 ## Signed sensor event replay
 
 Signed Sensor Events v1 can be validated without real Fedora/Falco or real signing keys:

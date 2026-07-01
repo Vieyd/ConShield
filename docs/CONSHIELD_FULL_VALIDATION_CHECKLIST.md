@@ -85,7 +85,7 @@ dotnet run --project .\src\ConShield.Cli -- --help
 dotnet run --project .\src\ConShield.Cli -- validate
 ```
 
-- Expected result: help lists `validate`, `demo readiness`, `demo reset`, `scan image`, optional live Trivy scan, `run protected`, `sensor replay`, `lifecycle replay`, optional `lifecycle watch`, `gate image`, optional live Trivy gate, and `evidence export`; validate prints `Result: PASS`.
+- Expected result: help lists `validate`, `demo readiness`, `demo reset`, `scan image`, optional live Trivy scan, `run protected`, `sensor replay`, `sensor collect`, `lifecycle replay`, optional `lifecycle watch`, `gate image`, optional live Trivy gate, and `evidence export`; validate prints `Result: PASS`.
 - CI-safe: yes.
 - Web/API required: no.
 - Docker/Falco/Trivy network required: no.
@@ -194,6 +194,24 @@ dotnet run --project .\src\ConShield.Cli -- sensor replay `
 - CI-safe: yes.
 - Web/API required: no with `--no-submit`.
 - Docker/Falco/Trivy network required: no.
+
+### Runtime sensor stream collector
+
+- Purpose: validate deterministic runtime sensor stream collection without a Fedora VM.
+- Commands:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- sensor collect `
+  --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl `
+  --demo-signature `
+  --no-submit
+```
+
+- Expected result: trusted demo sensor, valid demo signature status, malformed fixture line skipped safely, `Ingestion: SKIP`, expected rules include `RTE-001,SENSOR-001,SENSOR-002,SIGN-001,SIGN-002,SIGN-003`, and `Result: PASS`.
+- CI-safe: yes.
+- Web/API required: no with `--no-submit`.
+- Docker/Falco/Trivy network required: no.
+- Web execution: no; Dashboard/Demo show the collector as a read-only copy/paste command reference only.
 
 ## 10. Sensor trust registry
 

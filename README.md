@@ -239,6 +239,11 @@ dotnet run --project .\src\ConShield.Cli -- sensor replay `
   --demo-signature `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- sensor collect `
+  --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl `
+  --demo-signature `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- demo readiness
 
 dotnet run --project .\src\ConShield.Cli -- demo reset --confirm
@@ -247,7 +252,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
   --output .\artifacts\local\defense-evidence-cli.md
 ```
 
-Reset requires explicit `--confirm`. Live Docker execution remains opt-in through the existing protected-run safety rules. Deterministic fixture commands do not require real Fedora/Falco, live Docker run or event watching, live Trivy DB/network, external internet, certificates, private keys, signing keys, or real secrets. Details are documented in [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
+Reset requires explicit `--confirm`. Live Docker execution remains opt-in through the existing protected-run safety rules. Deterministic fixture commands, including runtime sensor stream collection, do not require real Fedora/Falco, live Docker run or event watching, live Trivy DB/network, external internet, certificates, private keys, signing keys, or real secrets. Details are documented in [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
 Optional live Trivy commands are manual local checks only. They require local Trivy installation and image access, cannot be mixed with `--from-trivy-json`, and are not required for CI, full validation, readiness, or guided seed.
 
 ### CI/CD container gate
@@ -434,6 +439,17 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRun
 ```
 
 Valid demo signatures keep `RTE-001`. Missing signatures produce `SIGN-001`; invalid signatures produce `SIGN-002`; stale or replayed signatures produce `SIGN-003`. Full mTLS, real certificates, private keys, and production signing key management are intentionally left for a later PR. Details are documented in [`docs/SIGNED_SENSOR_EVENTS.md`](docs/SIGNED_SENSOR_EVENTS.md).
+
+Runtime sensor stream collection is available as a deterministic CLI fixture path:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- sensor collect `
+  --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl `
+  --demo-signature `
+  --no-submit
+```
+
+The collector reads line by line, normalizes Falco-compatible events, applies sensor trust/signature metadata, skips malformed lines safely, and prints only sanitized counters/statuses/event IDs. It covers `RTE-001`, `SENSOR-001`/`SENSOR-002`, and `SIGN-001`/`SIGN-002`/`SIGN-003` modes without real Fedora/Falco. Dashboard and Demo pages show this as a copy/paste reference only; the Web UI does not execute the collector.
 
 The local replay path does not install or require Fedora, Falco Operator, Kubernetes, or a real sensor node. The real Fedora/Falco deployment kit lives under `deploy/falco-linux`, but it is not required for the default local demo.
 
@@ -762,6 +778,11 @@ dotnet run --project .\src\ConShield.Cli -- sensor replay `
   --demo-signature `
   --no-submit
 
+dotnet run --project .\src\ConShield.Cli -- sensor collect `
+  --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl `
+  --demo-signature `
+  --no-submit
+
 dotnet run --project .\src\ConShield.Cli -- demo readiness
 
 dotnet run --project .\src\ConShield.Cli -- demo reset --confirm
@@ -770,7 +791,7 @@ dotnet run --project .\src\ConShield.Cli -- evidence export `
   --output .\artifacts\local\defense-evidence-cli.md
 ```
 
-Reset требует явный `--confirm`. Live Docker execution остаётся opt-in через существующие safety rules protected-run workflow. Deterministic fixture-команды не требуют real Fedora/Falco, live Docker run или event watching, live Trivy DB/network, external internet, certificates, private keys, signing keys или real secrets. Подробности описаны в [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
+Reset требует явный `--confirm`. Live Docker execution остаётся opt-in через существующие safety rules protected-run workflow. Deterministic fixture-команды, включая runtime sensor stream collection, не требуют real Fedora/Falco, live Docker run или event watching, live Trivy DB/network, external internet, certificates, private keys, signing keys или real secrets. Подробности описаны в [`docs/CONSHIELD_CLI.md`](docs/CONSHIELD_CLI.md).
 Optional live Trivy команды — только manual local checks. Они требуют локальный Trivy и доступ к image, не смешиваются с `--from-trivy-json` и не требуются для CI, full validation, readiness или guided seed.
 
 ### CI/CD container gate
@@ -957,6 +978,17 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\Replay-ConShieldFalcoRun
 ```
 
 Valid demo signatures сохраняют `RTE-001`. Missing signatures создают `SIGN-001`; invalid signatures создают `SIGN-002`; stale или replayed signatures создают `SIGN-003`. Full mTLS, настоящие certificates, private keys и production signing key management намеренно оставлены для будущего PR. Подробности описаны в [`docs/SIGNED_SENSOR_EVENTS.md`](docs/SIGNED_SENSOR_EVENTS.md).
+
+Runtime sensor stream collection доступен как deterministic CLI fixture path:
+
+```powershell
+dotnet run --project .\src\ConShield.Cli -- sensor collect `
+  --from-json-lines .\tests\TestData\Falco\falco-runtime-stream.jsonl `
+  --demo-signature `
+  --no-submit
+```
+
+Collector читает stream line-by-line, normalizes Falco-compatible events, применяет sensor trust/signature metadata, безопасно пропускает malformed lines и печатает только sanitized counters/statuses/event IDs. Он покрывает `RTE-001`, `SENSOR-001`/`SENSOR-002` и `SIGN-001`/`SIGN-002`/`SIGN-003` modes без real Fedora/Falco. Dashboard и Demo показывают это только как copy/paste reference; Web UI не запускает collector.
 
 Local replay path does not install or require Fedora, Falco Operator, Kubernetes или настоящий sensor node. Real Fedora/Falco deployment kit находится в `deploy/falco-linux`, но для default local demo он не нужен.
 

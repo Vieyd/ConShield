@@ -29,6 +29,7 @@ public sealed class UnifiedCliTests
             "gate image",
             "run protected",
             "sensor replay",
+            "sensor collect",
             "lifecycle replay",
             "lifecycle watch",
             "evidence export"
@@ -162,6 +163,7 @@ public sealed class UnifiedCliTests
             "dotnet run --project .\\src\\ConShield.Cli -- lifecycle replay",
             "dotnet run --project .\\src\\ConShield.Cli -- lifecycle watch",
             "dotnet run --project .\\src\\ConShield.Cli -- sensor replay",
+            "dotnet run --project .\\src\\ConShield.Cli -- sensor collect",
             "dotnet run --project .\\src\\ConShield.Cli -- evidence export",
             "demo reset --confirm"
         })

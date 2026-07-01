@@ -19,7 +19,7 @@ This data flow model describes the local ConShield security event processing and
 - Developer / CI system.
 - Operator.
 - Docker host.
-- Runtime sensor.
+- Runtime sensor or deterministic JSON-lines stream fixture.
 - Trivy scan source: deterministic fixture or optional manual live Trivy scan/gate.
 
 ## Processes
@@ -40,7 +40,7 @@ This data flow model describes the local ConShield security event processing and
 - Scan fixture or scan result → P2 → normalized IMG event.
 - Container policy config → P3 → POL/LIFE launch decision event.
 - Docker lifecycle fixture or optional bounded live Docker watch → P4 → sanitized LIFE event.
-- Runtime/Falco fixture → P6/P4 → RTE/SENSOR/SIGN event.
+- Runtime/Falco fixture or JSON-lines stream → P6/P4 → RTE/SENSOR/SIGN event.
 - P4 → D1 and optionally D3 → EventConsumer → D2.
 - D1 + D4 → P5 → alerts/incidents.
 - D1 + alert/incident summaries → P7 → D5.
@@ -55,7 +55,7 @@ flowchart LR
     CI["Developer / CI system"] --> CS["ConShield local control plane"]
     Operator["Operator"] --> CS
     Docker["Docker host"] --> CS
-    Sensor["Runtime sensor"] --> CS
+    Sensor["Runtime sensor or JSON-lines fixture"] --> CS
     Trivy["Trivy scan source fixture or optional live Trivy"] --> CS
     CS --> Evidence["Safe evidence / release artifacts"]
     CS --> Views["Web and CLI views"]
@@ -70,7 +70,7 @@ flowchart TB
     Operator --> P3["P3 Enforce CI/CD or protected-run decision"]
     Docker["Docker host"] --> Watch["Optional bounded live Docker lifecycle watch"]
     Watch --> P4["P4 Ingest normalized event"]
-    Sensor["Runtime sensor"] --> P6["P6 Validate sensor trust/signature"]
+    Sensor["Runtime sensor or JSON-lines fixture"] --> P6["P6 Validate sensor trust/signature"]
     Trivy["Trivy scan fixture or optional live Trivy"] --> P2
 
     D4[("D4 Config files")] --> P1
