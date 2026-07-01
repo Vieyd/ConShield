@@ -70,13 +70,13 @@ The defense demo can be explained as a controlled story:
 3. Run the defense scenario.
 4. Replay image scan, protected run, lifecycle, and runtime fixtures.
 5. Open Security Summary.
-6. Open the read-only Operator Dashboard at `/Dashboard` to show posture cards, workflow tiles, safe command snippets, and docs links.
+6. Open the read-only Operator Dashboard at `/Dashboard` to show status-first posture cards, latest sanitized activity, guided demo flow, grouped workflow references, and docs links.
 7. Drill into SIEM alert, incident, and source event.
 8. Show Runtime Sensor Health and trust/signature states.
 9. Export evidence.
 10. Run readiness or full validation checks.
 
-The dashboard is a visual control center, not a command execution panel. It does not run PowerShell, shell commands, reset, Docker, Trivy, Falco, evidence export, or release packaging from the browser.
+The dashboard is a visual control center, not a command execution panel. Its command snippets are collapsed local copy/paste references for reproducibility. It does not run PowerShell, shell commands, reset, Docker, Trivy, Falco, evidence export, or release packaging from the browser.
 
 ## What to show first
 

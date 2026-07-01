@@ -13,8 +13,14 @@ public sealed class OperatorDashboardViewModel
     public IReadOnlyList<OperatorDashboardIncidentViewModel> LatestIncidents { get; init; } =
         Array.Empty<OperatorDashboardIncidentViewModel>();
     public OperatorDashboardSensorSummaryViewModel SensorSummary { get; init; } = new();
+    public IReadOnlyList<OperatorDashboardGuidedDemoStepViewModel> GuidedDemoSteps { get; init; } =
+        Array.Empty<OperatorDashboardGuidedDemoStepViewModel>();
+    public IReadOnlyList<OperatorDashboardWorkflowGroupViewModel> WorkflowGroups { get; init; } =
+        Array.Empty<OperatorDashboardWorkflowGroupViewModel>();
     public IReadOnlyList<OperatorDashboardWorkflowTileViewModel> WorkflowTiles { get; init; } =
         Array.Empty<OperatorDashboardWorkflowTileViewModel>();
+    public IReadOnlyList<OperatorDashboardDocGroupViewModel> DocumentationGroups { get; init; } =
+        Array.Empty<OperatorDashboardDocGroupViewModel>();
     public IReadOnlyList<OperatorDashboardDocLinkViewModel> DocumentationLinks { get; init; } =
         Array.Empty<OperatorDashboardDocLinkViewModel>();
 }
@@ -59,12 +65,32 @@ public sealed class OperatorDashboardSensorSummaryViewModel
     public DateTime? LatestRuntimeEventUtc { get; init; }
 }
 
+public sealed record OperatorDashboardGuidedDemoStepViewModel(
+    int Number,
+    string Title,
+    string Purpose,
+    string ExpectedResult,
+    string Command,
+    string DocPath,
+    string? Controller = null,
+    string? Action = null);
+
+public sealed record OperatorDashboardWorkflowGroupViewModel(
+    string Name,
+    string Description,
+    IReadOnlyList<OperatorDashboardWorkflowTileViewModel> Tiles);
+
 public sealed record OperatorDashboardWorkflowTileViewModel(
     string Name,
+    string Category,
     string Purpose,
     string Command,
     string DocPath,
     string? Controller = null,
     string? Action = null);
+
+public sealed record OperatorDashboardDocGroupViewModel(
+    string Name,
+    IReadOnlyList<OperatorDashboardDocLinkViewModel> Links);
 
 public sealed record OperatorDashboardDocLinkViewModel(string Label, string Path);

@@ -165,7 +165,7 @@ Open the read-only operator dashboard after starting the Web app:
 http://127.0.0.1:5080/Dashboard
 ```
 
-The dashboard shows status cards, latest sanitized SIEM alerts/incidents, sensor trust and signature summaries, workflow tiles, safe command snippets, and documentation links. It does not execute PowerShell or shell commands from the browser, does not trigger destructive reset, and does not display raw payloads, secrets, logs, environment values, connection strings, or generated local artifacts.
+The dashboard is status-first: it shows the current demo posture, status cards, latest sanitized SIEM alerts/incidents, and sensor trust/signature summaries before the command reference. It also includes a guided demo flow, grouped workflows for pre-deployment controls, runtime/lifecycle, and operations/evidence, plus grouped documentation links. Commands are collapsed local copy/paste references only; the Web UI does not execute PowerShell, Docker, Trivy, Falco, reset, evidence export, or packaging actions from the browser and does not display raw payloads, secrets, logs, environment values, connection strings, or generated local artifacts.
 
 ### Demo release packaging
 
@@ -628,7 +628,7 @@ http://127.0.0.1:5080/Demo
 http://127.0.0.1:5080/Dashboard
 ```
 
-Dashboard показывает status cards, последние sanitized SIEM alerts/incidents, summary доверия сенсоров и подписей, workflow tiles, безопасные command snippets и documentation links. Он не запускает PowerShell или shell commands из браузера, не выполняет destructive reset и не показывает raw payloads, secrets, logs, environment values, connection strings или generated local artifacts.
+Dashboard теперь построен по принципу status-first: сначала текущая posture демо, status cards, последние sanitized SIEM alerts/incidents и summary доверия сенсоров/подписей, затем guided demo flow и только потом command reference. Workflows сгруппированы как pre-deployment controls, runtime/lifecycle и operations/evidence; documentation links тоже сгруппированы. Commands свернуты как local copy/paste references; Web UI не запускает PowerShell, Docker, Trivy, Falco, reset, evidence export или packaging actions из браузера и не показывает raw payloads, secrets, logs, environment values, connection strings или generated local artifacts.
 
 ### Упаковка demo release
 

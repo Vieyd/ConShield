@@ -154,7 +154,7 @@ The Web UI includes a read-only operator dashboard at:
 http://127.0.0.1:5080/Dashboard
 ```
 
-The dashboard is useful during a demo because it shows posture cards, latest sanitized alerts/incidents, sensor trust/signature summaries, workflow tiles, command snippets, and docs links in one place. It does not run local commands from the browser and does not display secrets, raw payloads, logs, environment values, connection strings, or generated local artifacts.
+The dashboard is useful during a demo because it starts with posture cards, latest sanitized alerts/incidents, and sensor trust/signature summaries, then guides the operator through the demo story. Workflow references are grouped into pre-deployment controls, runtime/lifecycle, and operations/evidence. Command snippets are collapsed local copy/paste references only; the Web UI does not run local commands from the browser and does not display secrets, raw payloads, logs, environment values, connection strings, or generated local artifacts.
 
 ## Start Web GUI for demo
 

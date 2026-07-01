@@ -283,7 +283,7 @@ After starting the Web app, open the read-only operator dashboard:
 http://127.0.0.1:5080/Dashboard
 ```
 
-The dashboard shows current posture, status cards, latest sanitized SIEM alerts and incidents, sensor trust/signature summary, workflow tiles, safe command snippets, and docs links. It is not a browser command execution panel: it does not run PowerShell, shell commands, reset, Docker, Trivy, Falco, evidence export, or release packaging from the server, and it does not display raw payloads, secrets, logs, environment values, connection strings, or generated local artifacts.
+The dashboard is status-first: it shows current posture, status cards, latest sanitized SIEM alerts/incidents, and sensor trust/signature summary before the command reference. Use the guided demo flow to narrate validation, fixture replay, posture review, SIEM/incident drill-down, runtime sensor checks, evidence export, and release packaging. Workflow references are grouped into pre-deployment controls, runtime/lifecycle, and operations/evidence, and command snippets are collapsed as local copy/paste references only. It is not a browser command execution panel: it does not run PowerShell, shell commands, reset, Docker, Trivy, Falco, evidence export, or release packaging from the server, and it does not display raw payloads, secrets, logs, environment values, connection strings, or generated local artifacts.
 
 ## Image scan CLI path
 

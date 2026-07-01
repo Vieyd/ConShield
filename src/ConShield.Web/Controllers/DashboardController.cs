@@ -96,6 +96,9 @@ public sealed class DashboardController : Controller
             && FileExistsInRepo("config", "container-policy.default.json")
             && FileExistsInRepo("config", "sensor-registry.default.json");
 
+        var workflowTiles = BuildWorkflowTiles();
+        var documentationLinks = BuildDocumentationLinks();
+
         var model = new OperatorDashboardViewModel
         {
             PostureStatus = posture.Status,
@@ -128,8 +131,11 @@ public sealed class DashboardController : Controller
                 RuntimeSources = runtimeHealth.Summary.RuntimeSourcesCount,
                 LatestRuntimeEventUtc = runtimeHealth.Summary.LatestRuntimeEventUtc
             },
-            WorkflowTiles = BuildWorkflowTiles(),
-            DocumentationLinks = BuildDocumentationLinks()
+            GuidedDemoSteps = BuildGuidedDemoSteps(),
+            WorkflowTiles = workflowTiles,
+            WorkflowGroups = BuildWorkflowGroups(workflowTiles),
+            DocumentationLinks = documentationLinks,
+            DocumentationGroups = BuildDocumentationGroups(documentationLinks)
         };
 
         return View(model);
@@ -152,20 +158,39 @@ public sealed class DashboardController : Controller
         return ("Healthy", "No open incidents or current dashboard warning counters are present in local demo data.");
     }
 
+    private static IReadOnlyList<OperatorDashboardGuidedDemoStepViewModel> BuildGuidedDemoSteps() =>
+    [
+        new(1, "Validate repository and configuration", "Confirm deterministic checks before showing the system.", "Full validation reports PASS.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldFullValidation.ps1", "docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md"),
+        new(2, "Generate or replay demo data", "Run offline fixtures for scan, policy, lifecycle, and runtime paths.", "Security Events, SIEM alerts, incidents, and runtime summaries are populated.", "dotnet run --project .\\src\\ConShield.Cli -- sensor replay `\n  --demo-signature `\n  --no-submit", "docs/FALCO_RUNTIME_SENSOR.md", "SecurityEvents", "Index"),
+        new(3, "Review dashboard posture", "Start the defense story from status cards and warning counters.", "Current demo posture and key counters are visible first.", "Open http://127.0.0.1:5080/Dashboard after login", "docs/OPERATIONS_AND_SIEM_RUNBOOK.md", "Dashboard", "Index"),
+        new(4, "Inspect SIEM alerts and incidents", "Drill into correlated alert, incident, and linked source event.", "Operator can explain alert → incident → source event traceability.", "Open SIEM and Incidents from the dashboard links", "docs/OPERATIONS_AND_SIEM_RUNBOOK.md", "Siem", "Index"),
+        new(5, "Review runtime sensors and signed events", "Show trust and signature states without requiring real Fedora/Falco.", "Trusted, unknown/revoked, and signed event counters are summarized.", "Open Runtime Sensor Health from the dashboard link", "docs/SIGNED_SENSOR_EVENTS.md", "RuntimeSensors", "Index"),
+        new(6, "Export evidence", "Create a safe local Markdown evidence pack outside version control.", "Evidence export completes with sanitized sections.", "dotnet run --project .\\src\\ConShield.Cli -- evidence export `\n  --output <ignored-local-evidence-path>", "docs/DEMO_EVIDENCE_PACK.md", "Reports", "SecuritySummary"),
+        new(7, "Create release pack", "Package a safe demo handoff bundle for defense review.", "Release pack script creates a local ignored bundle.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\New-ConShieldDemoReleasePack.ps1", "docs/RELEASE_AND_DEMO_PACKAGING.md")
+    ];
+
     private static IReadOnlyList<OperatorDashboardWorkflowTileViewModel> BuildWorkflowTiles() =>
     [
-        new("Image Scan", "Map Trivy-compatible scan output into IMG security events.", "dotnet run --project .\\src\\ConShield.Cli -- scan image `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --no-submit", "docs/CONTAINER_IMAGE_SCANNING.md", "SecurityEvents", "Index"),
-        new("CI/CD Gate", "Evaluate scan findings against policy and return deterministic CI exit behavior.", "dotnet run --project .\\src\\ConShield.Cli -- gate image `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --fail-on never `\n  --no-submit", "docs/CICD_CONTAINER_GATE.md"),
-        new("Protected Run", "Show scan → policy → launch decision without browser-triggered execution.", "dotnet run --project .\\src\\ConShield.Cli -- run protected `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --no-run `\n  --no-submit", "docs/CONTAINER_POLICY.md"),
-        new("Docker Lifecycle Collector", "Replay Docker-compatible lifecycle fixture events into LIFE summaries.", "dotnet run --project .\\src\\ConShield.Cli -- lifecycle replay `\n  --from-docker-events-json .\\tests\\TestData\\DockerEvents\\container-lifecycle-events.json `\n  --no-submit", "docs/DOCKER_LIFECYCLE_COLLECTOR.md", "SecurityEvents", "Index"),
-        new("Runtime/Falco Replay", "Replay a Falco-compatible runtime event without real Fedora/Falco.", "dotnet run --project .\\src\\ConShield.Cli -- sensor replay `\n  --demo-signature `\n  --no-submit", "docs/FALCO_RUNTIME_SENSOR.md", "RuntimeSensors", "Index"),
-        new("Sensor Trust", "Validate sensor registry and simulate unknown/revoked enforcement.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldSensorRegistry.ps1", "docs/SENSOR_TRUST_REGISTRY.md", "RuntimeSensors", "Index"),
-        new("Signed Sensor Events", "Validate signed runtime sensor event paths without real signing keys.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Replay-ConShieldFalcoRuntimeEvent.ps1 `\n  -SimulateInvalidSignature `\n  -NoSubmit", "docs/SIGNED_SENSOR_EVENTS.md", "RuntimeSensors", "Index"),
-        new("SIEM Rules", "Validate configurable correlation rules.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldSiemRules.ps1", "docs/SIEM_RULES.md", "Siem", "Rules"),
-        new("Container Policy", "Validate container policy-as-code defaults.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldContainerPolicy.ps1", "docs/CONTAINER_POLICY.md"),
-        new("Evidence Export", "Export safe Markdown evidence under ignored local artifacts.", "dotnet run --project .\\src\\ConShield.Cli -- evidence export `\n  --output .\\artifacts\\local\\defense-evidence-dashboard.md", "docs/DEMO_EVIDENCE_PACK.md", "Reports", "SecuritySummary"),
-        new("Full Validation", "Run deterministic repository validation without live external dependencies.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldFullValidation.ps1", "docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md"),
-        new("Release Pack", "Create a safe local handoff bundle under ignored artifacts.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\New-ConShieldDemoReleasePack.ps1", "docs/RELEASE_AND_DEMO_PACKAGING.md")
+        new("Image Scan", "Pre-deployment controls", "Map Trivy-compatible scan output into IMG security events.", "dotnet run --project .\\src\\ConShield.Cli -- scan image `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --no-submit", "docs/CONTAINER_IMAGE_SCANNING.md", "SecurityEvents", "Index"),
+        new("CI/CD Gate", "Pre-deployment controls", "Evaluate scan findings against policy and return deterministic CI exit behavior.", "dotnet run --project .\\src\\ConShield.Cli -- gate image `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --fail-on never `\n  --no-submit", "docs/CICD_CONTAINER_GATE.md"),
+        new("Protected Run", "Pre-deployment controls", "Show scan → policy → launch decision without browser-triggered execution.", "dotnet run --project .\\src\\ConShield.Cli -- run protected `\n  --from-trivy-json .\\tests\\TestData\\Trivy\\sample-image-scan.json `\n  --no-run `\n  --no-submit", "docs/CONTAINER_POLICY.md"),
+        new("Container Policy", "Pre-deployment controls", "Validate container policy-as-code defaults.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldContainerPolicy.ps1", "docs/CONTAINER_POLICY.md"),
+        new("Docker Lifecycle Collector", "Runtime and lifecycle", "Replay Docker-compatible lifecycle fixture events into LIFE summaries.", "dotnet run --project .\\src\\ConShield.Cli -- lifecycle replay `\n  --from-docker-events-json .\\tests\\TestData\\DockerEvents\\container-lifecycle-events.json `\n  --no-submit", "docs/DOCKER_LIFECYCLE_COLLECTOR.md", "SecurityEvents", "Index"),
+        new("Runtime/Falco Replay", "Runtime and lifecycle", "Replay a Falco-compatible runtime event without real Fedora/Falco.", "dotnet run --project .\\src\\ConShield.Cli -- sensor replay `\n  --demo-signature `\n  --no-submit", "docs/FALCO_RUNTIME_SENSOR.md", "RuntimeSensors", "Index"),
+        new("Sensor Trust", "Runtime and lifecycle", "Validate sensor registry and simulate unknown/revoked enforcement.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldSensorRegistry.ps1", "docs/SENSOR_TRUST_REGISTRY.md", "RuntimeSensors", "Index"),
+        new("Signed Sensor Events", "Runtime and lifecycle", "Validate signed runtime sensor event paths without real signing keys.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Replay-ConShieldFalcoRuntimeEvent.ps1 `\n  -SimulateInvalidSignature `\n  -NoSubmit", "docs/SIGNED_SENSOR_EVENTS.md", "RuntimeSensors", "Index"),
+        new("SIEM Rules", "Operations and evidence", "Validate configurable correlation rules.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldSiemRules.ps1", "docs/SIEM_RULES.md", "Siem", "Rules"),
+        new("Evidence Export", "Operations and evidence", "Export safe Markdown evidence to an ignored local path.", "dotnet run --project .\\src\\ConShield.Cli -- evidence export `\n  --output <ignored-local-evidence-path>", "docs/DEMO_EVIDENCE_PACK.md", "Reports", "SecuritySummary"),
+        new("Full Validation", "Operations and evidence", "Run deterministic repository validation without live external dependencies.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Test-ConShieldFullValidation.ps1", "docs/CONSHIELD_FULL_VALIDATION_CHECKLIST.md"),
+        new("Release Pack", "Operations and evidence", "Create a safe local handoff bundle under an ignored output path.", "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\New-ConShieldDemoReleasePack.ps1", "docs/RELEASE_AND_DEMO_PACKAGING.md")
+    ];
+
+    private static IReadOnlyList<OperatorDashboardWorkflowGroupViewModel> BuildWorkflowGroups(
+        IReadOnlyList<OperatorDashboardWorkflowTileViewModel> workflowTiles) =>
+    [
+        new("Pre-deployment controls", "Scan, gate, and policy checks before a container is allowed to run.", workflowTiles.Where(x => x.Category == "Pre-deployment controls").ToArray()),
+        new("Runtime and lifecycle", "Runtime sensor, signed event, and lifecycle replay paths for demo evidence.", workflowTiles.Where(x => x.Category == "Runtime and lifecycle").ToArray()),
+        new("Operations and evidence", "Rules, validation, evidence, and release handoff workflows.", workflowTiles.Where(x => x.Category == "Operations and evidence").ToArray())
     ];
 
     private static IReadOnlyList<OperatorDashboardDocLinkViewModel> BuildDocumentationLinks() =>
@@ -182,6 +207,20 @@ public sealed class DashboardController : Controller
         new("Release/demo packaging", "docs/RELEASE_AND_DEMO_PACKAGING.md"),
         new("CLI docs", "docs/CONSHIELD_CLI.md")
     ];
+
+    private static IReadOnlyList<OperatorDashboardDocGroupViewModel> BuildDocumentationGroups(
+        IReadOnlyList<OperatorDashboardDocLinkViewModel> documentationLinks) =>
+    [
+        new("Architecture and data flow", PickDocs(documentationLinks, "Architecture", "Data flow model")),
+        new("Security model and requirements", PickDocs(documentationLinks, "Threat model", "Security requirements", "Requirements traceability matrix")),
+        new("Product positioning and defense", PickDocs(documentationLinks, "Product positioning", "Competitive analysis", "Diploma defense narrative")),
+        new("Operations and release", PickDocs(documentationLinks, "Full validation checklist", "Release/demo packaging", "CLI docs"))
+    ];
+
+    private static IReadOnlyList<OperatorDashboardDocLinkViewModel> PickDocs(
+        IReadOnlyList<OperatorDashboardDocLinkViewModel> documentationLinks,
+        params string[] labels) =>
+        labels.Select(label => documentationLinks.Single(x => x.Label == label)).ToArray();
 
     private static bool FileExistsInRepo(params string[] parts)
     {

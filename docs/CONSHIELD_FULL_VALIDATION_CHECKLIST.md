@@ -303,7 +303,7 @@ http://127.0.0.1:5080/Demo
 
 ## 18. README/docs consistency
 
-- Purpose: verify `/Dashboard` remains a read-only operator console and keep bilingual README/docs links aligned with the current command surface.
+- Purpose: verify `/Dashboard` remains a read-only, status-first operator console with guided demo flow, grouped workflows, collapsed command references, and aligned bilingual README/docs links.
 - Commands:
 
 ```powershell
@@ -314,7 +314,7 @@ dotnet test .\ConShield.sln --configuration Release --no-build --filter Architec
 dotnet test .\ConShield.sln --configuration Release --no-build --filter WebOperatorDashboardTests
 ```
 
-- Expected result: contract tests pass; `/Dashboard` route/view exists, exposes only safe links/snippets/status summaries, does not add server-side command execution, README keeps English first and Russian second, and README docs links point to existing files.
+- Expected result: contract tests pass; `/Dashboard` route/view exists, prioritizes posture/status/recent activity, includes guided demo flow, groups workflows into pre-deployment/runtime/operations areas, keeps command snippets secondary/collapsed, exposes only safe links/snippets/status summaries, does not add server-side command execution, README keeps English first and Russian second, and README docs links point to existing files.
 - CI-safe: yes.
 - Web/API required: no.
 - Docker/Falco/Trivy network required: no.
